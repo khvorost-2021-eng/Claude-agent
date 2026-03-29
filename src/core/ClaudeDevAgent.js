@@ -16,18 +16,18 @@ class ClaudeDevAgent {
   }
 
   getApiProvider() {
-    if (process.env.GEMINI_API_KEY) return 'gemini';
+    if (process.env.GROQ_API_KEY) return 'groq';
     if (process.env.OPENAI_API_KEY) return 'openai';
     if (process.env.ANTHROPIC_API_KEY) return 'anthropic';
     return 'openrouter';
   }
 
   getApiKey() {
-    return process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OPENROUTER_API_KEY;
+    return process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OPENROUTER_API_KEY;
   }
 
   detectProvider() {
-    if (process.env.GEMINI_API_KEY) return 'gemini';
+    if (process.env.GROQ_API_KEY) return 'groq';
     if (process.env.OPENAI_API_KEY) return 'openai';
     if (process.env.ANTHROPIC_API_KEY) return 'anthropic';
     return 'openrouter';
@@ -48,12 +48,12 @@ class ClaudeDevAgent {
     if (this.apiKey) {
       let result;
       console.log('Calling AI API...');
-      if (this.provider === 'openrouter') {
-        result = await this.generateCodeOpenRouter(prompt, options);
+      if (this.provider === 'groq') {
+        result = await this.generateCodeGroq(prompt, options);
       } else if (this.provider === 'openai') {
         result = await this.generateCodeOpenAI(prompt, options);
-      } else if (this.provider === 'gemini') {
-        result = await this.generateCodeGemini(prompt, options);
+      } else if (this.provider === 'openrouter') {
+        result = await this.generateCodeOpenRouter(prompt, options);
       } else {
         result = await this.generateCodeAnthropic(prompt, options);
       }
@@ -338,6 +338,49 @@ class HomePage extends StatelessWidget {
     }
   }
 
+  async generateCodeGroq(prompt, options = {}) {
+    console.log('=== generateCodeGroq called ===');
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'mixtral-8x7b-32768',
+          messages: [
+            { role: 'system', content: this.getSystemPrompt() },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 4000
+        })
+      });
+      
+      console.log('Groq Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Groq API error:', errorText);
+        return null;
+      }
+      
+      const data = await response.json();
+      console.log('Groq choices:', data.choices ? data.choices.length : 0);
+      
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        const content = data.choices[0].message.content;
+        console.log('Groq content length:', content.length);
+        return content;
+      }
+      return null;
+    } catch (error) {
+      console.error('Groq API error:', error);
+      return null;
+    }
+  }
+
   async generateCodeGemini(prompt, options = {}) {
     console.log('=== generateCodeGemini called ===');
     try {
@@ -423,12 +466,12 @@ Always deliver production-quality code that exceeds expectations.`;
     if (this.apiKey) {
       const prompt = `Ответь на сообщение пользователя кратко и по существу: "${message}"`;
       let result;
-      if (this.provider === 'openrouter') {
-        result = await this.generateCodeOpenRouter(prompt, { type: 'chat' });
+      if (this.provider === 'groq') {
+        result = await this.generateCodeGroq(prompt, { type: 'chat' });
       } else if (this.provider === 'openai') {
         result = await this.generateCodeOpenAI(prompt, { type: 'chat' });
-      } else if (this.provider === 'gemini') {
-        result = await this.generateCodeGemini(prompt, { type: 'chat' });
+      } else if (this.provider === 'openrouter') {
+        result = await this.generateCodeOpenRouter(prompt, { type: 'chat' });
       } else {
         result = await this.generateCodeAnthropic(prompt, { type: 'chat' });
       }
