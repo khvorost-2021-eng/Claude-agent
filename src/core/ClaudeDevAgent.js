@@ -6,7 +6,7 @@ import fetch from 'node-fetch';
 
 class ClaudeDevAgent {
   constructor(config = {}) {
-    this.apiKey = config.apiKey || process.env.OPENROUTER_API_KEY || process.env.ANTHROPIC_API_KEY;
+    this.apiKey = config.apiKey || this.getApiKey();
     this.provider = config.provider || this.detectProvider();
     this.projectsDir = config.projectsDir || './projects';
     this.templatesDir = config.templatesDir || './templates';
@@ -15,8 +15,18 @@ class ClaudeDevAgent {
     this.ensureDirectories();
   }
 
+  getApiProvider() {
+    if (process.env.OPENAI_API_KEY) return 'openai';
+    if (process.env.ANTHROPIC_API_KEY) return 'anthropic';
+    return 'openrouter';
+  }
+
+  getApiKey() {
+    return process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OPENROUTER_API_KEY;
+  }
+
   detectProvider() {
-    if (process.env.OPENROUTER_API_KEY) return 'openrouter';
+    if (process.env.OPENAI_API_KEY) return 'openai';
     if (process.env.ANTHROPIC_API_KEY) return 'anthropic';
     return 'openrouter';
   }
@@ -38,6 +48,8 @@ class ClaudeDevAgent {
       console.log('Calling AI API...');
       if (this.provider === 'openrouter') {
         result = await this.generateCodeOpenRouter(prompt, options);
+      } else if (this.provider === 'openai') {
+        result = await this.generateCodeOpenAI(prompt, options);
       } else {
         result = await this.generateCodeAnthropic(prompt, options);
       }
@@ -279,6 +291,49 @@ class HomePage extends StatelessWidget {
     }
   }
 
+  async generateCodeOpenAI(prompt, options = {}) {
+    console.log('=== generateCodeOpenAI called ===');
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: this.getSystemPrompt() },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 4000
+        })
+      });
+      
+      console.log('OpenAI Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('OpenAI API error:', errorText);
+        return null;
+      }
+      
+      const data = await response.json();
+      console.log('OpenAI choices:', data.choices ? data.choices.length : 0);
+      
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        const content = data.choices[0].message.content;
+        console.log('OpenAI content length:', content.length);
+        return content;
+      }
+      return null;
+    } catch (error) {
+      console.error('OpenAI API error:', error);
+      return null;
+    }
+  }
+
   getSystemPrompt() {
     return `You are ClaudeDev, an expert software developer AI assistant. You specialize in generating complete, production-ready applications with detailed explanations.
 
@@ -322,6 +377,8 @@ Always deliver production-quality code that exceeds expectations.`;
       let result;
       if (this.provider === 'openrouter') {
         result = await this.generateCodeOpenRouter(prompt, { type: 'chat' });
+      } else if (this.provider === 'openai') {
+        result = await this.generateCodeOpenAI(prompt, { type: 'chat' });
       } else {
         result = await this.generateCodeAnthropic(prompt, { type: 'chat' });
       }
