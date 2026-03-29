@@ -342,6 +342,34 @@ main {
   50% { opacity: 0.5; }
 }
 
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-4px); }
+}
+
 .thinking {
   animation: pulse 1.5s infinite;
+}
+
+.typing-indicator {
+  opacity: 0.8;
+}
+
+.typing-dots {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 4px;
+}
+
+.typing-dots .dot {
+  animation: typingBounce 1.4s infinite;
+  font-weight: bold;
+}
+
+.typing-dots .dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dots .dot:nth-child(3) {
+  animation-delay: 0.4s;
 }

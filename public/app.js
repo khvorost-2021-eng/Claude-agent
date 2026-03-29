@@ -20,6 +20,7 @@ class AgentClient {
     this.modal = document.getElementById('modal');
     this.modalTitle = document.getElementById('modalTitle');
     this.modalBody = document.getElementById('modalBody');
+    this.typingIndicator = null;
   }
 
   initEventListeners() {
@@ -69,6 +70,33 @@ class AgentClient {
     };
   }
 
+  showTypingIndicator() {
+    if (this.typingIndicator) return;
+    
+    this.typingIndicator = document.createElement('div');
+    this.typingIndicator.className = 'message bot typing-indicator';
+    this.typingIndicator.id = 'typing-indicator';
+    this.typingIndicator.innerHTML = `
+      <div class="message-content">
+        <span class="typing-text">🤔 Думаю</span>
+        <span class="typing-dots">
+          <span class="dot">.</span>
+          <span class="dot">.</span>
+          <span class="dot">.</span>
+        </span>
+      </div>
+    `;
+    this.chatMessages.appendChild(this.typingIndicator);
+    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+  }
+
+  hideTypingIndicator() {
+    if (this.typingIndicator) {
+      this.typingIndicator.remove();
+      this.typingIndicator = null;
+    }
+  }
+
   attemptReconnect() {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
@@ -84,12 +112,13 @@ class AgentClient {
   handleWebSocketMessage(data) {
     switch (data.type) {
       case 'thinking':
-        this.addMessage(data.content, 'bot', true);
+        this.showTypingIndicator();
         break;
       case 'progress':
         this.updateProgress(data);
         break;
       case 'complete':
+        this.hideTypingIndicator();
         this.handleProjectComplete(data.project);
         break;
     }
