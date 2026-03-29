@@ -16,16 +16,18 @@ class ClaudeDevAgent {
   }
 
   getApiProvider() {
+    if (process.env.GEMINI_API_KEY) return 'gemini';
     if (process.env.OPENAI_API_KEY) return 'openai';
     if (process.env.ANTHROPIC_API_KEY) return 'anthropic';
     return 'openrouter';
   }
 
   getApiKey() {
-    return process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OPENROUTER_API_KEY;
+    return process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OPENROUTER_API_KEY;
   }
 
   detectProvider() {
+    if (process.env.GEMINI_API_KEY) return 'gemini';
     if (process.env.OPENAI_API_KEY) return 'openai';
     if (process.env.ANTHROPIC_API_KEY) return 'anthropic';
     return 'openrouter';
@@ -50,6 +52,8 @@ class ClaudeDevAgent {
         result = await this.generateCodeOpenRouter(prompt, options);
       } else if (this.provider === 'openai') {
         result = await this.generateCodeOpenAI(prompt, options);
+      } else if (this.provider === 'gemini') {
+        result = await this.generateCodeGemini(prompt, options);
       } else {
         result = await this.generateCodeAnthropic(prompt, options);
       }
@@ -334,6 +338,50 @@ class HomePage extends StatelessWidget {
     }
   }
 
+  async generateCodeGemini(prompt, options = {}) {
+    console.log('=== generateCodeGemini called ===');
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: this.getSystemPrompt() + '\n\n' + prompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 4000
+          }
+        })
+      });
+      
+      console.log('Gemini Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Gemini API error:', errorText);
+        return null;
+      }
+      
+      const data = await response.json();
+      console.log('Gemini candidates:', data.candidates ? data.candidates.length : 0);
+      
+      if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
+        const content = data.candidates[0].content.parts[0].text;
+        console.log('Gemini content length:', content.length);
+        return content;
+      }
+      return null;
+    } catch (error) {
+      console.error('Gemini API error:', error);
+      return null;
+    }
+  }
+
   getSystemPrompt() {
     return `You are ClaudeDev, an expert software developer AI assistant. You specialize in generating complete, production-ready applications with detailed explanations.
 
@@ -379,6 +427,8 @@ Always deliver production-quality code that exceeds expectations.`;
         result = await this.generateCodeOpenRouter(prompt, { type: 'chat' });
       } else if (this.provider === 'openai') {
         result = await this.generateCodeOpenAI(prompt, { type: 'chat' });
+      } else if (this.provider === 'gemini') {
+        result = await this.generateCodeGemini(prompt, { type: 'chat' });
       } else {
         result = await this.generateCodeAnthropic(prompt, { type: 'chat' });
       }
