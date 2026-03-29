@@ -28,16 +28,26 @@ class ClaudeDevAgent {
   }
 
   async generateCode(prompt, options = {}) {
-    // Если API ключа нет или запрос падает - используем шаблоны
-    if (!this.apiKey) {
-      console.log('Demo mode: using templates instead of API');
-      return this.generateFromTemplate(options.type);
+    // Try API first if key exists
+    if (this.apiKey) {
+      let result;
+      if (this.provider === 'openrouter') {
+        result = await this.generateCodeOpenRouter(prompt, options);
+      } else {
+        result = await this.generateCodeAnthropic(prompt, options);
+      }
+      
+      // If API succeeded and returned content, use it
+      if (result && !result.startsWith('Error:')) {
+        return result;
+      }
+      
+      console.log('API failed or returned no content, falling back to templates');
     }
     
-    if (this.provider === 'openrouter') {
-      return this.generateCodeOpenRouter(prompt, options);
-    }
-    return this.generateCodeAnthropic(prompt, options);
+    // Fallback to templates
+    console.log('Using template mode');
+    return this.generateFromTemplate(options.type);
   }
   
   generateFromTemplate(type) {
@@ -408,10 +418,17 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   async generateCodeOpenRouter(prompt, options = {}) {
-    const model = options.model || 'google/gemini-flash-1.5';
+    // Updated model list with working models
+    const models = [
+      'anthropic/claude-3.5-haiku',
+      'anthropic/claude-3-haiku', 
+      'meta-llama/llama-3.1-8b-instruct',
+      'google/gemini-2.0-flash-001'
+    ];
+    const model = options.model || models[0];
     
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000); // 30 сек таймаут
+    const timeout = setTimeout(() => controller.abort(), 30000);
     
     try {
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -444,24 +461,22 @@ class _MyHomePageState extends State<MyHomePage> {
       if (!response.ok) {
         const errorText = await response.text();
         console.error('OpenRouter HTTP error:', response.status, errorText);
-        return `Error: API returned ${response.status}. ${errorText}`;
+        // Return null to trigger fallback
+        return null;
       }
 
       const data = await response.json();
       
       if (data.error) {
         console.error('OpenRouter error:', data.error);
-        return `Error: ${data.error.message}`;
+        return null;
       }
       
-      return data.choices?.[0]?.message?.content || 'Generation failed';
+      return data.choices?.[0]?.message?.content || null;
     } catch (error) {
       clearTimeout(timeout);
       console.error('OpenRouter fetch error:', error.message);
-      if (error.name === 'AbortError') {
-        return 'Error: Request timeout (30s). API is slow or unavailable.';
-      }
-      return `Error: ${error.message}`;
+      return null;
     }
   }
 
