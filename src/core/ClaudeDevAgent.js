@@ -418,66 +418,75 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   async generateCodeOpenRouter(prompt, options = {}) {
-    // Updated model list with working models
     const models = [
       'anthropic/claude-3.5-haiku',
-      'anthropic/claude-3-haiku', 
-      'meta-llama/llama-3.1-8b-instruct',
-      'google/gemini-2.0-flash-001'
+      'anthropic/claude-3-haiku',
+      'meta-llama/llama-3.1-8b-instruct'
     ];
-    const model = options.model || models[0];
     
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
-    
-    try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-          'HTTP-Referer': 'https://claude-dev-agent.render.com',
-          'X-Title': 'Claude Dev Agent'
-        },
-        body: JSON.stringify({
-          model: model,
-          messages: [
-            {
-              role: 'system',
-              content: this.getSystemPrompt(options.type)
+    // Try each model with retries
+    for (const model of models) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          console.log(`Trying ${model}, attempt ${attempt + 1}`);
+          
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 25000);
+          
+          const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            signal: controller.signal,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${this.apiKey}`,
+              'HTTP-Referer': 'https://claude-dev-agent.render.com',
+              'X-Title': 'Claude Dev Agent'
             },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          max_tokens: options.maxTokens || 4096
-        })
-      });
+            body: JSON.stringify({
+              model: model,
+              messages: [
+                {
+                  role: 'system',
+                  content: this.getSystemPrompt(options.type)
+                },
+                {
+                  role: 'user',
+                  content: prompt
+                }
+              ],
+              max_tokens: options.maxTokens || 4096,
+              temperature: 0.7
+            })
+          });
 
-      clearTimeout(timeout);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('OpenRouter HTTP error:', response.status, errorText);
-        // Return null to trigger fallback
-        return null;
-      }
+          clearTimeout(timeout);
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.log(`Model ${model} failed:`, response.status);
+            continue;
+          }
 
-      const data = await response.json();
-      
-      if (data.error) {
-        console.error('OpenRouter error:', data.error);
-        return null;
+          const data = await response.json();
+          
+          if (data.error) {
+            console.log(`Model ${model} error:`, data.error);
+            continue;
+          }
+          
+          const content = data.choices?.[0]?.message?.content;
+          if (content && content.length > 100) {
+            console.log(`Success with ${model}`);
+            return content;
+          }
+          
+        } catch (error) {
+          console.log(`Attempt ${attempt + 1} failed for ${model}:`, error.message);
+        }
       }
-      
-      return data.choices?.[0]?.message?.content || null;
-    } catch (error) {
-      clearTimeout(timeout);
-      console.error('OpenRouter fetch error:', error.message);
-      return null;
     }
+    
+    return null;
   }
 
   async generateCodeAnthropic(prompt, options = {}) {
@@ -505,33 +514,64 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   getSystemPrompt(type) {
-    const prompts = {
-      android: `You are an expert Android developer. Generate complete, production-ready Android code.
-Follow these rules:
-- Use modern Android architecture (Jetpack Compose, ViewModel, Repository pattern)
-- Include proper error handling and logging
-- Follow Material Design 3 guidelines
-- Generate modular, testable code
-- Include necessary AndroidManifest.xml configurations`,
+    const basePrompt = `You are an expert code generator. Your task is to create complete, working projects based on user requirements.
+
+CRITICAL RULES:
+1. ALWAYS generate COMPLETE, RUNNABLE code - never placeholders or "TODO" comments
+2. Include ALL files needed for the project to work immediately
+3. Use modern best practices and clean code structure
+4. Make the design responsive and visually appealing
+5. Add helpful comments explaining key parts
+6. Create at least 3-4 different files for the project
+
+OUTPUT FORMAT - You MUST use this exact format:
+filename.ext
+\`\`\`language
+code content here
+\`\`\`
+
+For example:
+index.html
+\`\`\`html
+<!DOCTYPE html>
+<html>
+<head><title>App</title></head>
+<body>...</body>
+</html>
+\`\`\``;
+
+    const typePrompts = {
+      android: `${basePrompt}
+
+For Android projects:
+- Use Jetpack Compose for UI
+- Include proper ViewModel with StateFlow
+- Add error handling and loading states
+- Use Material Design 3 components
+- Include navigation between screens
+- Generate 5-7 Kotlin files minimum`,
       
-      web: `You are an expert full-stack web developer. Generate complete, production-ready web applications.
-Follow these rules:
-- Use modern frameworks (React, Vue, or vanilla JS with modern ES6+)
-- Include responsive design with CSS Grid/Flexbox
-- Proper semantic HTML structure
-- Include client-side form validation
-- Optimize for performance and accessibility`,
+      web: `${basePrompt}
+
+For Web projects:
+- Create responsive design with CSS Grid/Flexbox
+- Include modern CSS with custom properties
+- Add interactive JavaScript functionality
+- Make it mobile-friendly
+- Use semantic HTML5 structure
+- Generate 4-5 files: HTML, CSS, JS, and extras as needed`,
       
-      flutter: `You are an expert Flutter developer. Generate complete, production-ready Flutter apps.
-Follow these rules:
-- Use clean architecture with BLoC pattern or Riverpod
+      flutter: `${basePrompt}
+
+For Flutter projects:
+- Use clean architecture (BLoC or Riverpod)
 - Include proper state management
-- Follow Material Design 3 guidelines
-- Support both Android and iOS
-- Include proper error handling`
+- Add multiple screens with navigation
+- Use Material Design 3
+- Generate 6-8 Dart files minimum`
     };
     
-    return prompts[type] || prompts.web;
+    return typePrompts[type] || typePrompts.web;
   }
 
   async createProject(projectType, name, description) {
