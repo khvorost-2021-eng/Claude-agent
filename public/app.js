@@ -112,6 +112,14 @@ class AgentClient {
       this.messageInput.focus();
       this.addMessage('Начните новый проект! Опишите что хотите создать.', 'bot');
     });
+
+    // Tab buttons
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const tabName = tab.dataset.tab;
+        this.switchTab(tabName);
+      });
+    });
   }
 
   connectWebSocket() {
