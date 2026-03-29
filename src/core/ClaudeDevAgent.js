@@ -341,7 +341,7 @@ class HomePage extends StatelessWidget {
   async generateCodeGemini(prompt, options = {}) {
     console.log('=== generateCodeGemini called ===');
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${this.apiKey}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.apiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -354,7 +354,7 @@ class HomePage extends StatelessWidget {
           }],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 4000
+            maxOutputTokens: 8192
           }
         })
       });
