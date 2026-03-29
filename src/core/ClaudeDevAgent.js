@@ -461,19 +461,35 @@ For educational websites:
 Always deliver production-quality code that exceeds expectations.`;
   }
 
+  getChatSystemPrompt() {
+    return `You are ClaudeDev, a helpful AI assistant. You help users with software development, answer questions, and provide clear, friendly responses.
+
+When responding to users:
+- Be conversational and natural
+- Answer questions directly and helpfully
+- If user asks for help, provide specific guidance
+- If user gives feedback or complains, acknowledge it professionally
+- Keep responses concise but informative
+- Use Russian language as the user communicates in Russian
+
+You can also create web projects, Android apps, and Flutter apps when users request them.`;
+  }
+
   async generateResponse(message) {
     // Generate a conversational response using AI
     if (this.apiKey) {
-      const prompt = `Ответь на сообщение пользователя кратко и по существу: "${message}"`;
+      const chatPrompt = `User message: "${message}"
+
+Respond naturally as ClaudeDev assistant. Be helpful, friendly, and conversational.`;
       let result;
       if (this.provider === 'groq') {
-        result = await this.generateCodeGroq(prompt, { type: 'chat' });
+        result = await this.generateChatGroq(chatPrompt);
       } else if (this.provider === 'openai') {
-        result = await this.generateCodeOpenAI(prompt, { type: 'chat' });
+        result = await this.generateChatOpenAI(chatPrompt);
       } else if (this.provider === 'openrouter') {
-        result = await this.generateCodeOpenRouter(prompt, { type: 'chat' });
+        result = await this.generateChatOpenRouter(chatPrompt);
       } else {
-        result = await this.generateCodeAnthropic(prompt, { type: 'chat' });
+        result = await this.generateChatAnthropic(chatPrompt);
       }
       if (result && !result.startsWith('Error:')) {
         return result;
@@ -489,6 +505,128 @@ Always deliver production-quality code that exceeds expectations.`;
       'Принято! Чем ещё могу быть полезен?'
     ];
     return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+  }
+
+  async generateChatGroq(prompt) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-8b-instant',
+          messages: [
+            { role: 'system', content: this.getChatSystemPrompt() },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.8,
+          max_tokens: 500
+        })
+      });
+      
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        return data.choices[0].message.content;
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async generateChatOpenAI(prompt) {
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: this.getChatSystemPrompt() },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.8,
+          max_tokens: 500
+        })
+      });
+      
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        return data.choices[0].message.content;
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async generateChatOpenRouter(prompt) {
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`,
+          'HTTP-Referer': 'https://claudedev.example.com',
+          'X-Title': 'ClaudeDev Agent'
+        },
+        body: JSON.stringify({
+          model: 'anthropic/claude-3-haiku',
+          messages: [
+            { role: 'system', content: this.getChatSystemPrompt() },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.8,
+          max_tokens: 500
+        })
+      });
+      
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        return data.choices[0].message.content;
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async generateChatAnthropic(prompt) {
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-haiku-20240307',
+          max_tokens: 500,
+          system: this.getChatSystemPrompt(),
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      if (data.content && data.content[0]) return data.content[0].text;
+      return null;
+    } catch (error) {
+      return null;
+    }
   }
 
   async createProject(name, description, type = 'web') {
