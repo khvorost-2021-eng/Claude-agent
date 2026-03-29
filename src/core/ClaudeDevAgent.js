@@ -621,22 +621,36 @@ Format each file with path and content. Use markdown code blocks with file paths
   }
 
   async parseAndSaveFiles(project, generatedContent) {
-    const fileRegex = /```[\w]*\s*([\w\/.\-]+)\n([\s\S]*?)```/g;
-    const matches = [...generatedContent.matchAll(fileRegex)];
+    // Try multiple patterns for file extraction
+    let matches = [];
+    
+    // Pattern 1: filename followed by code block (used in templates)
+    const pattern1 = /([\w\/.\-_]+)\s*\n```[\w]*\n([\s\S]*?)```/g;
+    matches = [...generatedContent.matchAll(pattern1)];
+    
+    // Pattern 2: code block with filename inside (used by AI models)
+    if (matches.length === 0) {
+      const pattern2 = /```[\w]*\s*([\w\/.\-_]+)\n([\s\S]*?)```/g;
+      matches = [...generatedContent.matchAll(pattern2)];
+    }
     
     for (const match of matches) {
-      const filePath = match[1];
-      const content = match[2];
+      const filePath = match[1].trim();
+      const content = match[2].trim();
       const fullPath = path.join(project.path, filePath);
       
       fs.ensureDirSync(path.dirname(fullPath));
       fs.writeFileSync(fullPath, content);
       project.files.push(filePath);
+      console.log('Created file:', filePath);
     }
     
-    // Save generated content as raw text if no code blocks found
+    // If no code blocks found, try to create simple files
     if (matches.length === 0) {
-      fs.writeFileSync(path.join(project.path, 'generated.txt'), generatedContent);
+      // Create index.html as fallback
+      fs.writeFileSync(path.join(project.path, 'index.html'), generatedContent);
+      project.files.push('index.html');
+      console.log('Created fallback file: index.html');
     }
   }
 
