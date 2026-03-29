@@ -249,19 +249,39 @@ class HomePage extends StatelessWidget {
   }
 
   getSystemPrompt() {
-    return `You are ClaudeDev, an expert software developer. Generate complete, runnable code based on the user's request.
+    return `You are ClaudeDev, an expert software developer AI assistant. You specialize in generating complete, production-ready applications with detailed explanations.
 
-IMPORTANT: Always format your response with file paths followed by code blocks.
-Format: filename.ext followed by code block with content.
+CORE PRINCIPLES:
+1. **Thoroughness**: Always provide complete, working solutions with all necessary files
+2. **Detailed Explanations**: Include comprehensive comments and documentation explaining WHY, not just WHAT
+3. **Best Practices**: Follow modern coding standards, responsive design, accessibility
+4. **Educational Focus**: When creating educational content (courses, lessons), provide rich, structured material
 
-Example:
-index.html
-\`\`\`html
-<!DOCTYPE html>
-<html>...</html>
+OUTPUT FORMAT:
+Always format responses as:
+filename.ext
+\`\`\`language
+complete file content with detailed comments
 \`\`\`
 
-Generate complete, working code with all necessary files.`;
+For web projects, generate:
+- index.html (main page with complete structure)
+- about.html (detailed about/course info page)  
+- lessons.html (structured lesson content with explanations)
+- practice.html (exercises with solutions)
+- contact.html (contact form)
+- styles.css (comprehensive CSS with variables, responsive design, animations)
+- main.js (interactive features, smooth scrolling, form handling)
+
+For educational websites:
+- Include detailed lesson content with explanations
+- Add theory sections with examples
+- Provide practical exercises with step-by-step solutions
+- Use modern UI/UX with gradients, cards, icons
+- Ensure mobile-responsive design
+- Add interactive elements (animations on scroll, hover effects)
+
+Always deliver production-quality code that exceeds expectations.`;
   }
 
   async createProject(name, description, type = 'web') {
@@ -318,13 +338,47 @@ Generate complete, working code with all necessary files.`;
     if (description.includes('хими')) subject = 'Химия';
     if (description.includes('биологи')) subject = 'Биология';
     if (description.includes('истори')) subject = 'История';
-    if (description.includes('5')) grade = '5 класс';
-    if (description.includes('6')) grade = '6 класс';
-    if (description.includes('11')) grade = '11 класс';
+    if (description.includes('английск')) subject = 'Английский язык';
+    if (description.includes('русск')) subject = 'Русский язык';
+    if (description.includes('литератур')) subject = 'Литература';
+    if (description.includes('информатик')) subject = 'Информатика';
+    if (description.includes('географи')) subject = 'География';
+    
+    // Extract grade levels
+    const gradeMatch = description.match(/(\d+)(?:\s*-\s*|\s+по\s+|\s*-\s*)(\d+)?/);
+    if (gradeMatch) {
+      const startGrade = gradeMatch[1];
+      const endGrade = gradeMatch[2];
+      grade = endGrade ? `${startGrade}-${endGrade} классы` : `${startGrade} класс`;
+    } else {
+      if (description.includes('5')) grade = '5 класс';
+      if (description.includes('6')) grade = '6 класс';
+      if (description.includes('7')) grade = '7 класс';
+      if (description.includes('8')) grade = '8 класс';
+      if (description.includes('9')) grade = '9 класс';
+      if (description.includes('10')) grade = '10 класс';
+      if (description.includes('11')) grade = '11 класс';
+    }
     
     const files = {};
     
-    files['index.html'] = `<!DOCTYPE html>
+    files['index.html'] = this.generateIndexPage(title, topic, subject, grade);
+    files['about.html'] = this.generateAboutPage(title, subject, grade);
+    files['lessons.html'] = this.generateLessonsPage(title, subject, grade);
+    files['practice.html'] = this.generatePracticePage(title, subject);
+    files['contact.html'] = this.generateContactPage(title);
+    files['styles.css'] = this.generateStyles();
+    files['main.js'] = this.generateJavaScript();
+
+    for (const [filename, content] of Object.entries(files)) {
+        const filepath = path.join(project.path, filename);
+        fs.writeFileSync(filepath, content);
+        project.files.push(filename);
+    }
+  }
+
+  generateIndexPage(title, topic, subject, grade) {
+    return `<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -332,216 +386,1689 @@ Generate complete, working code with all necessary files.`;
     <title>${title}</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <nav class="navbar">
         <div class="container nav-container">
-            <a href="index.html" class="nav-logo"><span>${title}</span></a>
+            <a href="index.html" class="nav-logo">
+                <i class="fas fa-graduation-cap"></i>
+                <span>${title}</span>
+            </a>
             <ul class="nav-menu">
                 <li><a href="index.html" class="nav-link active">Главная</a></li>
                 <li><a href="about.html" class="nav-link">О курсе</a></li>
                 <li><a href="lessons.html" class="nav-link">Уроки</a></li>
                 <li><a href="practice.html" class="nav-link">Практика</a></li>
+                <li><a href="contact.html" class="nav-link">Контакты</a></li>
             </ul>
-        </div>
-    </nav>
-    <header class="hero">
-        <div class="container">
-            <h1>${title}</h1>
-            <p class="hero-subtitle">${topic}</p>
-            <p class="hero-description">Полный курс с подробными объяснениями и практическими заданиями</p>
-            <div class="hero-buttons">
-                <a href="lessons.html" class="btn btn-primary">Начать обучение</a>
-                <a href="about.html" class="btn btn-secondary">Подробнее</a>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
             </div>
         </div>
+    </nav>
+
+    <header class="hero">
+        <div class="container">
+            <h1 class="hero-title">${title}</h1>
+            <p class="hero-subtitle">${topic}</p>
+            <p class="hero-description">Полный курс с подробными объяснениями, интерактивными примерами и практическими заданиями для ${grade || 'всех уровней'}</p>
+            <div class="hero-buttons">
+                <a href="lessons.html" class="btn btn-primary">
+                    <i class="fas fa-book-open"></i>
+                    Начать обучение
+                </a>
+                <a href="about.html" class="btn btn-secondary">
+                    <i class="fas fa-info-circle"></i>
+                    Подробнее о курсе
+                </a>
+            </div>
+            <div class="hero-stats">
+                <div class="stat">
+                    <span class="stat-number">50+</span>
+                    <span class="stat-label">Уроков</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">200+</span>
+                    <span class="stat-label">Заданий</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number">1000+</span>
+                    <span class="stat-label">Примеров</span>
+                </div>
+            </div>
+        </div>
+        <div class="hero-wave">
+            <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z" fill="white"/>
+            </svg>
+        </div>
     </header>
+
     <section class="features-section">
         <div class="container">
-            <h2 class="section-title">Почему наш курс</h2>
+            <h2 class="section-title">Почему выбирают наш курс</h2>
             <div class="features-grid">
                 <div class="feature-box">
+                    <div class="feature-icon"><i class="fas fa-lightbulb"></i></div>
                     <h3>Понятные объяснения</h3>
-                    <p>Каждая тема разобрана простым языком с наглядными примерами</p>
+                    <p>Каждая тема разобрана простым языком с наглядными примерами и иллюстрациями. Не просто формулы — а понимание принципов.</p>
                 </div>
                 <div class="feature-box">
+                    <div class="feature-icon"><i class="fas fa-layer-group"></i></div>
                     <h3>Структурированный материал</h3>
-                    <p>Уроки построены от простого к сложному</p>
+                    <p>Уроки построены от простого к сложному с четким планом обучения. Каждый урок — ступенька к мастерству.</p>
                 </div>
                 <div class="feature-box">
+                    <div class="feature-icon"><i class="fas fa-pencil-alt"></i></div>
                     <h3>Практические задания</h3>
-                    <p>Упражнения для закрепления материала</p>
+                    <p>После каждого урока — упражнения разного уровня сложности с подробными решениями и объяснениями.</p>
+                </div>
+                <div class="feature-box">
+                    <div class="feature-icon"><i class="fas fa-mobile-alt"></i></div>
+                    <h3>Учитесь где угодно</h3>
+                    <p>Доступ с любого устройства: компьютера, планшета или смартфона. Материал всегда под рукой.</p>
                 </div>
             </div>
         </div>
     </section>
+
+    <section class="preview-section">
+        <div class="container">
+            <h2 class="section-title">Содержание курса</h2>
+            <div class="topics-preview">
+                <div class="topic-card">
+                    <div class="topic-number">01</div>
+                    <h3>Базовые понятия</h3>
+                    <p>Основные определения, формулы и принципы. Создание прочного фундамента для дальнейшего обучения.</p>
+                    <ul>
+                        <li>Основные термины и определения</li>
+                        <li>Ключевые формулы и правила</li>
+                        <li>Базовые методы решения</li>
+                    </ul>
+                    <a href="lessons.html#module1" class="topic-link">Подробнее <i class="fas fa-arrow-right"></i></a>
+                </div>
+                <div class="topic-card">
+                    <div class="topic-number">02</div>
+                    <h3>Стандартные задачи</h3>
+                    <p>Типовые задачи и методы их решения. Развитие навыков применения теории на практике.</p>
+                    <ul>
+                        <li>Классические задачи</li>
+                        <li>Алгоритмы решения</li>
+                        <li>Проверка результатов</li>
+                    </ul>
+                    <a href="lessons.html#module2" class="topic-link">Подробнее <i class="fas fa-arrow-right"></i></a>
+                </div>
+                <div class="topic-card">
+                    <div class="topic-number">03</div>
+                    <h3>Продвинутый уровень</h3>
+                    <p>Сложные задачи, нестандартные подходы. Подготовка к олимпиадам и экзаменам.</p>
+                    <ul>
+                        <li>Комплексные задачи</li>
+                        <li>Нестандартные методы</li>
+                        <li>Оптимизация решений</li>
+                    </ul>
+                    <a href="lessons.html#module3" class="topic-link">Подробнее <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-box">
+                <h2>Готовы начать обучение?</h2>
+                <p>Присоединяйтесь к тысячам учеников, которые уже освоили этот предмет и добились успеха</p>
+                <a href="lessons.html" class="btn btn-large btn-primary">
+                    <i class="fas fa-rocket"></i>
+                    Перейти к урокам
+                </a>
+            </div>
+        </div>
+    </section>
+
     <footer class="footer">
-        <div class="container"><p>&copy; 2024 ${title}</p></div>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4><i class="fas fa-graduation-cap"></i> ${title}</h4>
+                    <p>Образовательный портал с подробными курсами и практическими материалами</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Разделы</h4>
+                    <ul>
+                        <li><a href="index.html">Главная</a></li>
+                        <li><a href="about.html">О курсе</a></li>
+                        <li><a href="lessons.html">Уроки</a></li>
+                        <li><a href="practice.html">Практика</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Контакты</h4>
+                    <p><i class="fas fa-envelope"></i> info@course.ru</p>
+                    <p><i class="fas fa-phone"></i> +7 (999) 123-45-67</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 ${title}. Все права защищены.</p>
+            </div>
+        </div>
     </footer>
+
+    <script src="main.js"></script>
 </body>
 </html>`;
+  }
 
-    files['about.html'] = `<!DOCTYPE html>
+  generateAboutPage(title, subject, grade) {
+    return `<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>О курсе | ${title}</title>
     <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <nav class="navbar">
         <div class="container nav-container">
-            <a href="index.html" class="nav-logo"><span>${title}</span></a>
+            <a href="index.html" class="nav-logo">
+                <i class="fas fa-graduation-cap"></i>
+                <span>${title}</span>
+            </a>
             <ul class="nav-menu">
-                <li><a href="index.html">Главная</a></li>
-                <li><a href="about.html" class="active">О курсе</a></li>
-                <li><a href="lessons.html">Уроки</a></li>
-                <li><a href="practice.html">Практика</a></li>
+                <li><a href="index.html" class="nav-link">Главная</a></li>
+                <li><a href="about.html" class="nav-link active">О курсе</a></li>
+                <li><a href="lessons.html" class="nav-link">Уроки</a></li>
+                <li><a href="practice.html" class="nav-link">Практика</a></li>
+                <li><a href="contact.html" class="nav-link">Контакты</a></li>
             </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
         </div>
     </nav>
+
     <header class="page-header">
-        <div class="container"><h1>О нашем курсе</h1></div>
+        <div class="container">
+            <h1>О нашем курсе</h1>
+            <p>Подробная информация о программе обучения и методике</p>
+        </div>
     </header>
+
     <main class="container">
         <section class="about-section">
-            <h2>Для кого этот курс?</h2>
-            <p>Курс для учеников ${grade || 'всех классов'} по предмету "${subject}"</p>
-            <ul class="feature-list">
-                <li>Освоить предмет с нуля</li>
-                <li>Подготовиться к контрольным</li>
-                <li>Углубить знания</li>
-            </ul>
+            <div class="about-grid">
+                <div class="about-content">
+                    <h2>Для кого этот курс?</h2>
+                    <p>Этот курс создан для учеников <strong>${grade || 'всех классов'}</strong>, которые хотят:</p>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-check"></i> Освоить предмет "${subject}" с нуля или углубить знания</li>
+                        <li><i class="fas fa-check"></i> Подготовиться к контрольным работам и экзаменам</li>
+                        <li><i class="fas fa-check"></i> Научиться решать задачи разной сложности</li>
+                        <li><i class="fas fa-check"></i> Получить системное образование по предмету</li>
+                    </ul>
+                    
+                    <h3 class="mt-4">Методика обучения</h3>
+                    <p>Наш курс построен на принципе "от простого к сложному". Каждый урок включает:</p>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-book"></i> Теоретический материал с примерами</li>
+                        <li><i class="fas fa-video"></i> Пошаговые объяснения решений</li>
+                        <li><i class="fas fa-tasks"></i> Практические упражнения</li>
+                        <li><i class="fas fa-check-double"></i> Самопроверку с разборами ошибок</li>
+                    </ul>
+                </div>
+                <div class="about-image">
+                    <div class="info-card highlight">
+                        <i class="fas fa-bullseye"></i>
+                        <h3>Наша цель</h3>
+                        <p>Сделать сложный материал понятным каждому ученику через структурированный подход и практику.</p>
+                    </div>
+                    <div class="info-card">
+                        <i class="fas fa-clock"></i>
+                        <h3>Длительность</h3>
+                        <p>50+ уроков, которые можно проходить в своём темпе</p>
+                    </div>
+                    <div class="info-card">
+                        <i class="fas fa-certificate"></i>
+                        <h3>Результат</h3>
+                        <p>Уверенное владение предметом и успех на экзаменах</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="program-section">
+            <h2 class="section-title">Структура программы</h2>
+            <div class="program-timeline">
+                <div class="timeline-item">
+                    <div class="timeline-marker">1</div>
+                    <div class="timeline-content">
+                        <h3>Базовый уровень</h3>
+                        <p>Фундаментальные понятия, определения, формулы. Создание прочной базы для дальнейшего обучения.</p>
+                        <span class="timeline-meta">15 уроков • 30 часов</span>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-marker">2</div>
+                    <div class="timeline-content">
+                        <h3>Средний уровень</h3>
+                        <p>Стандартные задачи, методы решения, типичные ошибки. Развитие навыков применения знаний.</p>
+                        <span class="timeline-meta">20 уроков • 40 часов</span>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-marker">3</div>
+                    <div class="timeline-content">
+                        <h3>Продвинутый уровень</h3>
+                        <p>Сложные задачи, нестандартные подходы, олимпиадные задания. Подготовка к высоким результатам.</p>
+                        <span class="timeline-meta">15 уроков • 30 часов</span>
+                    </div>
+                </div>
+            </div>
         </section>
     </main>
-    <footer class="footer"><p>&copy; 2024 ${title}</p></footer>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4><i class="fas fa-graduation-cap"></i> ${title}</h4>
+                    <p>Образовательный портал с подробными курсами</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Разделы</h4>
+                    <ul>
+                        <li><a href="index.html">Главная</a></li>
+                        <li><a href="about.html">О курсе</a></li>
+                        <li><a href="lessons.html">Уроки</a></li>
+                        <li><a href="practice.html">Практика</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 ${title}. Все права защищены.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="main.js"></script>
 </body>
 </html>`;
+  }
 
-    files['lessons.html'] = `<!DOCTYPE html>
+  generateLessonsPage(title, subject, grade) {
+    const lessons = [
+      { num: '1.1', title: 'Введение в курс', desc: 'Обзор программы, цели обучения, как эффективно использовать материалы курса', time: '20 мин' },
+      { num: '1.2', title: 'Основные термины', desc: 'Ключевые определения и понятия, которые нужно знать', time: '30 мин' },
+      { num: '1.3', title: 'Базовые принципы', desc: 'Фундаментальные законы и правила предмета', time: '35 мин' },
+      { num: '2.1', title: 'Первый модуль - практика', desc: 'Решение типовых задач базового уровня', time: '40 мин' },
+      { num: '2.2', title: 'Методы решения', desc: 'Алгоритмы и подходы к решению стандартных задач', time: '45 мин' },
+      { num: '3.1', title: 'Углублённое изучение', desc: 'Сложные темы и продвинутые концепции', time: '50 мин' },
+      { num: '3.2', title: 'Комплексные задачи', desc: 'Задачи, требующие применения нескольких методов', time: '55 мин' }
+    ];
+
+    return `<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Уроки | ${title}</title>
     <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <nav class="navbar">
         <div class="container nav-container">
-            <a href="index.html" class="nav-logo"><span>${title}</span></a>
+            <a href="index.html" class="nav-logo">
+                <i class="fas fa-graduation-cap"></i>
+                <span>${title}</span>
+            </a>
             <ul class="nav-menu">
-                <li><a href="index.html">Главная</a></li>
-                <li><a href="about.html">О курсе</a></li>
-                <li><a href="lessons.html" class="active">Уроки</a></li>
-                <li><a href="practice.html">Практика</a></li>
+                <li><a href="index.html" class="nav-link">Главная</a></li>
+                <li><a href="about.html" class="nav-link">О курсе</a></li>
+                <li><a href="lessons.html" class="nav-link active">Уроки</a></li>
+                <li><a href="practice.html" class="nav-link">Практика</a></li>
+                <li><a href="contact.html" class="nav-link">Контакты</a></li>
             </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
         </div>
     </nav>
+
     <header class="page-header">
-        <div class="container"><h1>Уроки курса</h1></div>
+        <div class="container">
+            <h1>Учебные материалы</h1>
+            <p>Полный список уроков с подробными объяснениями и примерами</p>
+        </div>
     </header>
+
     <main class="container">
-        <div class="lessons-list">
-            <div class="lesson-card">
-                <div class="lesson-number">1</div>
-                <div class="lesson-info">
-                    <h3>Введение в ${subject}</h3>
-                    <p>Основные понятия и определения</p>
+        <div class="lessons-layout">
+            <aside class="lessons-sidebar">
+                <h3>Модули курса</h3>
+                <ul class="modules-list">
+                    <li><a href="#module1" class="module-link active">Модуль 1: Введение</a></li>
+                    <li><a href="#module2" class="module-link">Модуль 2: Основы</a></li>
+                    <li><a href="#module3" class="module-link">Модуль 3: Продвинутые темы</a></li>
+                </ul>
+                <div class="progress-widget">
+                    <h4>Ваш прогресс</h4>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                    </div>
+                    <p>0 из ${lessons.length} уроков пройдено</p>
                 </div>
-            </div>
-            <div class="lesson-card">
-                <div class="lesson-number">2</div>
-                <div class="lesson-info">
-                    <h3>Базовые принципы</h3>
-                    <p>Фундаментальные концепции</p>
-                </div>
+            </aside>
+
+            <div class="lessons-content">
+                <section id="module1" class="module-section">
+                    <h2 class="module-title">Модуль 1: Введение в ${subject}</h2>
+                    ${lessons.slice(0, 3).map(l => `
+                    <div class="lesson-card">
+                        <div class="lesson-number">${l.num}</div>
+                        <div class="lesson-info">
+                            <h3>${l.title}</h3>
+                            <p class="lesson-desc">${l.desc}</p>
+                            <div class="lesson-meta">
+                                <span><i class="fas fa-clock"></i> ${l.time}</span>
+                                <span><i class="fas fa-signal"></i> Начальный уровень</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-small btn-primary">Начать</button>
+                    </div>
+                    `).join('')}
+                </section>
+
+                <section id="module2" class="module-section">
+                    <h2 class="module-title">Модуль 2: Основные темы</h2>
+                    ${lessons.slice(3, 5).map(l => `
+                    <div class="lesson-card">
+                        <div class="lesson-number">${l.num}</div>
+                        <div class="lesson-info">
+                            <h3>${l.title}</h3>
+                            <p class="lesson-desc">${l.desc}</p>
+                            <div class="lesson-meta">
+                                <span><i class="fas fa-clock"></i> ${l.time}</span>
+                                <span><i class="fas fa-signal"></i> Средний уровень</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-small btn-primary">Начать</button>
+                    </div>
+                    `).join('')}
+                </section>
+
+                <section id="module3" class="module-section">
+                    <h2 class="module-title">Модуль 3: Продвинутый уровень</h2>
+                    ${lessons.slice(5).map(l => `
+                    <div class="lesson-card">
+                        <div class="lesson-number">${l.num}</div>
+                        <div class="lesson-info">
+                            <h3>${l.title}</h3>
+                            <p class="lesson-desc">${l.desc}</p>
+                            <div class="lesson-meta">
+                                <span><i class="fas fa-clock"></i> ${l.time}</span>
+                                <span><i class="fas fa-signal"></i> Продвинутый</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-small btn-primary">Начать</button>
+                    </div>
+                    `).join('')}
+                </section>
             </div>
         </div>
     </main>
-    <footer class="footer"><p>&copy; 2024 ${title}</p></footer>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4><i class="fas fa-graduation-cap"></i> ${title}</h4>
+                    <p>Образовательный портал</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Разделы</h4>
+                    <ul>
+                        <li><a href="index.html">Главная</a></li>
+                        <li><a href="lessons.html">Уроки</a></li>
+                        <li><a href="practice.html">Практика</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 ${title}. Все права защищены.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="main.js"></script>
 </body>
 </html>`;
+  }
 
-    files['practice.html'] = `<!DOCTYPE html>
+  generatePracticePage(title, subject) {
+    return `<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Практика | ${title}</title>
     <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <nav class="navbar">
         <div class="container nav-container">
-            <a href="index.html" class="nav-logo"><span>${title}</span></a>
+            <a href="index.html" class="nav-logo">
+                <i class="fas fa-graduation-cap"></i>
+                <span>${title}</span>
+            </a>
             <ul class="nav-menu">
-                <li><a href="index.html">Главная</a></li>
-                <li><a href="about.html">О курсе</a></li>
-                <li><a href="lessons.html">Уроки</a></li>
-                <li><a href="practice.html" class="active">Практика</a></li>
+                <li><a href="index.html" class="nav-link">Главная</a></li>
+                <li><a href="about.html" class="nav-link">О курсе</a></li>
+                <li><a href="lessons.html" class="nav-link">Уроки</a></li>
+                <li><a href="practice.html" class="nav-link active">Практика</a></li>
+                <li><a href="contact.html" class="nav-link">Контакты</a></li>
             </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
         </div>
     </nav>
+
     <header class="page-header">
-        <div class="container"><h1>Практические задания</h1></div>
-    </header>
-    <main class="container">
-        <div class="practice-cards">
-            <div class="practice-card"><h3>Упражнения</h3><p>Закрепление материала</p></div>
-            <div class="practice-card"><h3>Тесты</h3><p>Проверка знаний</p></div>
+        <div class="container">
+            <h1>Практические задания</h1>
+            <p>Закрепите знания на практике с пошаговыми решениями</p>
         </div>
+    </header>
+
+    <main class="container">
+        <div class="practice-sections">
+            <div class="practice-card">
+                <div class="practice-icon"><i class="fas fa-pencil-alt"></i></div>
+                <h3>Тренировочные упражнения</h3>
+                <p>Базовые задания для закрепления материала каждого урока с подробными решениями</p>
+                <a href="#" class="btn btn-primary">Начать тренировку</a>
+            </div>
+            <div class="practice-card">
+                <div class="practice-icon"><i class="fas fa-tasks"></i></div>
+                <h3>Контрольные работы</h3>
+                <p>Проверьте свои знания комплексными заданиями по темам с самопроверкой</p>
+                <a href="#" class="btn btn-primary">Пройти тест</a>
+            </div>
+            <div class="practice-card">
+                <div class="practice-icon"><i class="fas fa-trophy"></i></div>
+                <h3>Олимпиадные задачи</h3>
+                <p>Сложные задания для подготовки к олимпиадам и конкурсам</p>
+                <a href="#" class="btn btn-primary">Попробовать</a>
+            </div>
+        </div>
+
+        <section class="examples-section">
+            <h2>Примеры решения задач</h2>
+            <div class="example-box">
+                <h3>Пример 1: Базовая задача</h3>
+                <div class="example-problem">
+                    <strong>Условие:</strong> Разберём типовую задачу с подробным объяснением каждого шага решения.
+                </div>
+                <div class="example-solution">
+                    <strong>Решение:</strong>
+                    <ol>
+                        <li><strong>Анализ условия:</strong> Внимательно прочитаем задачу и выделим известные данные</li>
+                        <li><strong>Выбор метода:</strong> Определим, какой подход лучше всего подходит</li>
+                        <li>< <li><strong>Применение формул:</strong> Подставим значения и выполним вычисления</li>
+                        <li><strong>Проверка:</strong> Убедимся, что ответ логичен и соответствует условию</li>
+                    </ol>
+                </div>
+                <div class="example-answer">
+                    <strong>Ответ:</strong> Полученный результат с пояснением
+                </div>
+            </div>
+        </section>
     </main>
-    <footer class="footer"><p>&copy; 2024 ${title}</p></footer>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2024 ${title}. Все права защищены.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="main.js"></script>
 </body>
 </html>`;
+  }
 
-    files['styles.css'] = `* { margin: 0; padding: 0; box-sizing: border-box; }
-:root { --primary: #6366f1; --secondary: #8b5cf6; --text: #1e293b; --bg: #ffffff; --shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-body { font-family: 'Inter', sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); }
-.container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
-.navbar { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 16px 0; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
-.nav-container { display: flex; justify-content: space-between; align-items: center; }
-.nav-logo { color: white; text-decoration: none; font-weight: 700; font-size: 1.25rem; }
-.nav-menu { display: flex; list-style: none; gap: 32px; }
-.nav-menu a { color: white; text-decoration: none; font-weight: 500; }
-.nav-menu a.active { border-bottom: 2px solid white; }
-.hero { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 100px 0; text-align: center; }
-.hero h1 { font-size: 3rem; font-weight: 700; margin-bottom: 16px; }
-.hero-subtitle { font-size: 1.5rem; margin-bottom: 16px; }
-.hero-description { font-size: 1.125rem; opacity: 0.9; margin-bottom: 32px; }
-.hero-buttons { display: flex; gap: 16px; justify-content: center; }
-.btn { display: inline-block; padding: 14px 28px; border-radius: 8px; font-weight: 600; text-decoration: none; }
-.btn-primary { background: white; color: var(--primary); }
-.btn-secondary { background: transparent; color: white; border: 2px solid white; }
-.page-header { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 60px 0; text-align: center; }
-.page-header h1 { font-size: 2.5rem; }
-.section { padding: 80px 0; }
-.section-title { font-size: 2rem; text-align: center; margin-bottom: 48px; }
-.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 32px; }
-.feature-box { background: white; padding: 32px; border-radius: 16px; box-shadow: var(--shadow); text-align: center; }
-.lessons-list { display: flex; flex-direction: column; gap: 20px; padding: 48px 0; }
-.lesson-card { background: white; padding: 24px; border-radius: 12px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 24px; }
-.lesson-number { width: 56px; height: 56px; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.25rem; }
-.practice-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 32px; padding: 48px 0; }
-.practice-card { background: white; padding: 40px; border-radius: 16px; box-shadow: var(--shadow); text-align: center; }
-.footer { background: var(--text); color: white; padding: 32px 0; text-align: center; margin-top: 60px; }
-.about-section { padding: 48px 0; }
-.feature-list { list-style: none; margin-top: 24px; }
-.feature-list li { padding: 12px 0; border-bottom: 1px solid #e2e8f0; }
-@media (max-width: 768px) { 
-    .hero h1 { font-size: 2rem; } 
-    .nav-menu { display: none; } 
-    .hero-buttons { flex-direction: column; align-items: center; } 
-    .lesson-card { flex-direction: column; text-align: center; } 
-}`;
+  generateContactPage(title) {
+    return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Контакты | ${title}</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="index.html" class="nav-logo">
+                <i class="fas fa-graduation-cap"></i>
+                <span>${title}</span>
+            </a>
+            <ul class="nav-menu">
+                <li><a href="index.html" class="nav-link">Главная</a></li>
+                <li><a href="about.html" class="nav-link">О курсе</a></li>
+                <li><a href="lessons.html" class="nav-link">Уроки</a></li>
+                <li><a href="practice.html" class="nav-link">Практика</a></li>
+                <li><a href="contact.html" class="nav-link active">Контакты</a></li>
+            </ul>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </div>
+    </nav>
 
-    for (const [filename, content] of Object.entries(files)) {
-        const filepath = path.join(project.path, filename);
-        fs.writeFileSync(filepath, content);
-        project.files.push(filename);
+    <header class="page-header">
+        <div class="container">
+            <h1>Свяжитесь с нами</h1>
+            <p>Есть вопросы? Мы всегда рады помочь!</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="contact-grid">
+            <div class="contact-info">
+                <h2>Контактная информация</h2>
+                <div class="contact-item">
+                    <i class="fas fa-envelope"></i>
+                    <div>
+                        <h4>Email</h4>
+                        <p>info@course.ru</p>
+                    </div>
+                </div>
+                <div class="contact-item">
+                    <i class="fas fa-phone"></i>
+                    <div>
+                        <h4>Телефон</h4>
+                        <p>+7 (999) 123-45-67</p>
+                    </div>
+                </div>
+                <div class="contact-item">
+                    <i class="fas fa-clock"></i>
+                    <div>
+                        <h4>Часы работы</h4>
+                        <p>Пн-Пт: 9:00 - 18:00</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="contact-form-wrapper">
+                <h2>Напишите нам</h2>
+                <form class="contact-form" id="contactForm">
+                    <div class="form-group">
+                        <label>Ваше имя</label>
+                        <input type="text" placeholder="Введите имя" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" placeholder="your@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Сообщение</label>
+                        <textarea placeholder="Ваш вопрос или сообщение..." rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-large">
+                        <i class="fas fa-paper-plane"></i>
+                        Отправить сообщение
+                    </button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4><i class="fas fa-graduation-cap"></i> ${title}</h4>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 ${title}. Все права защищены.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="main.js"></script>
+</body>
+</html>`;
+  }
+
+  generateStyles() {
+    return `/* Modern Educational Website Styles */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --primary: #6366f1;
+    --primary-dark: #4f46e5;
+    --secondary: #8b5cf6;
+    --accent: #ec4899;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --bg: #ffffff;
+    --bg-alt: #f8fafc;
+    --text: #1e293b;
+    --text-light: #64748b;
+    --border: #e2e8f0;
+    --shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--bg);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+/* Navigation */
+.navbar {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    padding: 16px 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: var(--shadow-lg);
+}
+
+.nav-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-logo {
+    color: white;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nav-logo i {
+    font-size: 1.5rem;
+}
+
+.nav-menu {
+    display: flex;
+    list-style: none;
+    gap: 32px;
+}
+
+.nav-menu a {
+    color: white;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 8px 0;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.nav-menu a::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: white;
+    transition: width 0.2s;
+}
+
+.nav-menu a:hover::after,
+.nav-menu a.active::after {
+    width: 100%;
+}
+
+.hamburger {
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    cursor: pointer;
+}
+
+.bar {
+    width: 25px;
+    height: 3px;
+    background: white;
+    border-radius: 3px;
+}
+
+/* Hero Section */
+.hero {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    padding: 80px 0 120px;
+    text-align: center;
+    position: relative;
+}
+
+.hero-title {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.hero-subtitle {
+    font-size: 1.5rem;
+    margin-bottom: 16px;
+    opacity: 0.9;
+}
+
+.hero-description {
+    font-size: 1.125rem;
+    opacity: 0.9;
+    max-width: 600px;
+    margin: 0 auto 32px;
+}
+
+.hero-buttons {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-bottom: 40px;
+}
+
+.hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+}
+
+.stat {
+    text-align: center;
+}
+
+.stat-number {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.stat-label {
+    opacity: 0.8;
+}
+
+.hero-wave {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    line-height: 0;
+}
+
+.hero-wave svg {
+    display: block;
+    width: 100%;
+    height: 60px;
+}
+
+/* Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 28px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    font-size: 1rem;
+}
+
+.btn-primary {
+    background: white;
+    color: var(--primary);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-secondary {
+    background: transparent;
+    color: white;
+    border: 2px solid white;
+}
+
+.btn-secondary:hover {
+    background: white;
+    color: var(--primary);
+}
+
+.btn-small {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+}
+
+.btn-large {
+    padding: 16px 32px;
+    font-size: 1.1rem;
+}
+
+/* Sections */
+.section {
+    padding: 80px 0;
+}
+
+.section-title {
+    font-size: 2.25rem;
+    text-align: center;
+    margin-bottom: 48px;
+    font-weight: 700;
+}
+
+/* Features */
+.features-section {
+    padding: 60px 0 80px;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 32px;
+}
+
+.feature-box {
+    background: white;
+    padding: 32px;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    text-align: center;
+    transition: transform 0.2s;
+}
+
+.feature-box:hover {
+    transform: translateY(-4px);
+}
+
+.feature-icon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.feature-box h3 {
+    margin-bottom: 12px;
+    font-size: 1.25rem;
+}
+
+.feature-box p {
+    color: var(--text-light);
+    line-height: 1.6;
+}
+
+/* Topics Preview */
+.preview-section {
+    background: var(--bg-alt);
+    padding: 80px 0;
+}
+
+.topics-preview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 32px;
+}
+
+.topic-card {
+    background: white;
+    padding: 32px;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+}
+
+.topic-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    opacity: 0.5;
+    margin-bottom: 16px;
+}
+
+.topic-card h3 {
+    font-size: 1.25rem;
+    margin-bottom: 12px;
+}
+
+.topic-card p {
+    color: var(--text-light);
+    margin-bottom: 16px;
+}
+
+.topic-card ul {
+    list-style: none;
+    margin-bottom: 20px;
+}
+
+.topic-card li {
+    padding: 8px 0;
+    padding-left: 24px;
+    position: relative;
+    color: var(--text-light);
+}
+
+.topic-card li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--success);
+    font-weight: bold;
+}
+
+.topic-link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* CTA Section */
+.cta-section {
+    padding: 60px 0;
+}
+
+.cta-box {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    padding: 48px;
+    border-radius: 24px;
+    text-align: center;
+}
+
+.cta-box h2 {
+    font-size: 2rem;
+    margin-bottom: 16px;
+}
+
+.cta-box p {
+    opacity: 0.9;
+    margin-bottom: 24px;
+}
+
+/* Page Header */
+.page-header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    color: white;
+    padding: 60px 0 80px;
+    text-align: center;
+    position: relative;
+}
+
+.page-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.page-header p {
+    opacity: 0.9;
+    font-size: 1.1rem;
+}
+
+/* About Section */
+.about-section {
+    padding: 60px 0;
+}
+
+.about-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: start;
+}
+
+.about-content h2 {
+    font-size: 1.75rem;
+    margin-bottom: 20px;
+}
+
+.about-content h3 {
+    font-size: 1.25rem;
+    margin: 32px 0 16px;
+}
+
+.feature-list {
+    list-style: none;
+}
+
+.feature-list li {
+    padding: 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.feature-list i {
+    color: var(--success);
+}
+
+.info-card {
+    background: white;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    margin-bottom: 24px;
+}
+
+.info-card.highlight {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+}
+
+.info-card i {
+    font-size: 2rem;
+    color: var(--primary);
+    margin-bottom: 12px;
+}
+
+.info-card.highlight i {
+    color: white;
+}
+
+.info-card h3 {
+    margin-bottom: 8px;
+}
+
+.info-card p {
+    color: var(--text-light);
+    font-size: 0.95rem;
+}
+
+.info-card.highlight p {
+    color: rgba(255,255,255,0.9);
+}
+
+/* Program Timeline */
+.program-section {
+    padding: 60px 0;
+}
+
+.program-timeline {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.timeline-item {
+    display: flex;
+    gap: 24px;
+    padding: 24px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.timeline-marker {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.timeline-content h3 {
+    margin-bottom: 8px;
+}
+
+.timeline-content p {
+    color: var(--text-light);
+    margin-bottom: 8px;
+}
+
+.timeline-meta {
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* Lessons Layout */
+.lessons-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 32px;
+    padding: 40px 0;
+}
+
+.lessons-sidebar {
+    position: sticky;
+    top: 100px;
+    height: fit-content;
+}
+
+.lessons-sidebar h3 {
+    margin-bottom: 16px;
+    font-size: 1.1rem;
+}
+
+.modules-list {
+    list-style: none;
+    margin-bottom: 24px;
+}
+
+.modules-list li {
+    margin-bottom: 8px;
+}
+
+.module-link {
+    display: block;
+    padding: 12px 16px;
+    text-decoration: none;
+    color: var(--text);
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.module-link:hover,
+.module-link.active {
+    background: var(--bg-alt);
+    color: var(--primary);
+}
+
+.progress-widget {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+}
+
+.progress-widget h4 {
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+}
+
+.progress-bar {
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    border-radius: 4px;
+    transition: width 0.3s;
+}
+
+.progress-widget p {
+    color: var(--text-light);
+    font-size: 0.85rem;
+}
+
+.module-section {
+    margin-bottom: 40px;
+}
+
+.module-title {
+    font-size: 1.5rem;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border);
+}
+
+.lesson-card {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 16px;
+    transition: transform 0.2s;
+}
+
+.lesson-card:hover {
+    transform: translateX(4px);
+}
+
+.lesson-number {
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.lesson-info {
+    flex: 1;
+}
+
+.lesson-info h3 {
+    margin-bottom: 6px;
+}
+
+.lesson-desc {
+    color: var(--text-light);
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+}
+
+.lesson-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+.lesson-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Practice Section */
+.practice-sections {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 32px;
+    padding: 40px 0;
+}
+
+.practice-card {
+    background: white;
+    padding: 40px;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    text-align: center;
+}
+
+.practice-icon {
+    width: 72px;
+    height: 72px;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    color: white;
+    font-size: 2rem;
+}
+
+.practice-card h3 {
+    margin-bottom: 12px;
+}
+
+.practice-card p {
+    color: var(--text-light);
+    margin-bottom: 20px;
+}
+
+/* Examples */
+.examples-section {
+    padding: 40px 0;
+}
+
+.examples-section h2 {
+    margin-bottom: 24px;
+}
+
+.example-box {
+    background: white;
+    padding: 32px;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+}
+
+.example-box h3 {
+    margin-bottom: 20px;
+    color: var(--primary);
+}
+
+.example-problem,
+.example-solution,
+.example-answer {
+    margin-bottom: 20px;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.example-problem {
+    background: var(--bg-alt);
+}
+
+.example-solution {
+    background: #eff6ff;
+}
+
+.example-solution ol {
+    margin-left: 20px;
+}
+
+.example-solution li {
+    margin-bottom: 8px;
+    padding-left: 8px;
+}
+
+.example-answer {
+    background: #f0fdf4;
+    border-left: 4px solid var(--success);
+}
+
+/* Contact */
+.contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    padding: 40px 0;
+}
+
+.contact-info h2,
+.contact-form-wrapper h2 {
+    margin-bottom: 24px;
+}
+
+.contact-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 0;
+}
+
+.contact-item i {
+    width: 48px;
+    height: 48px;
+    background: var(--bg-alt);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    font-size: 1.25rem;
+}
+
+.contact-item h4 {
+    margin-bottom: 4px;
+}
+
+.contact-item p {
+    color: var(--text-light);
+}
+
+.contact-form {
+    background: white;
+    padding: 32px;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* Footer */
+.footer {
+    background: var(--text);
+    color: white;
+    padding: 48px 0 24px;
+    margin-top: 80px;
+}
+
+.footer-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 32px;
+    margin-bottom: 32px;
+}
+
+.footer-section h4 {
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.footer-section ul {
+    list-style: none;
+}
+
+.footer-section li {
+    margin-bottom: 8px;
+}
+
+.footer-section a {
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.footer-section a:hover {
+    color: white;
+}
+
+.footer-section p {
+    color: rgba(255,255,255,0.7);
+}
+
+.footer-bottom {
+    text-align: center;
+    padding-top: 24px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.5);
+}
+
+/* Utilities */
+.mt-4 { margin-top: 32px; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .nav-menu {
+        display: none;
     }
+    
+    .hamburger {
+        display: flex;
+    }
+    
+    .hero-title {
+        font-size: 2rem;
+    }
+    
+    .hero-stats {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .hero-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .about-grid,
+    .contact-grid,
+    .lessons-layout {
+        grid-template-columns: 1fr;
+    }
+    
+    .lessons-sidebar {
+        position: static;
+    }
+    
+    .lesson-card {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .timeline-item {
+        flex-direction: column;
+    }
+    
+    .section-title {
+        font-size: 1.75rem;
+    }
+}`;
+  }
+
+  generateJavaScript() {
+    return `// Main JavaScript for Educational Website
+
+// Mobile menu toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const hamburger = document.querySelector('.hamburger');
+    const navMenu = document.querySelector('.nav-menu');
+    
+    if (hamburger) {
+        hamburger.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
+            hamburger.classList.toggle('active');
+        });
+    }
+
+    // Smooth scrolling for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+
+    // Contact form handling
+    const contactForm = document.getElementById('contactForm');
+    if (contactForm) {
+        contactForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Show success message
+            const btn = this.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> Сообщение отправлено!';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                this.reset();
+            }, 3000);
+        });
+    }
+
+    // Module navigation in lessons
+    const moduleLinks = document.querySelectorAll('.module-link');
+    moduleLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            moduleLinks.forEach(l => l.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+
+    // Animate elements on scroll
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('animate-in');
+            }
+        });
+    }, observerOptions);
+
+    // Observe elements
+    document.querySelectorAll('.feature-box, .topic-card, .lesson-card').forEach(el => {
+        observer.observe(el);
+    });
+
+    // Progress bar animation (demo)
+    const progressFill = document.querySelector('.progress-fill');
+    if (progressFill) {
+        setTimeout(() => {
+            progressFill.style.width = '0%';
+        }, 500);
+    }
+
+    console.log('🎓 Educational website loaded successfully!');
+});`;
   }
 
   async generateAndroidProject(project, description) {
