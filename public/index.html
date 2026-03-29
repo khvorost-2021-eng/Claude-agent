@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Dev Agent - AI App Builder</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🧠 Claude Dev Agent</h1>
+      <p>AI-агент для создания приложений и публикации в Google Play</p>
+    </header>
+
+    <main>
+      <section class="chat-section">
+        <div class="chat-header">
+          <h2>💬 Чат с агентом</h2>
+          <span class="status" id="status">● Офлайн</span>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+          <div class="message bot">
+            <div class="message-content">
+              Привет! Я Claude Dev Agent. Я могу:
+              <ul>
+                <li>Создавать Android приложения</li>
+                <li>Создавать веб-сайты</li>
+                <li>Собирать APK и AAB файлы</li>
+                <li>Публиковать приложения в Google Play</li>
+              </ul>
+              Что хотите создать?
+            </div>
+          </div>
+        </div>
+        
+        <div class="chat-input">
+          <input type="text" id="messageInput" placeholder="Опишите приложение или сайт..." autocomplete="off">
+          <button id="sendBtn">Отправить</button>
+        </div>
+      </section>
+
+      <section class="projects-section">
+        <h2>📁 Проекты</h2>
+        <div class="projects-list" id="projectsList">
+          <div class="empty">Нет активных проектов</div>
+        </div>
+      </section>
+
+      <section class="actions-section">
+        <h2>⚡ Быстрые действия</h2>
+        <div class="action-buttons">
+          <button class="action-btn" data-action="android">
+            📱 Создать Android приложение
+          </button>
+          <button class="action-btn" data-action="web">
+            🌐 Создать веб-сайт
+          </button>
+          <button class="action-btn" data-action="build">
+            🔨 Собрать проект
+          </button>
+          <button class="action-btn" data-action="publish">
+            🚀 Опубликовать в Google Play
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <div class="modal" id="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3 id="modalTitle">Заголовок</h3>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
