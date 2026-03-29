@@ -212,14 +212,27 @@ function parseIntent(message) {
     return { type: 'status' };
   }
   
-  // Default fallback - try to guess from context
-  if (lower.startsWith('создай') || lower.startsWith('сделай') || lower.startsWith('сгенерируй') || lower.startsWith('generate') || lower.startsWith('create') || lower.startsWith('make')) {
-    // If contains education/content keywords, assume website
-    if (lower.includes('курс') || lower.includes('урок') || lower.includes('школа') || lower.includes('математика') || lower.includes('физика') || lower.includes('английский') || lower.includes('обучение')) {
-      return { type: 'create_website', description: message };
-    }
-    // Default to website for ambiguous creation requests
-    return { type: 'create_website', description: message };
+  // Feedback / Issue patterns
+  const feedbackPatterns = [
+    'не работает', 'баг', 'ошибка', 'проблема', 'исправь', 'почини', 
+    'не запускается', 'не открывается', 'сломалось', 'bug', 'error', 'fix',
+    'кнопка', 'не нажимается', 'не отвечает', 'зависло'
+  ];
+  
+  // Check for feedback/issue intent
+  if (feedbackPatterns.some(pattern => lower.includes(pattern))) {
+    return { type: 'feedback', description: message };
+  }
+  
+  // Help patterns
+  if (lower.includes('помощь') || lower.includes('help') || lower.includes('?') || lower.includes('как') || lower.includes('что делать')) {
+    return { type: 'help', description: message };
+  }
+  
+  // Chat/Conversation patterns - any question or statement that's not a command
+  if (lower.length > 0) {
+    // Treat any remaining input as a conversation/chat
+    return { type: 'chat', description: message };
   }
   
   return { type: 'unknown' };
@@ -242,6 +255,50 @@ async function handleCreateWebsite(intent, agent) {
     content: `Создан новый веб-проект: ${project.name}`,
     projectId: project.id,
     actions: ['download', 'deploy']
+  };
+}
+
+async function handleChat(intent, agent) {
+  // Use AI to generate a conversational response
+  const response = await agent.generateResponse(intent.description);
+  return {
+    type: 'chat_response',
+    content: response || 'Я вас понял! Чем ещё могу помочь?'
+  };
+}
+
+async function handleFeedback(intent, agent) {
+  // Log the feedback for analysis
+  console.log('User feedback/issue:', intent.description);
+  
+  // Generate a helpful response
+  const response = await agent.generateResponse(`Пользователь сообщает о проблеме: ${intent.description}. Предложи решение.`);
+  
+  return {
+    type: 'feedback_received',
+    content: response || 'Спасибо за сообщение! Я записал эту проблему и постараюсь её решить. Попробуйте перезагрузить страницу или создать новый проект.'
+  };
+}
+
+function handleHelp(agent) {
+  return {
+    type: 'help',
+    content: `Я Claude Dev Agent — ваш AI-помощник в разработке!
+
+**Что я умею:**
+🌐 **Создавать веб-сайты** — напишите "создай сайт про..."
+📱 **Создавать Android приложения** — напишите "создай приложение..."
+📊 **Показывать проекты** — напишите "статус" или "проекты"
+🔧 **Помогать с проблемами** — просто опишите что не работает
+
+**Примеры команд:**
+- "создай сайт курс по математике"
+- "сделай приложение для заметок"
+- "не работает кнопка" (опишите проблему)
+- "что ты умеешь?"
+
+Что хотите создать?`,
+    actions: ['create_website', 'create_app']
   };
 }
 
@@ -343,10 +400,36 @@ wss.on('connection', (ws) => {
         }));
         break;
             
+          case 'chat':
+            const chatResponse = await handleChat(intent, agent);
+            ws.send(JSON.stringify({ 
+              type: 'chat', 
+              content: chatResponse.content 
+            }));
+            break;
+            
+          case 'feedback':
+            const feedbackResponse = await handleFeedback(intent, agent);
+            ws.send(JSON.stringify({ 
+              type: 'chat', 
+              content: feedbackResponse.content 
+            }));
+            break;
+            
+          case 'help':
+            const helpResponse = handleHelp(agent);
+            ws.send(JSON.stringify({ 
+              type: 'chat', 
+              content: helpResponse.content 
+            }));
+            break;
+            
           default:
-            ws.send(JSON.stringify({
-              type: 'error',
-              content: 'Неизвестная команда. Попробуйте: создать Android приложение или веб-сайт'
+            // Treat anything else as a chat message
+            const defaultResponse = await handleChat(intent, agent);
+            ws.send(JSON.stringify({ 
+              type: 'chat', 
+              content: defaultResponse.content 
             }));
         }
       } catch (error) {

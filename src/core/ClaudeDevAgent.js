@@ -284,6 +284,32 @@ For educational websites:
 Always deliver production-quality code that exceeds expectations.`;
   }
 
+  async generateResponse(message) {
+    // Generate a conversational response using AI
+    if (this.apiKey) {
+      const prompt = `Ответь на сообщение пользователя кратко и по существу: "${message}"`;
+      let result;
+      if (this.provider === 'openrouter') {
+        result = await this.generateCodeOpenRouter(prompt, { type: 'chat' });
+      } else {
+        result = await this.generateCodeAnthropic(prompt, { type: 'chat' });
+      }
+      if (result && !result.startsWith('Error:')) {
+        return result;
+      }
+    }
+    
+    // Fallback responses
+    const fallbacks = [
+      'Я вас понял! Чем ещё могу помочь?',
+      'Интересно! Расскажите подробнее.',
+      'Понял вас. Что бы вы хотели сделать дальше?',
+      'Я готов помочь! Напишите "помощь" чтобы узнать что я умею.',
+      'Принято! Чем ещё могу быть полезен?'
+    ];
+    return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+  }
+
   async createProject(name, description, type = 'web') {
     const projectId = Date.now().toString(36) + Math.random().toString(36).substr(2);
     const projectPath = path.join(this.projectsDir, projectId);
@@ -384,6 +410,7 @@ Always deliver production-quality code that exceeds expectations.`;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${title}</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -569,6 +596,7 @@ Always deliver production-quality code that exceeds expectations.`;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>О курсе | ${title}</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -720,6 +748,7 @@ Always deliver production-quality code that exceeds expectations.`;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Уроки | ${title}</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -863,6 +892,7 @@ Always deliver production-quality code that exceeds expectations.`;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Практика | ${title}</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -961,6 +991,7 @@ Always deliver production-quality code that exceeds expectations.`;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Контакты | ${title}</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
