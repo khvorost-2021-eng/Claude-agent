@@ -2402,15 +2402,48 @@ Format each file with path and content. Use markdown code blocks with file paths
 
   parseFilesFromResponse(content) {
     const files = {};
-    const pattern = /([\w\-]+\.(?:html|css|js))\s*\n?```(?:\w+)?\n?([\s\S]*?)```/gi;
-    let match;
+    console.log('Parsing AI response, length:', content.length);
+    console.log('Response preview:', content.substring(0, 200));
     
-    while ((match = pattern.exec(content)) !== null) {
-      const filename = match[1].trim();
-      const fileContent = match[2].trim();
-      files[filename] = fileContent;
+    // Try multiple patterns to extract files
+    const patterns = [
+      // Pattern 1: filename.ext\n```lang\ncontent\n```
+      /([\w\-]+\.(?:html|css|js))\s*\n?```[\w]*\n?([\s\S]*?)```/gi,
+      // Pattern 2: ```lang:filename.ext\ncontent\n```
+      /```[\w]*:(.+?\.(?:html|css|js))\n([\s\S]*?)```/gi,
+      // Pattern 3: ### filename.ext\n```\ncontent\n```
+      /###?\s*([\w\-]+\.(?:html|css|js))\s*\n?```[\w]*\n?([\s\S]*?)```/gi,
+    ];
+    
+    for (const pattern of patterns) {
+      let match;
+      while ((match = pattern.exec(content)) !== null) {
+        const filename = match[1].trim();
+        const fileContent = match[2].trim();
+        if (filename && fileContent && !files[filename]) {
+          files[filename] = fileContent;
+          console.log('Extracted file:', filename, 'size:', fileContent.length);
+        }
+      }
     }
     
+    // Fallback: if no files found, try to extract based on markdown headers
+    if (Object.keys(files).length === 0) {
+      const headerPattern = /##?\s*([\w\-]+\.(?:html|css|js))\s*\n([\s\S]*?)(?=##?\s*[\w\-]+\.(?:html|css|js)|$)/gi;
+      let match;
+      while ((match = headerPattern.exec(content)) !== null) {
+        const filename = match[1].trim();
+        let fileContent = match[2].trim();
+        // Remove code block markers if present
+        fileContent = fileContent.replace(/^```[\w]*\n?/, '').replace(/```$/, '');
+        if (filename && fileContent && !files[filename]) {
+          files[filename] = fileContent;
+          console.log('Extracted file via header:', filename);
+        }
+      }
+    }
+    
+    console.log('Total files extracted:', Object.keys(files).length);
     return files;
   }
 }
