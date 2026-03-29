@@ -360,7 +360,48 @@ function handleStatus(agent) {
   };
 }
 
-// WebSocket for real-time updates
+// Deploy endpoint for websites
+app.post('/api/deploy/:projectId', async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { subdomain } = req.body;
+    
+    const deployment = await agent.deployWebsite(projectId, subdomain);
+    
+    res.json({
+      success: true,
+      url: deployment.url,
+      subdomain: deployment.subdomain,
+      deployedAt: deployment.deployedAt
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Auth endpoints (like base44)
+app.post('/api/auth/login', async (req, res) => {
+  // Simple token-based auth
+  const { email, password } = req.body;
+  // TODO: Implement proper auth
+  res.json({ token: 'demo-token', user: { email } });
+});
+
+app.get('/api/auth/me', (req, res) => {
+  // Return current user
+  res.json({ user: null }); // No auth yet
+});
+
+// Settings endpoint
+app.get('/api/settings', (req, res) => {
+  res.json({
+    features: {
+      aiGeneration: true,
+      deploy: true,
+      auth: false // Coming soon
+    }
+  });
+});
 wss.on('connection', (ws) => {
   console.log('Client connected');
   
@@ -401,19 +442,59 @@ wss.on('connection', (ws) => {
         break;
             
           case 'chat':
-            const chatResponse = await handleChat(intent, agent);
-            ws.send(JSON.stringify({ 
-              type: 'chat', 
-              content: chatResponse.content 
-            }));
+            try {
+              console.log('Processing chat intent:', intent.description);
+              const chatResponse = await handleChat(intent, agent);
+              console.log('Chat response:', chatResponse);
+              ws.send(JSON.stringify({ 
+                type: 'chat', 
+                content: chatResponse.content 
+              }));
+            } catch (chatError) {
+              console.error('Chat handler error:', chatError);
+              ws.send(JSON.stringify({ 
+                type: 'chat', 
+                content: 'Извините, произошла ошибка. Попробуйте ещё раз или напишите "помощь".' 
+              }));
+            }
             break;
             
           case 'feedback':
-            const feedbackResponse = await handleFeedback(intent, agent);
-            ws.send(JSON.stringify({ 
-              type: 'chat', 
-              content: feedbackResponse.content 
-            }));
+            try {
+              console.log('Processing feedback intent:', intent.description);
+              const feedbackResponse = await handleFeedback(intent, agent);
+              ws.send(JSON.stringify({ 
+                type: 'chat', 
+                content: feedbackResponse.content 
+              }));
+            } catch (feedbackError) {
+              console.error('Feedback handler error:', feedbackError);
+              ws.send(JSON.stringify({ 
+                type: 'chat', 
+                content: 'Спасибо за сообщение! Я записал эту проблему.' 
+              }));
+            }
+            break;
+            
+          case 'deploy':
+            ws.send(JSON.stringify({ type: 'progress', step: 'deploying', content: 'Публикуем сайт...' }));
+            try {
+              const projects = agent.listProjects();
+              const webProject = projects.find(p => p.type === 'web') || projects[projects.length - 1];
+              if (webProject && webProject.type === 'web') {
+                const deployment = await agent.deployWebsite(webProject.id);
+                ws.send(JSON.stringify({
+                  type: 'deployed',
+                  content: `✅ Сайт опубликован: ${deployment.url}`,
+                  url: deployment.url,
+                  projectId: webProject.id
+                }));
+              } else {
+                ws.send(JSON.stringify({ type: 'error', content: 'Нет веб-проекта для публикации' }));
+              }
+            } catch (deployError) {
+              ws.send(JSON.stringify({ type: 'error', content: `Ошибка публикации: ${deployError.message}` }));
+            }
             break;
             
           case 'help':

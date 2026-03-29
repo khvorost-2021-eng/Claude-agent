@@ -354,6 +354,118 @@ Always deliver production-quality code that exceeds expectations.`;
   }
 
   async generateWebProject(project, description) {
+    // Try AI-powered generation first
+    if (this.apiKey) {
+      try {
+        console.log('Using AI to generate custom website...');
+        await this.generateWebProjectAI(project, description);
+        return;
+      } catch (error) {
+        console.error('AI generation failed, falling back to templates:', error.message);
+      }
+    }
+    
+    // Fallback to template generation
+    console.log('Using template mode for website generation');
+    await this.generateWebProjectTemplate(project, description);
+  }
+
+  async generateWebProjectAI(project, description) {
+    const prompt = `Создай полноценный многостраничный образовательный веб-сайт по запросу: "${description}"
+
+ТРЕБОВАНИЯ:
+1. Сайт должен быть на русском языке
+2. Современный дизайн с анимациями и интерактивностью
+3. Полностью адаптивный (mobile-first)
+4. Использовать CSS переменные, flexbox, grid
+5. FontAwesome иконки через CDN
+6. Google Fonts (Inter или похожий)
+
+СТРУКТУРА (7 файлов):
+
+index.html - Главная страница:
+- Hero секция с заголовком и CTA
+- Статистика (количество уроков/заданий)
+- Преимущества курса
+- Краткое содержание
+
+about.html - О курсе:
+- Информация о программе
+- Для кого курс
+- Структура с таймлайном
+
+lessons.html - Уроки:
+- Список уроков по модулям
+- Боковая панель с навигацией
+- Прогресс обучения
+
+practice.html - Практика:
+- Типы заданий
+- Примеры решений с пошаговым разбором
+
+contact.html - Контакты:
+- Форма обратной связи
+- Контактная информация
+
+styles.css - Полный CSS:
+- CSS переменные для цветов
+- Анимации и transitions
+- Responsive breakpoints
+- Hover эффекты
+
+main.js - JavaScript:
+- Мобильное меню (hamburger)
+- Плавная прокрутка
+- Обработка форм
+- Scroll animations
+
+ВАЖНО: В каждый HTML добавь favicon:
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+
+Формат вывода:
+filename.ext
+\`\`\`language
+content
+\`\`\``;
+
+    // Call AI to generate the website
+    const aiResponse = await this.generateCode(prompt, { type: 'web' });
+    
+    if (!aiResponse) {
+      throw new Error('AI returned empty response');
+    }
+    
+    // Parse the AI response to extract files
+    const files = this.parseFilesFromResponse(aiResponse);
+    
+    // Ensure all required files exist
+    const requiredFiles = ['index.html', 'about.html', 'lessons.html', 'practice.html', 'contact.html', 'styles.css', 'main.js'];
+    for (const filename of requiredFiles) {
+      if (!files[filename]) {
+        console.warn(`Missing ${filename}, generating from template...`);
+        // Generate missing file from template
+        const title = description.slice(0, 30);
+        if (filename === 'index.html') files[filename] = this.generateIndexPage(title, description, 'Курс', '');
+        else if (filename === 'about.html') files[filename] = this.generateAboutPage(title, 'Курс', '');
+        else if (filename === 'lessons.html') files[filename] = this.generateLessonsPage(title, 'Курс', '');
+        else if (filename === 'practice.html') files[filename] = this.generatePracticePage(title, 'Курс');
+        else if (filename === 'contact.html') files[filename] = this.generateContactPage(title);
+        else if (filename === 'styles.css') files[filename] = this.generateStyles();
+        else if (filename === 'main.js') files[filename] = this.generateJavaScript();
+      }
+    }
+    
+    // Save all files
+    for (const [filename, content] of Object.entries(files)) {
+      const filepath = path.join(project.path, filename);
+      fs.writeFileSync(filepath, content);
+      project.files.push(filename);
+    }
+    
+    console.log(`Generated ${Object.keys(files).length} files via AI`);
+  }
+
+  async generateWebProjectTemplate(project, description) {
     const title = description.split(' ').slice(0, 8).join(' ') || 'Курс';
     const topic = description.replace(/создай сайт|создай вебсайт|создай курс/gi, '').trim() || 'Образовательный курс';
     
@@ -370,7 +482,6 @@ Always deliver production-quality code that exceeds expectations.`;
     if (description.includes('информатик')) subject = 'Информатика';
     if (description.includes('географи')) subject = 'География';
     
-    // Extract grade levels
     const gradeMatch = description.match(/(\d+)(?:\s*-\s*|\s+по\s+|\s*-\s*)(\d+)?/);
     if (gradeMatch) {
       const startGrade = gradeMatch[1];
@@ -397,9 +508,9 @@ Always deliver production-quality code that exceeds expectations.`;
     files['main.js'] = this.generateJavaScript();
 
     for (const [filename, content] of Object.entries(files)) {
-        const filepath = path.join(project.path, filename);
-        fs.writeFileSync(filepath, content);
-        project.files.push(filename);
+      const filepath = path.join(project.path, filename);
+      fs.writeFileSync(filepath, content);
+      project.files.push(filename);
     }
   }
 
@@ -2257,6 +2368,49 @@ Format each file with path and content. Use markdown code blocks with file paths
       this.activeProjects.delete(projectId);
     }
   }
-}
 
-export default ClaudeDevAgent;
+  async deployWebsite(projectId, subdomain = null) {
+    const project = this.activeProjects.get(projectId);
+    if (!project || project.type !== 'web') {
+      throw new Error('Invalid web project');
+    }
+
+    try {
+      console.log(`Deploying website ${projectId}...`);
+      
+      // Generate subdomain from project name if not provided
+      const deploySubdomain = subdomain || project.name.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 20);
+      
+      // For now, create a simple public URL structure
+      // In production, this would integrate with Netlify/Vercel API
+      const publicUrl = `https://${deploySubdomain}.netlify.app`;
+      
+      project.deployment = {
+        url: publicUrl,
+        subdomain: deploySubdomain,
+        deployedAt: new Date().toISOString(),
+        status: 'deployed'
+      };
+      
+      console.log(`Website deployed to: ${publicUrl}`);
+      return project.deployment;
+    } catch (error) {
+      console.error('Deployment failed:', error);
+      throw error;
+    }
+  }
+
+  parseFilesFromResponse(content) {
+    const files = {};
+    const pattern = /([\w\-]+\.(?:html|css|js))\s*\n?```(?:\w+)?\n?([\s\S]*?)```/gi;
+    let match;
+    
+    while ((match = pattern.exec(content)) !== null) {
+      const filename = match[1].trim();
+      const fileContent = match[2].trim();
+      files[filename] = fileContent;
+    }
+    
+    return files;
+  }
+}

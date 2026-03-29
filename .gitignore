@@ -1,0 +1,12 @@
+node_modules/
+projects/
+*.log
+.env
+.DS_Store
+uploads/
+*.keystore
+*.jks
+dist/
+build/
+.vscode/
+.idea/
