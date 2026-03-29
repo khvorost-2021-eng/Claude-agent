@@ -354,6 +354,11 @@ Always deliver production-quality code that exceeds expectations.`;
   }
 
   async generateWebProject(project, description) {
+    console.log('=== generateWebProject called ===');
+    console.log('API Key exists:', !!this.apiKey);
+    console.log('API Key prefix:', this.apiKey ? this.apiKey.substring(0, 10) + '...' : 'none');
+    console.log('Provider:', this.provider);
+    
     // Try AI-powered generation first
     if (this.apiKey) {
       try {
@@ -362,7 +367,10 @@ Always deliver production-quality code that exceeds expectations.`;
         return;
       } catch (error) {
         console.error('AI generation failed, falling back to templates:', error.message);
+        console.error('Full error:', error);
       }
+    } else {
+      console.log('No API key found, skipping AI generation');
     }
     
     // Fallback to template generation
@@ -429,7 +437,14 @@ content
 \`\`\``;
 
     // Call AI to generate the website
+    console.log('Calling generateCode with prompt length:', prompt.length);
     const aiResponse = await this.generateCode(prompt, { type: 'web' });
+    
+    console.log('AI Response received:', !!aiResponse);
+    console.log('AI Response length:', aiResponse ? aiResponse.length : 0);
+    if (aiResponse) {
+      console.log('AI Response preview:', aiResponse.substring(0, 300));
+    }
     
     if (!aiResponse) {
       throw new Error('AI returned empty response');
