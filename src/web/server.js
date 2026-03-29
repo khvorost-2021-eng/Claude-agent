@@ -237,19 +237,33 @@ wss.on('connection', (ws) => {
         content: 'Обрабатываю запрос...'
       }));
       
-      // Broadcast progress updates
-      switch (intent.type) {
-        case 'create_app':
-          ws.send(JSON.stringify({ type: 'progress', step: 'generating', content: 'Генерирую код приложения...' }));
-          const appProject = await agent.createProject('android', 'App', msg.content);
-          ws.send(JSON.stringify({ type: 'progress', step: 'complete', project: appProject }));
-          break;
-          
-        case 'create_website':
-          ws.send(JSON.stringify({ type: 'progress', step: 'generating', content: 'Генерирую веб-сайт...' }));
-          const webProject = await agent.createProject('web', 'Website', msg.content);
-          ws.send(JSON.stringify({ type: 'progress', step: 'complete', project: webProject }));
-          break;
+      try {
+        // Broadcast progress updates
+        switch (intent.type) {
+          case 'create_app':
+            ws.send(JSON.stringify({ type: 'progress', step: 'generating', content: 'Генерирую код приложения...' }));
+            const appProject = await agent.createProject('android', 'App', msg.content);
+            ws.send(JSON.stringify({ type: 'progress', step: 'complete', project: appProject }));
+            break;
+            
+          case 'create_website':
+            ws.send(JSON.stringify({ type: 'progress', step: 'generating', content: 'Генерирую веб-сайт...' }));
+            const webProject = await agent.createProject('web', 'Website', msg.content);
+            ws.send(JSON.stringify({ type: 'progress', step: 'complete', project: webProject }));
+            break;
+            
+          default:
+            ws.send(JSON.stringify({
+              type: 'error',
+              content: 'Неизвестная команда. Попробуйте: создать Android приложение или веб-сайт'
+            }));
+        }
+      } catch (error) {
+        console.error('WebSocket error:', error);
+        ws.send(JSON.stringify({
+          type: 'error',
+          content: `Ошибка: ${error.message}`
+        }));
       }
     }
   });

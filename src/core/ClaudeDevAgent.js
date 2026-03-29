@@ -35,42 +35,61 @@ class ClaudeDevAgent {
   }
 
   async generateCodeOpenRouter(prompt, options = {}) {
-    // Free models: google/gemma-2-9b-it, meta-llama/llama-3.1-8b-instruct
-    // Cheap models: anthropic/claude-3-haiku, google/gemini-flash-1.5
     const model = options.model || 'google/gemini-flash-1.5';
     
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiKey}`,
-        'HTTP-Referer': 'https://claude-dev-agent.render.com',
-        'X-Title': 'Claude Dev Agent'
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: [
-          {
-            role: 'system',
-            content: this.getSystemPrompt(options.type)
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: options.maxTokens || 4096
-      })
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000); // 30 сек таймаут
+    
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`,
+          'HTTP-Referer': 'https://claude-dev-agent.render.com',
+          'X-Title': 'Claude Dev Agent'
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [
+            {
+              role: 'system',
+              content: this.getSystemPrompt(options.type)
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: options.maxTokens || 4096
+        })
+      });
 
-    const data = await response.json();
-    
-    if (data.error) {
-      console.error('OpenRouter error:', data.error);
-      return `Error: ${data.error.message}`;
+      clearTimeout(timeout);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('OpenRouter HTTP error:', response.status, errorText);
+        return `Error: API returned ${response.status}. ${errorText}`;
+      }
+
+      const data = await response.json();
+      
+      if (data.error) {
+        console.error('OpenRouter error:', data.error);
+        return `Error: ${data.error.message}`;
+      }
+      
+      return data.choices?.[0]?.message?.content || 'Generation failed';
+    } catch (error) {
+      clearTimeout(timeout);
+      console.error('OpenRouter fetch error:', error.message);
+      if (error.name === 'AbortError') {
+        return 'Error: Request timeout (30s). API is slow or unavailable.';
+      }
+      return `Error: ${error.message}`;
     }
-    
-    return data.choices?.[0]?.message?.content || 'Generation failed';
   }
 
   async generateCodeAnthropic(prompt, options = {}) {

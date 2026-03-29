@@ -121,6 +121,10 @@ class AgentClient {
         this.hideTypingIndicator();
         this.handleProjectComplete(data.project);
         break;
+      case 'error':
+        this.hideTypingIndicator();
+        this.addMessage(`❌ ${data.content}`, 'bot');
+        break;
     }
   }
 
