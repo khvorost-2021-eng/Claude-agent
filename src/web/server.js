@@ -170,29 +170,63 @@ app.post('/api/chat', async (req, res) => {
 });
 
 function parseIntent(message) {
-  const lower = message.toLowerCase();
+  const lower = message.toLowerCase().trim();
   
-  if (lower.includes('приложение') || lower.includes('app') || lower.includes('android')) {
-    return { type: 'create_app', description: message };
-  }
-  if (lower.includes('сайт') || lower.includes('веб') || lower.includes('website') || lower.includes('web')) {
+  // Website patterns
+  const websitePatterns = [
+    'сайт', 'веб', 'website', 'web', 'курс', 'страница', 'landing', 'сайд',
+    'создай сайт', 'сделай сайт', 'создать сайт', 'сделать сайт',
+    'создай веб', 'сделай веб', 'создать веб', 'сделать веб',
+    'веб-сайт', 'вебсайт', 'веб приложение', 'веб-приложение'
+  ];
+  
+  // Android app patterns
+  const appPatterns = [
+    'приложение', 'app', 'android', 'апк', 'apk',
+    'создай приложение', 'сделай приложение', 'создать приложение',
+    'создай андроид', 'сделай андроид', 'мобильное приложение'
+  ];
+  
+  // Check for website intent
+  if (websitePatterns.some(pattern => lower.includes(pattern))) {
     return { type: 'create_website', description: message };
   }
-  if (lower.includes('публикуй') || lower.includes('publish') || lower.includes('google play')) {
+  
+  // Check for Android app intent
+  if (appPatterns.some(pattern => lower.includes(pattern))) {
+    return { type: 'create_app', description: message };
+  }
+  
+  // Publish patterns
+  if (lower.includes('публикуй') || lower.includes('publish') || lower.includes('google play') || lower.includes('опубликуй')) {
     return { type: 'publish', description: message };
   }
-  if (lower.includes('собери') || lower.includes('build') || lower.includes('скомпилируй')) {
+  
+  // Build patterns
+  if (lower.includes('собери') || lower.includes('build') || lower.includes('скомпилируй') || lower.includes('сборка') || lower.includes('скомпилировать')) {
     return { type: 'build', description: message };
   }
-  if (lower.includes('статус') || lower.includes('проекты') || lower.includes('status')) {
+  
+  // Status patterns
+  if (lower.includes('статус') || lower.includes('проекты') || lower.includes('status') || lower.includes('список')) {
     return { type: 'status' };
+  }
+  
+  // Default fallback - try to guess from context
+  if (lower.startsWith('создай') || lower.startsWith('сделай') || lower.startsWith('сгенерируй') || lower.startsWith('generate') || lower.startsWith('create') || lower.startsWith('make')) {
+    // If contains education/content keywords, assume website
+    if (lower.includes('курс') || lower.includes('урок') || lower.includes('школа') || lower.includes('математика') || lower.includes('физика') || lower.includes('английский') || lower.includes('обучение')) {
+      return { type: 'create_website', description: message };
+    }
+    // Default to website for ambiguous creation requests
+    return { type: 'create_website', description: message };
   }
   
   return { type: 'unknown' };
 }
 
 async function handleCreateApp(intent, agent) {
-  const project = await agent.createProject('android', 'GeneratedApp', intent.description);
+  const project = await agent.createProject('GeneratedApp', intent.description, 'android');
   return {
     type: 'project_created',
     content: `Создан новый Android проект: ${project.name}`,
@@ -202,7 +236,7 @@ async function handleCreateApp(intent, agent) {
 }
 
 async function handleCreateWebsite(intent, agent) {
-  const project = await agent.createProject('web', 'GeneratedWebsite', intent.description);
+  const project = await agent.createProject('GeneratedWebsite', intent.description, 'web');
   return {
     type: 'project_created',
     content: `Создан новый веб-проект: ${project.name}`,
@@ -289,7 +323,7 @@ wss.on('connection', (ws) => {
         switch (intent.type) {
           case 'create_app':
             ws.send(JSON.stringify({ type: 'progress', step: 'generating', content: 'Генерирую код приложения...' }));
-            const appProject = await agent.createProject('android', 'App', msg.content);
+            const appProject = await agent.createProject('App', msg.content, 'android');
         ws.send(JSON.stringify({ 
           type: 'project_created', 
           content: '✅ Android проект создан',
@@ -300,7 +334,7 @@ wss.on('connection', (ws) => {
             
           case 'create_website':
             ws.send(JSON.stringify({ type: 'progress', step: 'generating', content: 'Генерирую веб-сайт...' }));
-            const webProject = await agent.createProject('web', 'Website', msg.content);
+            const webProject = await agent.createProject('Website', msg.content, 'web');
         ws.send(JSON.stringify({ 
           type: 'project_created', 
           content: '✅ Веб-сайт создан',
