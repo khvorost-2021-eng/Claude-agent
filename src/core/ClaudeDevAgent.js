@@ -2414,3 +2414,5 @@ Format each file with path and content. Use markdown code blocks with file paths
     return files;
   }
 }
+
+export default ClaudeDevAgent;
