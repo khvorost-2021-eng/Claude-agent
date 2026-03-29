@@ -27,19 +27,34 @@ class ClaudeDevAgent {
   }
 
   async generateCode(prompt, options = {}) {
+    console.log('=== generateCode called ===');
+    console.log('API Key exists:', !!this.apiKey);
+    console.log('Provider:', this.provider);
+    console.log('Prompt length:', prompt.length);
+    console.log('Options:', options);
+    
     if (this.apiKey) {
       let result;
+      console.log('Calling AI API...');
       if (this.provider === 'openrouter') {
         result = await this.generateCodeOpenRouter(prompt, options);
       } else {
         result = await this.generateCodeAnthropic(prompt, options);
       }
+      console.log('API result received:', !!result);
+      if (result) {
+        console.log('Result preview:', result.substring(0, 200));
+        console.log('Starts with Error?:', result.startsWith('Error:'));
+      }
       if (result && !result.startsWith('Error:')) {
+        console.log('Returning AI generated content');
         return result;
       }
-      console.log('API failed or returned no content, falling back to templates');
+      console.log('API failed or returned error content');
+    } else {
+      console.log('No API key available');
     }
-    console.log('Using template mode');
+    console.log('Falling back to template mode');
     return this.generateFromTemplate(options.type);
   }
 
@@ -172,6 +187,9 @@ class HomePage extends StatelessWidget {
   }
 
   async generateCodeOpenRouter(prompt, options = {}) {
+    console.log('=== generateCodeOpenRouter called ===');
+    console.log('API Key prefix:', this.apiKey.substring(0, 15));
+    
     const models = [
       'anthropic/claude-3.5-haiku',
       'anthropic/claude-3-haiku',
@@ -181,6 +199,7 @@ class HomePage extends StatelessWidget {
     for (const model of models) {
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
+          console.log(`Trying model ${model}, attempt ${attempt + 1}`);
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 60000);
           
@@ -206,18 +225,30 @@ class HomePage extends StatelessWidget {
           
           clearTimeout(timeout);
           
-          if (!response.ok) continue;
+          console.log('Response status:', response.status);
+          console.log('Response ok:', response.ok);
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('API error response:', errorText);
+            continue;
+          }
           
           const data = await response.json();
+          console.log('API data received, choices:', data.choices ? data.choices.length : 0);
           
           if (data.choices && data.choices[0] && data.choices[0].message) {
-            return data.choices[0].message.content;
+            const content = data.choices[0].message.content;
+            console.log('AI content length:', content.length);
+            console.log('AI content preview:', content.substring(0, 300));
+            return content;
           }
         } catch (error) {
           console.error(`Attempt ${attempt + 1} failed for ${model}:`, error.message);
         }
       }
     }
+    console.log('All models failed, returning null');
     return null;
   }
 
