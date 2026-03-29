@@ -348,7 +348,7 @@ class HomePage extends StatelessWidget {
           'Authorization': `Bearer ${this.apiKey}`
         },
         body: JSON.stringify({
-          model: 'mixtral-8x7b-32768',
+          model: 'llama-3.1-8b-instant',
           messages: [
             { role: 'system', content: this.getSystemPrompt() },
             { role: 'user', content: prompt }
