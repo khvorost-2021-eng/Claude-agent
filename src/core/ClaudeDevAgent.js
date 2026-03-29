@@ -6,7 +6,8 @@ import fetch from 'node-fetch';
 
 class ClaudeDevAgent {
   constructor(config = {}) {
-    this.apiKey = config.anthropicApiKey || process.env.ANTHROPIC_API_KEY;
+    this.apiKey = config.apiKey || process.env.OPENROUTER_API_KEY || process.env.ANTHROPIC_API_KEY;
+    this.provider = config.provider || this.detectProvider();
     this.projectsDir = config.projectsDir || './projects';
     this.templatesDir = config.templatesDir || './templates';
     this.memory = new Map();
@@ -15,22 +16,39 @@ class ClaudeDevAgent {
     this.ensureDirectories();
   }
 
+  detectProvider() {
+    if (process.env.OPENROUTER_API_KEY) return 'openrouter';
+    if (process.env.ANTHROPIC_API_KEY) return 'anthropic';
+    return 'openrouter'; // default
+  }
+
   ensureDirectories() {
     fs.ensureDirSync(this.projectsDir);
     fs.ensureDirSync(this.templatesDir);
   }
 
   async generateCode(prompt, options = {}) {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    if (this.provider === 'openrouter') {
+      return this.generateCodeOpenRouter(prompt, options);
+    }
+    return this.generateCodeAnthropic(prompt, options);
+  }
+
+  async generateCodeOpenRouter(prompt, options = {}) {
+    // Free models: google/gemma-2-9b-it, meta-llama/llama-3.1-8b-instruct
+    // Cheap models: anthropic/claude-3-haiku, google/gemini-flash-1.5
+    const model = options.model || 'google/gemini-flash-1.5';
+    
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': this.apiKey,
-        'anthropic-version': '2023-06-01'
+        'Authorization': `Bearer ${this.apiKey}`,
+        'HTTP-Referer': 'https://claude-dev-agent.render.com',
+        'X-Title': 'Claude Dev Agent'
       },
       body: JSON.stringify({
-        model: options.model || 'claude-opus-4-6-20251101',
-        max_tokens: options.maxTokens || 4096,
+        model: model,
         messages: [
           {
             role: 'system',
@@ -39,6 +57,37 @@ class ClaudeDevAgent {
           {
             role: 'user',
             content: prompt
+          }
+        ],
+        max_tokens: options.maxTokens || 4096
+      })
+    });
+
+    const data = await response.json();
+    
+    if (data.error) {
+      console.error('OpenRouter error:', data.error);
+      return `Error: ${data.error.message}`;
+    }
+    
+    return data.choices?.[0]?.message?.content || 'Generation failed';
+  }
+
+  async generateCodeAnthropic(prompt, options = {}) {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: options.model || 'claude-3-haiku-20240307',
+        max_tokens: options.maxTokens || 4096,
+        messages: [
+          {
+            role: 'user',
+            content: `${this.getSystemPrompt(options.type)}\n\n${prompt}`
           }
         ]
       })

@@ -153,7 +153,11 @@ class AgentClient {
     this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
     
     if (thinking) {
-      setTimeout(() => messageDiv.remove(), 3000);
+      setTimeout(() => {
+        if (messageDiv.parentNode === this.chatMessages) {
+          messageDiv.remove();
+        }
+      }, 3000);
     }
   }
 
