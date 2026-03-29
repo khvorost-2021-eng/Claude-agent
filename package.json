@@ -21,7 +21,8 @@
     "fs-extra": "^11.1.1",
     "child_process": "^1.0.2",
     "googleapis": "^128.0.0",
-    "adm-zip": "^0.5.10"
+    "adm-zip": "^0.5.10",
+    "dotenv": "^16.3.1"
   },
   "keywords": ["ai", "agent", "claude", "android", "google-play", "app-builder"],
   "author": "AI Developer",

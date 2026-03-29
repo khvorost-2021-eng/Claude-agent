@@ -1,5 +1,5 @@
-import ClaudeDevAgent from '../core/ClaudeDevAgent.js';
-import GooglePlayPublisher from '../publish/GooglePlayPublisher.js';
+import ClaudeDevAgent from './core/ClaudeDevAgent.js';
+import GooglePlayPublisher from './publish/GooglePlayPublisher.js';
 import dotenv from 'dotenv';
 
 dotenv.config();

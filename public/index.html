@@ -7,17 +7,25 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>🧠 Claude Dev Agent</h1>
-      <p>AI-агент для создания приложений и публикации в Google Play</p>
+  <div class="app">
+    <!-- Top Bar -->
+    <header class="top-bar">
+      <div class="logo">
+        <span class="logo-icon">🧠</span>
+        <span class="logo-text">Claude Dev Agent</span>
+      </div>
+      <div class="top-actions">
+        <button class="top-btn" id="newProjectBtn">+ Новый проект</button>
+        <span class="status-badge" id="status">● Офлайн</span>
+      </div>
     </header>
 
-    <main>
-      <section class="chat-section">
-        <div class="chat-header">
+    <!-- Main Layout -->
+    <div class="main-layout">
+      <!-- Left Sidebar - Chat -->
+      <aside class="sidebar chat-sidebar">
+        <div class="sidebar-header">
           <h2>💬 Чат с агентом</h2>
-          <span class="status" id="status">● Офлайн</span>
         </div>
         
         <div class="chat-messages" id="chatMessages">
@@ -25,54 +33,106 @@
             <div class="message-content">
               Привет! Я Claude Dev Agent. Я могу:
               <ul>
-                <li>Создавать Android приложения</li>
                 <li>Создавать веб-сайты</li>
-                <li>Собирать APK и AAB файлы</li>
-                <li>Публиковать приложения в Google Play</li>
+                <li>Создавать Android приложения</li>
+                <li>Показывать код и превью в реальном времени</li>
               </ul>
               Что хотите создать?
             </div>
           </div>
         </div>
         
-        <div class="chat-input">
-          <input type="text" id="messageInput" placeholder="Опишите приложение или сайт..." autocomplete="off">
-          <button id="sendBtn">Отправить</button>
+        <div class="chat-input-area">
+          <div class="quick-actions">
+            <button class="chip" data-prompt="Создай веб-сайт: ">🌐 Веб-сайт</button>
+            <button class="chip" data-prompt="Создай Android приложение: ">📱 Android</button>
+            <button class="chip" data-prompt="Создай калькулятор">🔢 Калькулятор</button>
+            <button class="chip" data-prompt="Создай todo list">✅ Todo List</button>
+          </div>
+          <div class="chat-input">
+            <input type="text" id="messageInput" placeholder="Опишите что хотите создать..." autocomplete="off">
+            <button id="sendBtn">➤</button>
+          </div>
         </div>
-      </section>
+      </aside>
 
-      <section class="projects-section">
-        <h2>📁 Проекты</h2>
+      <!-- Center - Workspace -->
+      <main class="workspace">
+        <!-- Tab Bar -->
+        <div class="tab-bar">
+          <button class="tab active" data-tab="preview">👁 Превью</button>
+          <button class="tab" data-tab="code">📄 Код</button>
+          <button class="tab" data-tab="files">📁 Файлы</button>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+          <!-- Preview Tab -->
+          <div class="tab-panel active" id="previewPanel">
+            <div class="preview-toolbar">
+              <span class="preview-url" id="previewUrl">Нет активного проекта</span>
+              <div class="preview-actions">
+                <button id="refreshPreview">🔄 Обновить</button>
+                <button id="openPreview">↗ Открыть</button>
+              </div>
+            </div>
+            <div class="preview-frame-container">
+              <iframe id="previewFrame" src="about:blank"></iframe>
+              <div class="preview-placeholder" id="previewPlaceholder">
+                <div class="placeholder-content">
+                  <span class="placeholder-icon">🎨</span>
+                  <p>Превью появится здесь после создания проекта</p>
+                  <p class="placeholder-hint">Напишите в чат что хотите создать</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Code Tab -->
+          <div class="tab-panel" id="codePanel">
+            <div class="code-toolbar">
+              <select id="fileSelect">
+                <option>Выберите файл...</option>
+              </select>
+              <div class="code-actions">
+                <button id="copyCode">📋 Копировать</button>
+                <button id="downloadCode">⬇ Скачать</button>
+              </div>
+            </div>
+            <div class="code-editor">
+              <pre id="codeDisplay"><code class="code-content">// Код появится здесь после создания проекта</code></pre>
+            </div>
+          </div>
+
+          <!-- Files Tab -->
+          <div class="tab-panel" id="filesPanel">
+            <div class="files-tree" id="filesTree">
+              <div class="files-empty">
+                <p>Нет активного проекта</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- Right Sidebar - Projects -->
+      <aside class="sidebar projects-sidebar">
+        <div class="sidebar-header">
+          <h2>� Проекты</h2>
+        </div>
         <div class="projects-list" id="projectsList">
-          <div class="empty">Нет активных проектов</div>
+          <div class="empty">Нет проектов</div>
         </div>
-      </section>
+      </aside>
+    </div>
+  </div>
 
-      <section class="actions-section">
-        <h2>⚡ Быстрые действия</h2>
-        <div class="action-buttons">
-          <button class="action-btn" data-action="android">
-            📱 Создать Android приложение
-          </button>
-          <button class="action-btn" data-action="web">
-            🌐 Создать веб-сайт
-          </button>
-          <button class="action-btn" data-action="build">
-            🔨 Собрать проект
-          </button>
-          <button class="action-btn" data-action="publish">
-            🚀 Опубликовать в Google Play
-          </button>
-        </div>
-      </section>
-    </main>
-
-    <div class="modal" id="modal">
-      <div class="modal-content">
-        <span class="close">&times;</span>
-        <h3 id="modalTitle">Заголовок</h3>
-        <div id="modalBody"></div>
-      </div>
+  <!-- Project Modal -->
+  <div class="modal" id="projectModal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h3 id="modalTitle">Проект</h3>
+      <div id="modalBody"></div>
     </div>
   </div>
 

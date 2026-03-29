@@ -79,9 +79,56 @@ app.get('/api/projects/:id/download', (req, res) => {
   res.download(file);
 });
 
-app.delete('/api/projects/:id', async (req, res) => {
-  await agent.deleteProject(req.params.id);
-  res.json({ success: true });
+// Preview - serve generated projects
+app.use('/preview', express.static('projects'));
+
+// Get project files for code viewer
+app.get('/api/projects/:id/files', (req, res) => {
+  const project = agent.getProject(req.params.id);
+  if (!project) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  
+  const files = [];
+  const projectPath = project.path;
+  
+  function readDirRecursive(dir, basePath = '') {
+    const items = fs.readdirSync(dir);
+    for (const item of items) {
+      const fullPath = path.join(dir, item);
+      const relativePath = path.join(basePath, item);
+      const stat = fs.statSync(fullPath);
+      
+      if (stat.isDirectory()) {
+        readDirRecursive(fullPath, relativePath);
+      } else {
+        files.push({
+          path: relativePath.replace(/\\/g, '/'),
+          content: fs.readFileSync(fullPath, 'utf-8')
+        });
+      }
+    }
+  }
+  
+  if (fs.existsSync(projectPath)) {
+    readDirRecursive(projectPath);
+  }
+  
+  res.json({ files, previewUrl: `/preview/${project.id}` });
+});
+
+// Get preview URL for project
+app.get('/api/projects/:id/preview', (req, res) => {
+  const project = agent.getProject(req.params.id);
+  if (!project) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  
+  const previewUrl = project.type === 'web' 
+    ? `/preview/${project.id}`
+    : null;
+    
+  res.json({ previewUrl, type: project.type });
 });
 
 // Chat endpoint for agent interaction
@@ -243,14 +290,24 @@ wss.on('connection', (ws) => {
           case 'create_app':
             ws.send(JSON.stringify({ type: 'progress', step: 'generating', content: 'Генерирую код приложения...' }));
             const appProject = await agent.createProject('android', 'App', msg.content);
-            ws.send(JSON.stringify({ type: 'progress', step: 'complete', project: appProject }));
-            break;
+        ws.send(JSON.stringify({ 
+          type: 'project_created', 
+          content: '✅ Android проект создан',
+          project: appProject,
+          previewUrl: `/preview/${appProject.id}`
+        }));
+        break;
             
           case 'create_website':
             ws.send(JSON.stringify({ type: 'progress', step: 'generating', content: 'Генерирую веб-сайт...' }));
             const webProject = await agent.createProject('web', 'Website', msg.content);
-            ws.send(JSON.stringify({ type: 'progress', step: 'complete', project: webProject }));
-            break;
+        ws.send(JSON.stringify({ 
+          type: 'project_created', 
+          content: '✅ Веб-сайт создан',
+          project: webProject,
+          previewUrl: `/preview/${webProject.id}`
+        }));
+        break;
             
           default:
             ws.send(JSON.stringify({

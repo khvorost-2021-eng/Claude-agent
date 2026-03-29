@@ -1,32 +1,55 @@
-# Claude Opus Agent
+# Claude Dev Agent
 
-Advanced AI Agent system with brain-like architecture inspired by Claude Opus capabilities.
+AI Agent для создания веб-сайтов и Android приложений через чат-интерфейс. Аналог Base44 — создавайте проекты через чат, просматривайте код и превью в реальном времени.
 
-## Architecture
+## Возможности
 
-- **Brain Core**: Central processing unit with reasoning, planning, and decision making
-- **Memory System**: Short-term (working) and long-term memory with embeddings
-- **Cortex**: Tool use, API integration, and external interaction
-- **Web Interface**: Real-time chat and visualization
+- **Чат с AI** — Описывайте что хотите создать простым языком
+- **Превью в реальном времени** — Видьте результат сразу после генерации
+- **Просмотр кода** — Изучайте и скачивайте сгенерированный код
+- **Файловый менеджер** — Просматривайте структуру проекта
+- **Шаблоны** — Работает без API ключей через шаблоны
 
-## Quick Start
+## Быстрый старт
 
 ```bash
+# Установка зависимостей
 npm install
-npm run dev
+
+# Запуск сервера
+npm run web
 ```
 
-## API Key Setup
+Откройте http://localhost:3000
 
-Create a `.env` file with:
-```
-ANTHROPIC_API_KEY=your_key_here
-```
+## Функции
 
-## Features
+### Создание проектов
+- Веб-сайты (HTML/CSS/JS)
+- Android приложения (Kotlin)
 
-- Autonomous reasoning and planning
-- Persistent memory across sessions
-- Tool use capabilities (search, code execution, API calls)
-- Streaming responses
-- WebSocket real-time interface
+### Просмотр
+- **Превью** — Интерактивный просмотр веб-сайтов
+- **Код** — Просмотр любого файла с подсветкой
+- **Файлы** — Древовидная структура проекта
+
+## API Keys (опционально)
+
+Для AI-генерации через OpenRouter или Anthropic:
+
+1. Скопируйте `.env.example` в `.env`
+2. Добавьте ключи:
+   - `OPENROUTER_API_KEY` — от [openrouter.ai](https://openrouter.ai/keys)
+   - `ANTHROPIC_API_KEY` — от [console.anthropic.com](https://console.anthropic.com)
+
+Без ключей агент работает в демо-режиме с шаблонами.
+
+## Скрипты
+
+- `npm run web` — Запуск веб-сервера
+- `npm start` — Запуск агента
+- `npm run dev` — Режим разработки
+
+## Лицензия
+
+MIT
