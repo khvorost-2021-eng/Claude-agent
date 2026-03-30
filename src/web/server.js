@@ -170,7 +170,20 @@ app.post('/api/chat', async (req, res) => {
 });
 
 function parseIntent(message) {
-  const lower = message.toLowerCase().trim();
+  const lower = message.toLowerCase();
+  
+  // MODIFICATION PATTERNS - Check these FIRST (before create)
+  // These indicate the user wants to modify/extend an existing project
+  const modifyPatterns = [
+    'дополни', 'доработай', 'улучши', 'измени', 'обнови', 'переделай', 'исправь',
+    'добавь', 'внеси изменения', 'модифицируй', 'расширь', 'редактируй',
+    'сделай лучше', 'сделай красивее', 'сделай более',
+    'который ты уже создал', 'существующий проект', 'в текущий проект',
+    'в существующий', 'в уже созданный'
+  ];
+  
+  // Check for modification intent FIRST
+  const isModification = modifyPatterns.some(pattern => lower.includes(pattern));
   
   // Website patterns
   const websitePatterns = [
@@ -180,6 +193,14 @@ function parseIntent(message) {
     'веб-сайт', 'вебсайт', 'веб приложение', 'веб-приложение'
   ];
   
+  // Check for website intent (create or modify)
+  if (websitePatterns.some(pattern => lower.includes(pattern))) {
+    if (isModification) {
+      return { type: 'modify_website', description: message };
+    }
+    return { type: 'create_website', description: message };
+  }
+  
   // Android app patterns
   const appPatterns = [
     'приложение', 'app', 'android', 'апк', 'apk',
@@ -187,14 +208,17 @@ function parseIntent(message) {
     'создай андроид', 'сделай андроид', 'мобильное приложение'
   ];
   
-  // Check for website intent
-  if (websitePatterns.some(pattern => lower.includes(pattern))) {
-    return { type: 'create_website', description: message };
+  // Check for Android app intent (create or modify)
+  if (appPatterns.some(pattern => lower.includes(pattern))) {
+    if (isModification) {
+      return { type: 'modify_app', description: message };
+    }
+    return { type: 'create_app', description: message };
   }
   
-  // Check for Android app intent
-  if (appPatterns.some(pattern => lower.includes(pattern))) {
-    return { type: 'create_app', description: message };
+  // If modification requested but no specific type detected, treat as modify for latest project
+  if (isModification) {
+    return { type: 'modify_project', description: message };
   }
   
   // Publish patterns
@@ -470,6 +494,36 @@ wss.on('connection', (ws) => {
           previewUrl: `/preview/${webProject.id}`
         }));
         break;
+            
+          case 'modify_website':
+          case 'modify_app':
+          case 'modify_project':
+            ws.send(JSON.stringify({ type: 'progress', step: 'modifying', content: 'Дорабатываю проект...' }));
+            try {
+              const projects = agent.listProjects();
+              if (projects.length === 0) {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  content: 'Нет проектов для доработки. Сначала создайте проект.'
+                }));
+              } else {
+                const project = projects[projects.length - 1];
+                await agent.modifyProject(project.id, msg.content);
+                ws.send(JSON.stringify({
+                  type: 'project_modified',
+                  content: `✅ Проект "${project.name}" доработан`,
+                  projectId: project.id,
+                  previewUrl: `/preview/${project.id}`
+                }));
+              }
+            } catch (modifyError) {
+              console.error('Modify project error:', modifyError);
+              ws.send(JSON.stringify({
+                type: 'error',
+                content: `Ошибка при доработке: ${modifyError.message}`
+              }));
+            }
+            break;
             
           case 'chat':
             try {

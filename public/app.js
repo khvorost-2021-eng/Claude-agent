@@ -197,8 +197,16 @@ class AgentClient {
         break;
       case 'project_created':
         this.hideTypingIndicator();
+        this.addMessage(data.content, 'bot');
         if (data.project && data.previewUrl) {
           this.handleProjectCreated(data.project, data.previewUrl);
+        }
+        break;
+      case 'project_modified':
+        this.hideTypingIndicator();
+        this.addMessage(data.content, 'bot');
+        if (data.projectId && data.previewUrl) {
+          this.handleProjectModified(data.projectId, data.previewUrl);
         }
         break;
       case 'complete':
@@ -553,6 +561,31 @@ class AgentClient {
     
     const panel = document.getElementById(tabName + 'Panel');
     if (panel) panel.classList.add('active');
+  }
+
+  // Handle project modification - update preview
+  async handleProjectModified(projectId, previewUrl) {
+    this.addMessage(`✅ Проект доработан`, 'bot');
+    
+    // Update preview
+    if (this.previewFrame) {
+      // Force refresh by adding timestamp
+      this.previewFrame.src = previewUrl + '?t=' + Date.now();
+    }
+    if (this.previewUrl) {
+      this.previewUrl.textContent = previewUrl;
+    }
+    
+    // Reload files
+    await this.loadProjectFiles(projectId);
+    
+    // Switch to preview tab
+    this.switchTab('preview');
+    
+    // Update projects list
+    this.loadProjects();
+    
+    this.showToast('Проект успешно доработан!');
   }
 
   // Handle project creation - update preview

@@ -462,17 +462,39 @@ Always deliver production-quality code that exceeds expectations.`;
   }
 
   getChatSystemPrompt() {
-    return `You are ClaudeDev, a helpful AI assistant. You help users with software development, answer questions, and provide clear, friendly responses.
+    return `Ты ClaudeDev — интеллектуальный AI-ассистент для разработки. Ты помогаешь пользователям создавать веб-сайты, Android-приложения и Flutter-приложения через естественный разговор.
 
-When responding to users:
-- Be conversational and natural
-- Answer questions directly and helpfully
-- If user asks for help, provide specific guidance
-- If user gives feedback or complains, acknowledge it professionally
-- Keep responses concise but informative
-- Use Russian language as the user communicates in Russian
+Твоя роль:
+- Понимать намерения пользователя из разговора
+- Предлагать конкретные решения и действия
+- Быть инициативным — предлагать улучшения и идеи
+- Объяснять технические концепции простым языком
+- Помогать с отладкой и исправлением ошибок
 
-You can also create web projects, Android apps, and Flutter apps when users request them.`;
+Стиль общения:
+- Дружелюбный и профессиональный
+- Конкретный и полезный (избегай общих фраз)
+- Структурированный — используй списки, параграфы, выделение
+- Отвечай на русском языке
+- Если предлагаешь действие — объясни зачем и что получится
+
+Примеры качественных ответов:
+
+❌ "Я вас понял! Чем ещё могу помочь?" (слишком общо)
+✅ "Отлично! Я создам для вас образовательный сайт по кулинарии с красивым дизайном и структурированными уроками. Будет главная страница, разделы с рецептами и практические задания. Готов начать?"
+
+❌ "Создаю сайт..."
+✅ "Начинаю создавать ваш сайт по кулинарии! 🍳\n\nВот что я планирую сделать:\n• Современный дизайн с адаптивной вёрсткой\n• Главную страницу с привлекательным описанием курса\n• Разделы: Уроки, Практика, О курсе\n• Интерактивные элементы и анимации\n\nЭто займёт около 30 секунд..."
+
+Когда пользователь просит доработать:
+- Перечисли конкретные изменения которые внесёшь
+- Объясни почему это улучшит проект
+- Покажи результат
+
+Когда пользователь описывает проблему:
+- Перефразируй проблему чтобы показать понимание
+- Предложи 2-3 конкретных решения
+- Объясни плюсы каждого подхода`;
   }
 
   async generateResponse(message, history = []) {
@@ -834,6 +856,127 @@ You can also create web projects, Android apps, and Flutter apps when users requ
       project.error = error.message;
       throw error;
     }
+  }
+
+  async modifyProject(projectId, description) {
+    console.log('=== modifyProject called ===');
+    console.log('Project ID:', projectId);
+    console.log('Description:', description);
+    
+    const project = this.activeProjects.get(projectId);
+    if (!project) {
+      throw new Error(`Project ${projectId} not found`);
+    }
+    
+    project.status = 'modifying';
+    project.modifiedAt = new Date().toISOString();
+    
+    try {
+      switch (project.type) {
+        case 'web':
+          await this.modifyWebProject(project, description);
+          break;
+        case 'android':
+          await this.modifyAndroidProject(project, description);
+          break;
+        case 'flutter':
+          await this.modifyFlutterProject(project, description);
+          break;
+        default:
+          throw new Error(`Unsupported project type: ${project.type}`);
+      }
+      
+      project.status = 'completed';
+      return project;
+    } catch (error) {
+      project.status = 'failed';
+      project.error = error.message;
+      throw error;
+    }
+  }
+
+  async modifyWebProject(project, description) {
+    console.log('=== modifyWebProject called ===');
+    
+    if (this.apiKey) {
+      try {
+        console.log('Using AI to modify website...');
+        await this.modifyWebProjectAI(project, description);
+        return;
+      } catch (error) {
+        console.error('AI modification failed:', error.message);
+      }
+    }
+    
+    // Fallback: regenerate with new description
+    console.log('Using template mode for website modification');
+    await this.generateWebProjectTemplate(project, description);
+  }
+
+  async modifyWebProjectAI(project, description) {
+    // Read existing files to understand current state
+    const existingFiles = {};
+    const requiredFiles = ['index.html', 'about.html', 'lessons.html', 'practice.html', 'contact.html', 'styles.css', 'main.js'];
+    
+    for (const filename of requiredFiles) {
+      const filepath = path.join(project.path, filename);
+      if (fs.existsSync(filepath)) {
+        existingFiles[filename] = fs.readFileSync(filepath, 'utf8');
+      }
+    }
+    
+    const prompt = `Доработай существующий веб-сайт по запросу: "${description}"
+
+Текущие файлы проекта:
+${Object.entries(existingFiles).map(([name, content]) => `
+=== ${name} ===
+${content.substring(0, 500)}...
+`).join('\n')}
+
+ТРЕБОВАНИЯ К ДОРАБОТКЕ:
+1. Сохрани структуру и навигацию сайта
+2. Внеси запрошенные изменения (улучши дизайн, добавь контент, исправь стили)
+3. Сохрани совместимость с существующими файлами
+4. Используй те же технологии: CSS переменные, FontAwesome, Google Fonts
+
+Верни ВСЕ файлы проекта с внесёнными изменениями:
+index.html, about.html, lessons.html, practice.html, contact.html, styles.css, main.js
+
+Формат вывода:
+filename.ext
+\`\`\`language
+content
+\`\`\``;
+
+    const aiResponse = await this.generateCode(prompt, { type: 'web' });
+    
+    if (!aiResponse) {
+      throw new Error('AI returned empty response');
+    }
+    
+    // Parse and save modified files
+    const files = this.parseFilesFromResponse(aiResponse);
+    
+    for (const [filename, content] of Object.entries(files)) {
+      const filepath = path.join(project.path, filename);
+      fs.writeFileSync(filepath, content);
+      if (!project.files.includes(filename)) {
+        project.files.push(filename);
+      }
+    }
+    
+    console.log(`Modified ${Object.keys(files).length} files via AI`);
+  }
+
+  async modifyAndroidProject(project, description) {
+    // For now, just update the description and regenerate
+    console.log('Android project modification - regenerating...');
+    await this.generateAndroidProject(project, description);
+  }
+
+  async modifyFlutterProject(project, description) {
+    console.log('Flutter project modification - regenerating...');
+    await this.generateFlutterProject(project, description);
   }
 
   async generateWebProject(project, description) {
