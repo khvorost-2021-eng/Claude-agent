@@ -355,7 +355,9 @@ class ClaudeDevAgent {
     console.log('=== AI SITE GENERATION START ===');
     console.log('Description:', description);
     
-    const { analyzeIntent } = require('./websiteTemplates.js');
+    // Dynamic import for ES modules compatibility
+    const websiteTemplates = await import('./websiteTemplates.js');
+    const analyzeIntent = websiteTemplates.analyzeIntent;
     const intent = analyzeIntent ? analyzeIntent(description) : { category: 'general', siteType: 'general' };
     const topic = this.extractTopic(description);
     
@@ -496,6 +498,10 @@ Start with <!DOCTYPE html> and end with </html>.`;
 
   // Generate hybrid site: AI-powered full HTML generation
   async generateHybridSite(project, description, topic, intent, aiContent) {
+    // Dynamic import for ES modules compatibility
+    const websiteTemplates = await import('./websiteTemplates.js');
+    const { generateSmartSite, analyzeIntent, getTitleForTopic } = websiteTemplates;
+    
     // Default content if AI fails
     const content = aiContent || {
       title: topic,
