@@ -476,12 +476,18 @@ You can also create web projects, Android apps, and Flutter apps when users requ
   }
 
   async generateResponse(message) {
-    // Generate a conversational response using AI
+    console.log('=== generateResponse called ===');
+    console.log('Message:', message);
+    console.log('API Key exists:', !!this.apiKey);
+    console.log('Provider:', this.provider);
+    
     if (this.apiKey) {
       const chatPrompt = `User message: "${message}"
 
 Respond naturally as ClaudeDev assistant. Be helpful, friendly, and conversational.`;
       let result;
+      console.log('Calling chat provider:', this.provider);
+      
       if (this.provider === 'groq') {
         result = await this.generateChatGroq(chatPrompt);
       } else if (this.provider === 'openai') {
@@ -491,9 +497,15 @@ Respond naturally as ClaudeDev assistant. Be helpful, friendly, and conversation
       } else {
         result = await this.generateChatAnthropic(chatPrompt);
       }
-      if (result && !result.startsWith('Error:')) {
+      
+      console.log('Chat result received:', !!result);
+      if (result) {
+        console.log('Chat result preview:', result.substring(0, 100));
         return result;
       }
+      console.log('Chat API returned null, using fallback');
+    } else {
+      console.log('No API key, using fallback');
     }
     
     // Fallback responses
@@ -504,11 +516,16 @@ Respond naturally as ClaudeDev assistant. Be helpful, friendly, and conversation
       'Я готов помочь! Напишите "помощь" чтобы узнать что я умею.',
       'Принято! Чем ещё могу быть полезен?'
     ];
-    return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    const fallback = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    console.log('Using fallback response:', fallback);
+    return fallback;
   }
 
   async generateChatGroq(prompt) {
+    console.log('=== generateChatGroq called ===');
+    console.log('API Key exists:', !!this.apiKey);
     try {
+      console.log('Sending request to Groq...');
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -526,14 +543,27 @@ Respond naturally as ClaudeDev assistant. Be helpful, friendly, and conversation
         })
       });
       
-      if (!response.ok) return null;
+      console.log('Groq chat response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Groq chat error:', errorText);
+        return null;
+      }
       
       const data = await response.json();
+      console.log('Groq chat choices:', data.choices ? data.choices.length : 0);
+      
       if (data.choices && data.choices[0] && data.choices[0].message) {
-        return data.choices[0].message.content;
+        const content = data.choices[0].message.content;
+        console.log('Groq chat content length:', content.length);
+        console.log('Groq chat content preview:', content.substring(0, 100));
+        return content;
       }
+      console.log('No content in Groq chat response');
       return null;
     } catch (error) {
+      console.error('Groq chat API error:', error.message);
       return null;
     }
   }
@@ -1405,7 +1435,7 @@ content
                     <ol>
                         <li><strong>Анализ условия:</strong> Внимательно прочитаем задачу и выделим известные данные</li>
                         <li><strong>Выбор метода:</strong> Определим, какой подход лучше всего подходит</li>
-                        <li>< <li><strong>Применение формул:</strong> Подставим значения и выполним вычисления</li>
+                        <li><strong>Применение формул:</strong> Подставим значения и выполним вычисления</li>
                         <li><strong>Проверка:</strong> Убедимся, что ответ логичен и соответствует условию</li>
                     </ol>
                 </div>

@@ -205,6 +205,14 @@ class AgentClient {
         this.hideTypingIndicator();
         this.handleProjectComplete(data.project);
         break;
+      case 'chat':
+        this.hideTypingIndicator();
+        this.addMessage(data.content, 'bot');
+        break;
+      case 'deployed':
+        this.hideTypingIndicator();
+        this.addMessage(data.content, 'bot');
+        break;
       case 'error':
         this.hideTypingIndicator();
         this.addMessage(`❌ ${data.content}`, 'bot');

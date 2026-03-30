@@ -347,6 +347,47 @@ body {
   margin-top: 8px;
 }
 
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.typing-text {
+  color: var(--text2);
+  font-size: 0.9rem;
+}
+
+.typing-dots {
+  display: flex;
+  gap: 2px;
+}
+
+.typing-dots .dot {
+  animation: typingBounce 1.4s infinite ease-in-out both;
+  font-size: 1.2rem;
+  color: var(--accent);
+}
+
+.typing-dots .dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.typing-dots .dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes typingBounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 /* Code */
 .code-toolbar {
   display: flex;
