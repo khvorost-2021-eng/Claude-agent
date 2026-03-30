@@ -404,26 +404,35 @@ Write a JSON object with these fields:
 Output ONLY valid JSON, no markdown, no comments.`;
 
     try {
+      console.log('🤖 Fetching AI content from Pollinations...');
       const encoded = encodeURIComponent(contentPrompt);
       const url = `https://text.pollinations.ai/${encoded}?json=true&seed=${Date.now()}`;
+      console.log('🌐 URL:', url.substring(0, 80) + '...');
       
       const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      console.log('📥 Response status:', response.status);
+      
       const text = await response.text();
+      console.log('📄 Response length:', text.length);
+      console.log('📝 Preview:', text.substring(0, 200));
       
       // Try to parse JSON from response
       try {
         const data = JSON.parse(text);
-        console.log('✅ AI content generated:', data.title);
+        console.log('✅ AI content parsed successfully:', data.title);
         return data;
-      } catch (e) {
+      } catch (parseError) {
+        console.log('⚠️ Direct JSON parse failed, trying regex extraction...');
         // Extract JSON from markdown code block if present
         const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/{[\s\S]*}/);
         if (jsonMatch) {
+          console.log('🔍 Found JSON via regex');
           return JSON.parse(jsonMatch[1] || jsonMatch[0]);
         }
+        console.log('❌ No JSON found in response');
       }
     } catch (e) {
-      console.error('AI content error:', e.message);
+      console.error('❌ AI content error:', e.message);
     }
     return null;
   }
@@ -451,15 +460,12 @@ Start with <!DOCTYPE html> and end with </html>.`;
     try {
       console.log(`🤖 AI generating ${pageName} page for ${topic}...`);
       const encoded = encodeURIComponent(pagePrompt);
-      const url = `https://text.pollinations.ai/${encoded}?seed=${Date.now()}&model=openai`;
+      const url = `https://text.pollinations.ai/${encoded}?seed=${Date.now()}`;
       
       console.log(`🌐 Fetching from: ${url.substring(0, 100)}...`);
       
       const response = await fetch(url, { 
-        headers: { 
-          'Accept': 'text/plain, text/html, */*',
-          'User-Agent': 'Mozilla/5.0'
-        }
+        headers: { 'Accept': 'text/plain' }
       });
       
       if (!response.ok) {
@@ -538,7 +544,7 @@ Start with <!DOCTYPE html> and end with </html>.`;
       }
       
       // Fallback to template only if AI completely failed
-      if (!html || html.length < 1000) {
+      if (!html || html.length < 500) {
         console.log(`⚠️ AI failed for ${pageName} after ${attempts} attempts, using template fallback`);
         html = this.generatePageWithContent(pageName, content, topic, intent, heroImage);
         templateFallbackCount++;
