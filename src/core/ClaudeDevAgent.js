@@ -2358,7 +2358,9 @@ section { padding: 7rem 2rem; }
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
-}`, 
+}
+`;
+  }
   
   generateSmartHTML(template, pageName, description, intent) {
     const { title, hero } = template;
