@@ -61,7 +61,9 @@ class AgentClient {
     this.previewFrame = document.getElementById('previewFrame');
     this.previewPlaceholder = document.getElementById('previewPlaceholder');
     this.previewUrl = document.getElementById('previewUrl');
-    this.fileSelect = document.getElementById('fileSelect');
+    this.fileInput = document.getElementById('fileInput');
+    this.attachBtn = document.getElementById('attachBtn');
+    this.pendingFiles = [];
     this.codeDisplay = document.getElementById('codeDisplay');
     this.filesTree = document.getElementById('filesTree');
     this.typingIndicator = null;
@@ -167,6 +169,10 @@ class AgentClient {
         this.showToast('Чат очищен');
       }
     });
+
+    // File attachment
+    this.attachBtn?.addEventListener('click', () => this.fileInput?.click());
+    this.fileInput?.addEventListener('change', (e) => this.handleFileSelect(e));
 
     // Tab buttons
     document.querySelectorAll('.tab').forEach(tab => {
@@ -288,6 +294,10 @@ class AgentClient {
       case 'complete':
         this.hideTypingIndicator();
         this.handleProjectComplete(data.project);
+        break;
+      case 'media_received':
+        this.hideTypingIndicator();
+        this.displayMedia(data.files, 'bot');
         break;
       case 'chat':
         this.hideTypingIndicator();
@@ -754,6 +764,133 @@ class AgentClient {
     if (this.statusEl) {
       this.statusEl.textContent = status === 'online' ? '● Онлайн' : '● Офлайн';
       this.statusEl.className = `status-badge ${status}`;
+    }
+  }
+
+  // Display media files in chat
+  displayMedia(files, sender) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${sender}`;
+    
+    let mediaHtml = '<div class="message-content">';
+    
+    files.forEach(file => {
+      if (file.type === 'image') {
+        mediaHtml += `<div class="message-media"><img src="${file.url}" alt="${file.filename}" onclick="window.open('${file.url}', '_blank')"></div>`;
+      } else if (file.type === 'video') {
+        mediaHtml += `<div class="message-media"><video src="${file.url}" controls></video></div>`;
+      } else {
+        mediaHtml += `<div class="message-file">📎 <a href="${file.url}" target="_blank" download>${file.filename}</a></div>`;
+      }
+    });
+    
+    mediaHtml += '</div>';
+    messageDiv.innerHTML = mediaHtml;
+    
+    this.chatMessages.appendChild(messageDiv);
+    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    
+    this.saveLocalHistory();
+  }
+
+  // File handling methods
+  handleFileSelect(event) {
+    const files = Array.from(event.target.files);
+    if (files.length === 0) return;
+
+    // Show file preview in input area
+    this.pendingFiles = files;
+    const fileNames = files.map(f => f.name).join(', ');
+    this.showToast(`Выбрано файлов: ${files.length}`);
+    
+    // Add visual indicator
+    this.addMessage(`📎 Прикреплено: ${fileNames}`, 'user', false, false);
+  }
+
+  async uploadAndSendFiles() {
+    if (this.pendingFiles.length === 0) return;
+
+    const formData = new FormData();
+    this.pendingFiles.forEach(file => formData.append('files', file));
+
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) throw new Error('Upload failed');
+
+      const data = await response.json();
+      
+      // Send files via WebSocket
+      if (this.connected) {
+        this.ws.send(JSON.stringify({
+          type: 'media',
+          files: data.files,
+          sessionId: this.sessionId
+        }));
+      }
+
+      // Clear pending files
+      this.pendingFiles = [];
+      this.fileInput.value = '';
+      
+      return data.files;
+    } catch (error) {
+      console.error('File upload error:', error);
+      this.addMessage('❌ Ошибка загрузки файлов', 'bot');
+      return null;
+    }
+  }
+
+  // Override sendMessage to handle files
+  async sendMessage() {
+    const content = this.messageInput.value.trim();
+    
+    // Upload files first if any
+    let uploadedFiles = null;
+    if (this.pendingFiles.length > 0) {
+      uploadedFiles = await this.uploadAndSendFiles();
+    }
+
+    if (!content && !uploadedFiles) return;
+
+    // Add text message if content exists
+    if (content) {
+      this.addMessage(content, 'user');
+      this.saveLocalHistory();
+    }
+    
+    this.messageInput.value = '';
+    this.messageInput.style.height = 'auto';
+
+    // Send via WebSocket
+    if (this.connected) {
+      this.ws.send(JSON.stringify({ 
+        type: 'chat', 
+        content: content || '[Файлы]', 
+        files: uploadedFiles,
+        sessionId: this.sessionId 
+      }));
+    } else {
+      // Fallback to HTTP API
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            message: content,
+            files: uploadedFiles 
+          })
+        });
+        
+        const data = await response.json();
+        this.handleResponse(data.response);
+        this.saveLocalHistory();
+      } catch (error) {
+        this.addMessage('Ошибка соединения. Попробуйте позже.', 'bot');
+      }
     }
   }
 }

@@ -849,6 +849,115 @@ document.addEventListener('DOMContentLoaded', () => {
     fs.ensureDirSync(this.templatesDir);
   }
 
+  // ===== PROJECT CREATION =====
+
+  async createProject(name, description, type = 'web') {
+    console.log(`=== Creating project: ${name} (${type}) ===`);
+    
+    const projectId = 'proj_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    const projectPath = path.join(this.projectsDir, projectId);
+    
+    fs.ensureDirSync(projectPath);
+    
+    const project = {
+      id: projectId,
+      name: name,
+      description: description,
+      type: type,
+      path: projectPath,
+      files: [],
+      status: 'generating',
+      createdAt: new Date().toISOString()
+    };
+    
+    this.activeProjects.set(projectId, project);
+    
+    try {
+      if (type === 'web') {
+        await this.generateSiteWithAI(project, description);
+      } else if (type === 'android') {
+        await this.generateAndroidApp(project, description);
+      }
+      
+      project.status = 'ready';
+      console.log(`✅ Project ${projectId} created`);
+    } catch (error) {
+      console.error('❌ Project error:', error);
+      project.status = 'error';
+      project.error = error.message;
+    }
+    
+    return project;
+  }
+
+  async generateAndroidApp(project, description) {
+    const androidTemplate = this.getAndroidTemplate();
+    const files = this.parseGeneratedContent(androidTemplate);
+    
+    for (const [filename, content] of Object.entries(files)) {
+      const filePath = path.join(project.path, filename);
+      fs.ensureDirSync(path.dirname(filePath));
+      fs.writeFileSync(filePath, content);
+      project.files.push(filename);
+    }
+  }
+
+  extractTopic(description) {
+    const words = description.toLowerCase()
+      .replace(/создай|сделай|сайт|про|about|create|make|website|web|для|for/g, '')
+      .trim()
+      .split(/\s+/)
+      .filter(w => w.length > 2);
+    return words.slice(0, 3).join(' ') || 'general';
+  }
+
+  listProjects() {
+    return Array.from(this.activeProjects.values());
+  }
+
+  getProject(projectId) {
+    return this.activeProjects.get(projectId);
+  }
+
+  async modifyProject(projectId, description) {
+    const project = this.activeProjects.get(projectId);
+    if (!project) throw new Error('Project not found');
+    
+    project.description += `\n[Modified: ${description}]`;
+    return project;
+  }
+
+  async deployWebsite(projectId, subdomain = null) {
+    const project = this.activeProjects.get(projectId);
+    if (!project || project.type !== 'web') {
+      throw new Error('Web project not found');
+    }
+    
+    return {
+      url: `https://${subdomain || projectId}.claude-agent.repl.co`,
+      subdomain: subdomain || projectId,
+      deployedAt: new Date().toISOString()
+    };
+  }
+
+  async buildAndroidApp(projectId) {
+    const project = this.activeProjects.get(projectId);
+    if (!project || project.type !== 'android') {
+      throw new Error('Android project not found');
+    }
+    
+    project.build = {
+      apk: path.join(project.path, 'app.apk'),
+      aab: path.join(project.path, 'app.aab'),
+      completedAt: new Date().toISOString()
+    };
+    
+    project.status = 'built';
+    return project.build;
+  }
+
+  // ===== CODE GENERATION =====
+
   async generateCode(prompt, options = {}) {
     console.log('=== generateCode called ===');
     console.log('API Key exists:', !!this.apiKey);

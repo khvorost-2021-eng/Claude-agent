@@ -477,10 +477,58 @@ app.get('/api/settings', (req, res) => {
     features: {
       aiGeneration: true,
       deploy: true,
-      auth: false // Coming soon
+      auth: false, // Coming soon
+      mediaUpload: true // Enable media upload
     }
   });
 });
+
+// Media upload endpoint
+app.post('/api/upload', upload.array('files', 5), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'No files uploaded' });
+    }
+
+    const files = req.files.map(file => {
+      const isImage = file.mimetype.startsWith('image/');
+      const isVideo = file.mimetype.startsWith('video/');
+      const url = `/uploads/${file.filename}`;
+      
+      return {
+        filename: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        url: url,
+        type: isImage ? 'image' : isVideo ? 'video' : 'file'
+      };
+    });
+
+    // Move files to permanent uploads directory
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+    fs.ensureDirSync(uploadsDir);
+    
+    for (const file of req.files) {
+      const tempPath = file.path;
+      const targetPath = path.join(uploadsDir, file.filename);
+      fs.moveSync(tempPath, targetPath);
+    }
+
+    res.json({ 
+      success: true, 
+      files: files,
+      message: `Uploaded ${files.length} files`
+    });
+  } catch (error) {
+    console.error('Upload error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join('public', 'uploads')));
+
+// WebSocket connection
 wss.on('connection', (ws) => {
   console.log('Client connected');
   
@@ -507,6 +555,23 @@ wss.on('connection', (ws) => {
     // Ensure we have a session ID for regular messages
     if (!ws.sessionId) {
       ws.sessionId = getOrCreateSessionId(ws);
+    }
+    
+    // Handle media messages
+    if (msg.type === 'media') {
+      console.log('Received media files:', msg.files);
+      
+      // Add media to history
+      const mediaContent = msg.files.map(f => `[${f.type}: ${f.filename}]`).join(', ');
+      addToHistory(ws, 'user', `Отправил файлы: ${mediaContent}`, ws.sessionId);
+      
+      // Broadcast media to client for display
+      ws.send(JSON.stringify({
+        type: 'media_received',
+        files: msg.files,
+        content: `Получены файлы: ${msg.files.map(f => f.filename).join(', ')}`
+      }));
+      return;
     }
     
     if (msg.type === 'chat') {

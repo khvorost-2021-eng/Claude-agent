@@ -250,6 +250,51 @@ body {
   font-size: 1rem;
 }
 
+.chat-input #attachBtn {
+  padding: 10px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  font-size: 1.2rem;
+}
+
+.chat-input #attachBtn:hover {
+  background: var(--accent);
+}
+
+/* Media in messages */
+.message-media {
+  margin-top: 8px;
+  max-width: 100%;
+}
+
+.message-media img {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.message-media video {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+}
+
+.message-file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg3);
+  border-radius: 6px;
+  margin-top: 8px;
+}
+
+.message-file a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
 /* Workspace */
 .workspace {
   display: flex;
