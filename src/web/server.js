@@ -172,8 +172,7 @@ app.post('/api/chat', async (req, res) => {
 function parseIntent(message) {
   const lower = message.toLowerCase();
   
-  // MODIFICATION PATTERNS - Check these FIRST (before create)
-  // These indicate the user wants to modify/extend an existing project
+  // MODIFICATION PATTERNS  // Check for modification intent FIRST with STRICTER checking
   const modifyPatterns = [
     'дополни', 'доработай', 'улучши', 'измени', 'обнови', 'переделай', 'исправь',
     'добавь', 'внеси изменения', 'модифицируй', 'расширь', 'редактируй',
@@ -181,6 +180,10 @@ function parseIntent(message) {
     'который ты уже создал', 'существующий проект', 'в текущий проект',
     'в существующий', 'в уже созданный'
   ];
+  
+  // If strong modification words detected, prioritize modification
+  const strongModifyWords = ['дополни', 'доработай', 'улучши', 'измени', 'обнови', 'переделай', 'исправь', 'добавь к', 'сделай лучше', 'сделай красивее'];
+  const hasStrongModify = strongModifyWords.some(w => lower.includes(w));
   
   // Check for modification intent FIRST
   const isModification = modifyPatterns.some(pattern => lower.includes(pattern));
@@ -193,9 +196,10 @@ function parseIntent(message) {
     'веб-сайт', 'вебсайт', 'веб приложение', 'веб-приложение'
   ];
   
-  // Check for website intent (create or modify)
+  // Check for website intent (create or modify) - MODIFICATION TAKES PRIORITY
   if (websitePatterns.some(pattern => lower.includes(pattern))) {
-    if (isModification) {
+    if (hasStrongModify || isModification) {
+      console.log('📝 Modification intent detected for website:', message);
       return { type: 'modify_website', description: message };
     }
     return { type: 'create_website', description: message };
@@ -285,25 +289,18 @@ async function handleGenerateImage(intent, agent) {
       };
     }
     
-    // Call the agent's image generation method
-    const imageResult = await agent.generateImageWithAI(
-      `High quality artistic image of ${subject}, detailed, beautiful, professional photography style`,
-      { provider: 'pollinations' }
-    );
+    // Direct Pollinations URL - always works without API key
+    const prompt = encodeURIComponent(`High quality artistic image of ${subject}, detailed, beautiful, professional photography style`);
+    const imageUrl = `https://image.pollinations.ai/prompt/${prompt}?width=1024&height=1024&nologo=true&seed=${Date.now()}`;
     
-    if (imageResult && imageResult.url) {
-      return {
-        type: 'image_generated',
-        content: `✅ Изображение сгенерировано: "${subject}"`,
-        imageUrl: imageResult.url,
-        prompt: subject
-      };
-    } else {
-      return {
-        type: 'error',
-        content: '❌ Не удалось сгенерировать изображение. Попробуйте ещё раз.'
-      };
-    }
+    console.log('✅ Generated Pollinations URL:', imageUrl);
+    
+    return {
+      type: 'image_generated',
+      content: `✅ Изображение сгенерировано: "${subject}"`,
+      imageUrl: imageUrl,
+      prompt: subject
+    };
   } catch (error) {
     console.error('Image generation error:', error);
     return {
@@ -388,9 +385,20 @@ function getOrCreateSessionId(ws, providedId = null) {
   return newSessionId;
 }
 
-async function handleChat(intent, agent, history = []) {
-  // Use AI to generate a conversational response with history context
-  const response = await agent.generateResponse(intent.description, history);
+async function handleChat(intent, agent, history = [], sessionContext = {}) {
+  // Build context from history and session
+  const recentHistory = history.slice(-5);
+  const contextPrompt = recentHistory.map(h => `${h.role}: ${h.content}`).join('\n');
+  
+  // Include project context if exists
+  const projectInfo = sessionContext.currentProject 
+    ? `\n\nТекущий проект: ${sessionContext.currentProject.name} (${sessionContext.currentProject.type})`
+    : '';
+  
+  const fullPrompt = `История разговора:\n${contextPrompt}${projectInfo}\n\nТекущий запрос: ${intent.description}`;
+  
+  // Use AI to generate a conversational response with full context
+  const response = await agent.generateResponse(fullPrompt, history);
   return {
     type: 'chat_response',
     content: response || 'Я вас понял! Чем ещё могу помочь?'
@@ -622,6 +630,40 @@ wss.on('connection', (ws) => {
         files: msg.files,
         content: `Получены файлы: ${msg.files.map(f => f.filename).join(', ')}`
       }));
+      
+      // Analyze images if present
+      const imageFiles = msg.files.filter(f => f.type === 'image');
+      if (imageFiles.length > 0) {
+        ws.send(JSON.stringify({
+          type: 'thinking',
+          content: '🔍 Анализирую изображение...'
+        }));
+        
+        try {
+          const analyses = await Promise.all(
+            imageFiles.map(async (img) => {
+              const analysis = await analyzeImage(img.url);
+              return { filename: img.filename, analysis };
+            })
+          );
+          
+          const analysisContent = analyses.map(a => `📷 **${a.filename}**: ${a.analysis}`).join('\n\n');
+          
+          // Add analysis to history
+          addToHistory(ws, 'assistant', `Анализ изображений:\n${analysisContent}`, ws.sessionId);
+          
+          ws.send(JSON.stringify({
+            type: 'chat',
+            content: `🔍 **Анализ изображений:**\n\n${analysisContent}`
+          }));
+        } catch (analyzeError) {
+          console.error('Image analysis error:', analyzeError);
+          ws.send(JSON.stringify({
+            type: 'chat',
+            content: 'Изображения получены. Не удалось проанализировать их содержимое.'
+          }));
+        }
+      }
       return;
     }
     
@@ -666,6 +708,10 @@ wss.on('connection', (ws) => {
               );
               const webProject = await Promise.race([createPromise, timeoutPromise]);
               
+              // Save project to session context
+              setSessionContext(ws.sessionId, 'currentProject', webProject);
+              setSessionContext(ws.sessionId, 'lastProjectId', webProject.id);
+              
               ws.send(JSON.stringify({ 
                 type: 'project_created', 
                 content: '✅ Веб-сайт создан',
@@ -686,15 +732,27 @@ wss.on('connection', (ws) => {
           case 'modify_project':
             ws.send(JSON.stringify({ type: 'progress', step: 'modifying', content: 'Дорабатываю проект...' }));
             try {
+              const ctx = getSessionContext(ws.sessionId);
               const projects = agent.listProjects();
+              
               if (projects.length === 0) {
                 ws.send(JSON.stringify({
                   type: 'error',
                   content: 'Нет проектов для доработки. Сначала создайте проект.'
                 }));
               } else {
-                const project = projects[projects.length - 1];
+                // Try to get project from context, otherwise use last project
+                let project = ctx.currentProject;
+                if (!project || !projects.find(p => p.id === project.id)) {
+                  project = projects[projects.length - 1];
+                }
+                
+                console.log('📝 Modifying project:', project.id, project.name);
                 await agent.modifyProject(project.id, msg.content);
+                
+                // Update context with modified project
+                setSessionContext(ws.sessionId, 'currentProject', project);
+                
                 ws.send(JSON.stringify({
                   type: 'project_modified',
                   content: `✅ Проект "${project.name}" доработан`,
@@ -715,7 +773,10 @@ wss.on('connection', (ws) => {
             try {
               console.log('Processing chat intent:', intent.description);
               console.log('History length:', history.length);
-              const chatResponse = await handleChat(intent, agent, history);
+              
+              // Get session context for project continuity
+              const ctx = getSessionContext(ws.sessionId);
+              const chatResponse = await handleChat(intent, agent, history, ctx);
               console.log('Chat response:', chatResponse);
               
               // Add bot response to history (persistently)
@@ -849,5 +910,64 @@ server.listen(PORT, () => {
   console.log(`AI Agent server running on port ${PORT}`);
   console.log(`Dashboard: http://localhost:${PORT}`);
 });
+
+// Store current project context per session for continuity
+const sessionContext = new Map();
+
+// Helper to set session context
+function setSessionContext(sessionId, key, value) {
+  if (!sessionContext.has(sessionId)) {
+    sessionContext.set(sessionId, {});
+  }
+  const ctx = sessionContext.get(sessionId);
+  ctx[key] = value;
+  ctx.lastActivity = Date.now();
+}
+
+// Helper to get session context
+function getSessionContext(sessionId) {
+  return sessionContext.get(sessionId) || {};
+}
+
+// Analyze image with Vision API
+async function analyzeImage(imageUrl, prompt = 'Опиши что видишь на этой картинке') {
+  try {
+    console.log('🔍 Analyzing image:', imageUrl);
+    
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY}`,
+        'HTTP-Referer': 'https://claudedev.example.com',
+        'X-Title': 'ClaudeDev Agent'
+      },
+      body: JSON.stringify({
+        model: 'anthropic/claude-3-haiku',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              { type: 'image_url', image_url: { url: imageUrl } }
+            ]
+          }
+        ],
+        max_tokens: 1000
+      })
+    });
+    
+    if (!response.ok) {
+      console.log('Vision API failed, returning basic info');
+      return 'Изображение получено (анализ недоступен)';
+    }
+    
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || 'Изображение получено';
+  } catch (error) {
+    console.error('Image analysis error:', error.message);
+    return 'Изображение получено';
+  }
+}
 
 export { app, agent, publisher };

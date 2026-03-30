@@ -352,8 +352,8 @@ class ClaudeDevAgent {
   }
   
   async generateSiteWithAI(project, description) {
-    console.log('=== AI SITE GENERATION (NO TEMPLATES) ===');
-    console.log('Generating complete website with AI based on user request...');
+    console.log('=== AI SITE GENERATION ===');
+    console.log('Generating custom multi-page website based on user request...');
     
     // Extract topic and intent
     const { analyzeIntent } = require('./websiteTemplates.js');
@@ -368,54 +368,107 @@ class ClaudeDevAgent {
     const webResults = await this.searchWeb(`${topic} основная информация факты`);
     const realInfo = webResults.slice(0, 3).map(r => r.snippet).join(' ').substring(0, 500);
     
-    // Generate images for the site
-    console.log('🎨 Generating AI images for the site...');
-    const heroImage = await this.generateImageWithAI(
-      `Hero banner image for ${topic} website, modern professional design, high quality`,
-      { provider: 'pollinations' }
-    );
+    // Generate hero image
+    console.log('🎨 Generating hero image...');
+    const heroImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(`Modern professional hero banner for ${topic} website, stunning design, high quality`)}?width=1200&height=600&nologo=true&seed=${Date.now()}`;
     
-    // Create AI prompt for complete site generation
-    const sitePrompt = `Создай полноценный современный веб-сайт на тему "${topic}".
+    // Create AI prompt for complete multi-page site
+    const sitePrompt = `Создай ПОЛНОЦЕННЫЙ МНОГОСТРАНИЧНЫЙ веб-сайт на тему "${topic}".
+
+⚠️ ВАЖНО: Это заказ пользователя. НЕ используй шаблоны. Создай УНИКАЛЬНЫЙ сайт с конкретным контентом по теме.
 
 ТИП САЙТА: ${intent.siteType}
 КАТЕГОРИЯ: ${intent.category}
 
-РЕАЛЬНАЯ ИНФОРМАЦИЯ (используй в контенте):
+КОНТЕНТ (используй реальные факты):
 ${realInfo}
 
-СТРУКТУРА САЙТА (5 страниц):
-1. index.html - Главная страница с эффектным hero-блоком, градиентом, заголовком "${topic}", описанием, CTA-кнопкой
-2. about.html - О нас/О теме с фактами и информацией
-3. services.html - Услуги/разделы/контент по теме
-4. blog.html - Статьи/уроки по теме (если образовательный) или новости
-5. contact.html - Контактная страница с формой
+СОЗДАЙ 5 ФАЙЛОВ:
 
-ДИЗАЙН ТРЕБОВАНИЯ:
-- Современный glassmorphism дизайн
-- Градиентные кнопки (border-radius: 50px)
-- Адаптивность
-- CSS variables для цветов
-- Плавные анимации
-- НИКАКИХ серых кнопок
-- Используй изображение: ${heroImage?.url || 'https://picsum.photos/800/600'}
+1. index.html - Главная страница:
+   - Hero блок с заголовком по теме "${topic}"
+   - Приветственный текст с фактами из контента выше
+   - 3 карточки с преимуществами
+   - CTA кнопка
+   - Навигация на другие страницы
 
-Контент должен быть на русском языке, уникальным, без шаблонных фраз. Используй реальные факты из предоставленной информации.
+2. about.html - О нас/О теме:
+   - История/информация по теме "${topic}"
+   - 2-3 секции с фактами
+   - Изображения
+   - Ссылки на главную и контакты
 
-ОТВЕТЬ в формате:
-filename.html
+3. services.html - Услуги/Разделы:
+   - 3-4 карточки услуг по теме
+   - Описания каждой услуги
+   - Цены или детали
+
+4. blog.html - Статьи/Новости:
+   - Список из 2-3 статей по теме
+   - Заголовки, краткое описание, дата
+   - Кликабельные карточки
+
+5. contact.html - Контакты:
+   - Форма обратной связи (имя, email, сообщение)
+   - Контактная информация
+   - Карта (placeholder)
+
+Также создай:
+6. styles.css - Единый стиль для всех страниц:
+   - CSS variables для цветов
+   - Градиенты, тени, анимации
+   - Адаптивный дизайн
+   - Красивые кнопки (border-radius: 50px)
+
+7. main.js - Интерактивность:
+   - Мобильное меню
+   - Smooth scroll
+   - Валидация форм
+   - Анимации при скролле
+
+ТРЕБОВАНИЯ:
+- Каждая страница должна иметь уникальный контент по теме (не lorem ipsum)
+- Используй навигацию между страницами
+- Дизайн должен быть современным
+- Все ссылки между страницами должны работать
+- Контент на РУССКОМ языке
+- Используй изображение: ${heroImageUrl}
+
+ОТВЕТЬ строго в формате:
+
+index.html
 \`\`\`html
-код
+<!DOCTYPE html>...
+\`\`\`
+
+about.html
+\`\`\`html
+...
+\`\`\`
+
+services.html
+\`\`\`html
+...
+\`\`\`
+
+blog.html
+\`\`\`html
+...
+\`\`\`
+
+contact.html
+\`\`\`html
+...
 \`\`\`
 
 styles.css
 \`\`\`css
-код
+...
 \`\`\`
 
 main.js
 \`\`\`javascript
-код
+...
 \`\`\``;
 
     // Generate complete site with AI
@@ -991,8 +1044,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       console.log('No API key available');
     }
-    console.log('Falling back to template mode');
-    return this.generateFromTemplate(options.type);
+    console.log('Returning null - AI generation failed');
+    return null;  // Return null instead of template so caller knows AI failed
   }
 
   generateFromTemplate(type) {
