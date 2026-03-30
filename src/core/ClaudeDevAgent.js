@@ -1246,34 +1246,57 @@ Only respond with valid JSON, no other text.`;
     const files = {};
     
     // Generate CSS first (shared styles)
-    const cssPrompt = `Create modern, BEAUTIFUL CSS for a ${structure.type} website.
+    const cssPrompt = `Create MODERN, BEAUTIFUL CSS for a ${structure.type} website with EXCELLENT button design.
 Theme: ${structure.theme || 'modern professional'}
 Features needed: ${structure.features?.join(', ') || 'responsive, clean design'}
 
-CRITICAL REQUIREMENTS:
-1. HIGH CONTRAST: Dark text (#1a1a2e, #16213e) on light backgrounds (#f8f9fa, #ffffff) OR light text (#ffffff) on dark backgrounds (#0f0f23, #1a1a2e)
-2. NEVER use light gray text (#cccccc, #dddddd) on white backgrounds
-3. USE CSS CUSTOM PROPERTIES for consistent colors:
-   --primary: vibrant accent color
-   --text: high contrast dark color
-   --bg: clean light background
-   --heading: very dark for maximum readability
-4. Modern design: subtle shadows, rounded corners (8-16px), smooth transitions
-5. Typography: Clear hierarchy, readable sizes (16px+ for body)
-6. Mobile-first responsive with breakpoints
+CRITICAL DESIGN REQUIREMENTS:
 
-Example color scheme (adjust to match theme):
-:root {
-  --primary: #6366f1;
-  --primary-dark: #4f46e5;
-  --text: #1e293b;
-  --text-light: #64748b;
-  --bg: #ffffff;
-  --bg-alt: #f1f5f9;
-  --heading: #0f172a;
+1. BUTTONS MUST BE BEAUTIFUL:
+   - Border-radius: 50px (pill-shaped) or 12px (rounded)
+   - Padding: 1rem 2rem (comfortable click area)
+   - Font-weight: 600 (semi-bold)
+   - Box-shadow for depth: 0 4px 15px rgba(0,0,0,0.2)
+   - Hover effect: transform: translateY(-2px) + increased shadow
+   - Transition: all 0.3s ease
+   - Primary button: gradient background (vibrant colors)
+   - Secondary button: outlined with border
+
+2. HIGH CONTRAST COLORS:
+   - Dark text (#1e293b, #0f172a) on light backgrounds (#ffffff, #f8fafc)
+   - CSS custom properties in :root for consistency
+   - Gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+
+3. MODERN ELEMENTS:
+   - Cards with shadow: box-shadow: 0 10px 40px rgba(0,0,0,0.1)
+   - Border-radius: 12px-20px for cards
+   - Smooth transitions on all interactive elements
+   - Font: 'Inter' or system fonts
+   - Backdrop-filter blur for navigation
+
+4. VISUAL HIERARCHY:
+   - Hero section with gradient background
+   - Clear section titles with proper spacing
+   - Icon integration (FontAwesome)
+
+Example button CSS:
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 2rem;
+  border-radius: 50px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
 }
 
-Output ONLY valid CSS with these color variables.`;
+Output ONLY the complete CSS content.`;
 
     const cssResponse = await this.generateCode(cssPrompt, { type: 'web' });
     files['styles.css'] = this.extractCodeBlock(cssResponse) || cssResponse;
@@ -1549,10 +1572,10 @@ Output ONLY the JavaScript content.`;
   }
   
   async generateMinimalSite(project, description) {
-    // Emergency fallback - create minimal working site
-    console.log('Creating minimal site as fallback');
+    // Emergency fallback - create beautiful modern site
+    console.log('Creating beautiful minimal site as fallback');
     
-    const title = description.split(' ').slice(0, 5).join(' ') || 'Website';
+    const title = description.replace(/создай сайт|создай|сделай/gi, '').trim().split(' ').slice(0, 4).join(' ') || 'Классный Сайт';
     
     const html = `<!DOCTYPE html>
 <html lang="ru">
@@ -1560,58 +1583,320 @@ Output ONLY the JavaScript content.`;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${title}</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌐</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --accent: #8b5cf6;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --bg: #ffffff;
+            --bg-alt: #f8fafc;
+            --gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-hero: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --radius: 12px;
+            --radius-lg: 20px;
+        }
+        
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             line-height: 1.6; 
-            color: #333;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: var(--text);
+            background: var(--bg);
+        }
+        
+        /* Navigation */
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+        }
+        
+        .nav-menu {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+        
+        .nav-link {
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        
+        .nav-link:hover {
+            color: var(--primary);
+        }
+        
+        /* Hero Section */
+        .hero {
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            background: var(--gradient-hero);
+            padding: 6rem 2rem 4rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
         }
-        .container {
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.3;
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 1;
             max-width: 800px;
-            margin: 0 auto;
-            padding: 40px;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
-        h1 { 
-            font-size: 2.5rem; 
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        p { font-size: 1.2rem; margin-bottom: 1.5rem; }
-        .btn {
-            display: inline-block;
-            padding: 15px 30px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
             color: white;
+            margin-bottom: 1.5rem;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        
+        .hero p {
+            font-size: 1.25rem;
+            color: rgba(255,255,255,0.9);
+            margin-bottom: 2.5rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 2rem;
+            border-radius: 50px;
+            font-weight: 600;
             text-decoration: none;
-            border-radius: 30px;
-            font-weight: bold;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        
+        .btn-primary {
+            background: white;
+            color: var(--primary-dark);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: white;
+        }
+        
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        /* Features Section */
+        .features {
+            padding: 5rem 2rem;
+            background: var(--bg-alt);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 3rem;
+            color: var(--text);
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+        
+        .feature-card {
+            background: white;
+            padding: 2rem;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
             transition: transform 0.3s, box-shadow 0.3s;
         }
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            background: var(--gradient);
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+        
+        .feature-icon i {
+            font-size: 1.5rem;
+            color: white;
+        }
+        
+        .feature-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+        
+        .feature-card p {
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+        
+        /* Footer */
+        .footer {
+            background: var(--text);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2rem; }
+            .nav-menu { display: none; }
+            .hero-buttons { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>${title}</h1>
-        <p>${description}</p>
-        <p>Это базовая версия сайта. Для полной версии требуется API ключ.</p>
-        <a href="#" class="btn">Узнать больше</a>
-    </div>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="#" class="nav-logo">✨ ${title}</a>
+            <ul class="nav-menu">
+                <li><a href="#" class="nav-link">Главная</a></li>
+                <li><a href="#" class="nav-link">О нас</a></li>
+                <li><a href="#" class="nav-link">Контакты</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>${title}</h1>
+            <p>Добро пожаловать на наш удивительный сайт! Здесь вы найдете интересный контент и современный дизайн.</p>
+            <div class="hero-buttons">
+                <a href="#" class="btn btn-primary">
+                    <i class="fas fa-rocket"></i>
+                    Начать сейчас
+                </a>
+                <a href="#" class="btn btn-secondary">
+                    <i class="fas fa-info-circle"></i>
+                    Узнать больше
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section class="features">
+        <div class="container">
+            <h2 class="section-title">Наши возможности</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h3>Быстрая работа</h3>
+                    <p>Высокая производительность и оптимизация для любых устройств</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Надёжность</h3>
+                    <p>Безопасность и стабильность на высшем уровне</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-magic"></i>
+                    </div>
+                    <h3>Современный дизайн</h3>
+                    <p>Красивый и актуальный интерфейс для пользователей</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <p>&copy; 2024 ${title}. Создано с любовью ❤️</p>
+    </footer>
 </body>
 </html>`;
     
@@ -1619,7 +1904,7 @@ Output ONLY the JavaScript content.`;
     fs.writeFileSync(filepath, html);
     project.files.push('index.html');
     
-    console.log('Created minimal fallback site');
+    console.log('Created beautiful minimal fallback site');
   }
 
   async generateWebProjectAI(project, description) {
