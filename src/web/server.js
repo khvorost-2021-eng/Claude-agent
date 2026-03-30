@@ -253,6 +253,17 @@ function parseIntent(message) {
     return { type: 'help', description: message };
   }
   
+  // Image generation patterns
+  const imagePatterns = [
+    'сгенерируй картинку', 'создай картинку', 'сгенерируй изображение', 'создай изображение',
+    'нарисуй', 'сделай картинку', 'сделай изображение', 'generate image', 'create image',
+    'draw', 'картинка', 'изображение', 'фото', 'picture', 'image of'
+  ];
+  
+  if (imagePatterns.some(pattern => lower.includes(pattern))) {
+    return { type: 'generate_image', description: message };
+  }
+  
   // Chat/Conversation patterns - any question or statement that's not a command
   if (lower.length > 0) {
     // Treat any remaining input as a conversation/chat
@@ -260,6 +271,50 @@ function parseIntent(message) {
   }
   
   return { type: 'unknown' };
+}
+
+async function handleGenerateImage(intent, agent) {
+  console.log('🎨 Generating image for:', intent.description);
+  
+  try {
+    // Extract the subject from the description
+    const subject = intent.description
+      .replace(/сгенерируй|создай|нарисуй|картинку|изображение|фото|generate|create|draw|image|of/gi, '')
+      .trim();
+    
+    if (!subject) {
+      return {
+        type: 'error',
+        content: 'Пожалуйста, опишите что нарисовать. Например: "сгенерируй картинку космоса"'
+      };
+    }
+    
+    // Call the agent's image generation method
+    const imageResult = await agent.generateImageWithAI(
+      `High quality artistic image of ${subject}, detailed, beautiful, professional photography style`,
+      { provider: 'pollinations' }
+    );
+    
+    if (imageResult && imageResult.url) {
+      return {
+        type: 'image_generated',
+        content: `✅ Изображение сгенерировано: "${subject}"`,
+        imageUrl: imageResult.url,
+        prompt: subject
+      };
+    } else {
+      return {
+        type: 'error',
+        content: '❌ Не удалось сгенерировать изображение. Попробуйте ещё раз.'
+      };
+    }
+  } catch (error) {
+    console.error('Image generation error:', error);
+    return {
+      type: 'error',
+      content: `❌ Ошибка генерации: ${error.message}`
+    };
+  }
 }
 
 async function handleCreateApp(intent, agent) {
@@ -679,6 +734,35 @@ wss.on('connection', (ws) => {
               ws.send(JSON.stringify({ 
                 type: 'chat', 
                 content: 'Извините, произошла ошибка. Попробуйте ещё раз или напишите "помощь".' 
+              }));
+            }
+            break;
+            
+          case 'generate_image':
+            try {
+              console.log('Processing image generation:', intent.description);
+              ws.send(JSON.stringify({ 
+                type: 'progress', 
+                step: 'generating_image', 
+                content: '🎨 Генерирую изображение...' 
+              }));
+              
+              const imageResponse = await handleGenerateImage(intent, agent);
+              
+              // Add bot response to history
+              addToHistory(ws, 'assistant', imageResponse.content, ws.sessionId);
+              
+              ws.send(JSON.stringify({ 
+                type: 'image_generated', 
+                content: imageResponse.content,
+                imageUrl: imageResponse.imageUrl,
+                prompt: imageResponse.prompt
+              }));
+            } catch (imageError) {
+              console.error('Image generation handler error:', imageError);
+              ws.send(JSON.stringify({ 
+                type: 'error', 
+                content: '❌ Ошибка при генерации изображения. Попробуйте ещё раз.' 
               }));
             }
             break;

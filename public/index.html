@@ -39,6 +39,7 @@
           <h2>💬 Чат с агентом</h2>
           <div class="chat-actions">
             <button class="chat-btn new-chat" id="newChatBtn" title="Новый чат">+ Новый</button>
+            <button class="chat-btn history-chat" id="historyChatBtn" title="История чатов">📚 История</button>
             <button class="chat-btn delete-chat" id="deleteChatBtn" title="Удалить чат">🗑 Очистить</button>
           </div>
         </div>
@@ -150,6 +151,17 @@
       <span class="close">&times;</span>
       <h3 id="modalTitle">Проект</h3>
       <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- Chat History Modal -->
+  <div class="modal" id="chatHistoryModal">
+    <div class="modal-content chat-history-modal">
+      <span class="close" id="closeChatHistory">&times;</span>
+      <h3>📚 История чатов</h3>
+      <div id="chatHistoryBody" class="chat-history-body">
+        <p>История чатов пуста</p>
+      </div>
     </div>
   </div>
 

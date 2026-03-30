@@ -160,6 +160,15 @@ class AgentClient {
       this.showToast('Новый чат создан');
     });
 
+    // History button
+    document.getElementById('historyChatBtn')?.addEventListener('click', () => {
+      this.showChatHistory();
+    });
+
+    document.getElementById('closeChatHistory')?.addEventListener('click', () => {
+      document.getElementById('chatHistoryModal')?.classList.remove('active');
+    });
+
     // Delete chat button - clear all messages
     document.getElementById('deleteChatBtn')?.addEventListener('click', () => {
       if (confirm('Очистить весь чат?')) {
@@ -298,6 +307,18 @@ class AgentClient {
       case 'media_received':
         this.hideTypingIndicator();
         this.displayMedia(data.files, 'bot');
+        break;
+      case 'image_generated':
+        this.hideTypingIndicator();
+        this.addMessage(data.content, 'bot');
+        if (data.imageUrl) {
+          this.displayMedia([{
+            url: data.imageUrl,
+            filename: data.prompt || 'generated-image.png',
+            type: 'image'
+          }], 'bot');
+        }
+        this.saveLocalHistory();
         break;
       case 'chat':
         this.hideTypingIndicator();
@@ -791,6 +812,37 @@ class AgentClient {
     this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
     
     this.saveLocalHistory();
+  }
+
+  // Show chat history modal
+  showChatHistory() {
+    const modal = document.getElementById('chatHistoryModal');
+    const body = document.getElementById('chatHistoryBody');
+    
+    // Get messages from current chat
+    const messages = [];
+    this.chatMessages.querySelectorAll('.message').forEach((msg, index) => {
+      const role = msg.classList.contains('user') ? 'user' : 'assistant';
+      const contentEl = msg.querySelector('.message-content');
+      const content = contentEl ? contentEl.innerText : '';
+      
+      if (content && !msg.classList.contains('thinking')) {
+        messages.push({ role, content, index: index + 1 });
+      }
+    });
+    
+    if (messages.length === 0) {
+      body.innerHTML = '<p>История чатов пуста</p>';
+    } else {
+      body.innerHTML = messages.map(msg => `
+        <div class="chat-history-item ${msg.role}">
+          <div class="chat-history-role">${msg.role === 'user' ? '👤 Вы' : '🤖 Агент'} #${msg.index}</div>
+          <div class="chat-history-content">${msg.content.substring(0, 200)}${msg.content.length > 200 ? '...' : ''}</div>
+        </div>
+      `).join('');
+    }
+    
+    modal?.classList.add('active');
   }
 
   // File handling methods

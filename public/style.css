@@ -295,6 +295,53 @@ body {
   text-decoration: none;
 }
 
+/* Chat History Modal */
+.chat-history-modal {
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+}
+
+.chat-history-body {
+  overflow-y: auto;
+  max-height: 60vh;
+  padding: 10px;
+}
+
+.chat-history-item {
+  padding: 12px;
+  margin-bottom: 10px;
+  background: var(--bg3);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent);
+}
+
+.chat-history-item.user {
+  border-left-color: var(--success);
+}
+
+.chat-history-item.assistant {
+  border-left-color: var(--accent);
+}
+
+.chat-history-role {
+  font-size: 0.75rem;
+  color: var(--text2);
+  margin-bottom: 4px;
+}
+
+.chat-history-content {
+  font-size: 0.9rem;
+  color: var(--text);
+  word-wrap: break-word;
+}
+
+.chat-history-time {
+  font-size: 0.7rem;
+  color: var(--text2);
+  margin-top: 4px;
+}
+
 /* Workspace */
 .workspace {
   display: flex;
