@@ -149,6 +149,693 @@ class ClaudeDevAgent {
     return template;
   }
 
+  // ===== AI IMAGE & VIDEO GENERATION =====
+  
+  async generateImageWithAI(prompt, options = {}) {
+    console.log(`🎨 Generating AI image for: "${prompt}"`);
+    
+    const provider = options.provider || 'openai';
+    const size = options.size || '1024x1024';
+    
+    try {
+      if (provider === 'openai' && process.env.OPENAI_API_KEY) {
+        // DALL-E 3 generation
+        const response = await fetch('https://api.openai.com/v1/images/generations', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+          },
+          body: JSON.stringify({
+            model: 'dall-e-3',
+            prompt: prompt,
+            n: 1,
+            size: size,
+            quality: 'standard'
+          })
+        });
+        
+        if (!response.ok) throw new Error(`DALL-E API error: ${response.status}`);
+        
+        const data = await response.json();
+        if (data.data && data.data[0]) {
+          console.log(`✅ AI image generated: ${data.data[0].url}`);
+          return {
+            url: data.data[0].url,
+            alt: prompt,
+            source: 'dall-e-3',
+            revised_prompt: data.data[0].revised_prompt
+          };
+        }
+      } else if (provider === 'stability' && process.env.STABILITY_API_KEY) {
+        // Stable Diffusion via Stability AI
+        const response = await fetch('https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.STABILITY_API_KEY}`
+          },
+          body: JSON.stringify({
+            text_prompts: [{ text: prompt, weight: 1 }],
+            cfg_scale: 7,
+            steps: 30,
+            width: 1024,
+            height: 1024
+          })
+        });
+        
+        if (!response.ok) throw new Error(`Stability API error: ${response.status}`);
+        
+        const data = await response.json();
+        if (data.artifacts && data.artifacts[0]) {
+          const base64Image = data.artifacts[0].base64;
+          console.log(`✅ Stable Diffusion image generated`);
+          return {
+            base64: base64Image,
+            alt: prompt,
+            source: 'stable-diffusion'
+          };
+        }
+      } else if (provider === 'pollinations') {
+        // Free Pollinations AI (no API key needed)
+        const encodedPrompt = encodeURIComponent(prompt);
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${options.width || 1024}&height=${options.height || 1024}&nologo=true`;
+        console.log(`✅ Pollinations image URL generated`);
+        return {
+          url: imageUrl,
+          alt: prompt,
+          source: 'pollinations'
+        };
+      }
+    } catch (error) {
+      console.error('❌ AI image generation failed:', error.message);
+    }
+    
+    // Fallback to web search images
+    console.log('⚠️ AI generation failed, using web search images');
+    const webImages = await this.searchImages(prompt, 1);
+    return webImages[0];
+  }
+  
+  async searchVideos(query, limit = 3) {
+    console.log(`🎬 Searching videos for: "${query}"`);
+    
+    try {
+      // Use YouTube search or other video APIs
+      const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=video&maxResults=${limit}&key=${process.env.YOUTUBE_API_KEY || ''}`;
+      
+      if (process.env.YOUTUBE_API_KEY) {
+        const response = await fetch(searchUrl);
+        if (response.ok) {
+          const data = await response.json();
+          const videos = data.items?.map(item => ({
+            id: item.id.videoId,
+            title: item.snippet.title,
+            description: item.snippet.description,
+            thumbnail: item.snippet.thumbnails?.medium?.url,
+            embedUrl: `https://www.youtube.com/embed/${item.id.videoId}`,
+            watchUrl: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+            source: 'youtube'
+          })) || [];
+          console.log(`✅ Found ${videos.length} videos`);
+          return videos;
+        }
+      }
+    } catch (error) {
+      console.error('❌ Video search error:', error.message);
+    }
+    
+    // Return fallback video embeds
+    return [
+      {
+        embedUrl: `https://www.youtube.com/embed/dQw4w9WgXcQ`,
+        title: `Learn ${query}`,
+        thumbnail: `https://img.youtube.com/vi/dQw4w9WgXcQ/mqdefault.jpg`,
+        source: 'youtube-fallback'
+      }
+    ];
+  }
+  
+  async generateVisualContentForLesson(topic, lessonTitle) {
+    console.log(`🖼️ Generating visual content for lesson: "${lessonTitle}"`);
+    
+    // Generate AI image for the lesson
+    const imagePrompt = `Educational illustration about ${topic}: ${lessonTitle}, clean modern design, infographic style, professional presentation, high quality`;
+    const image = await this.generateImageWithAI(imagePrompt, { provider: 'pollinations' });
+    
+    // Search related videos
+    const videos = await this.searchVideos(`${topic} ${lessonTitle} tutorial`, 2);
+    
+    return {
+      image: image,
+      videos: videos,
+      diagrams: [], // Will be populated with generated diagrams
+      infographics: []
+    };
+  }
+  
+  async generateTheoryWithMedia(topic, lessonIndex) {
+    console.log(`📚 Generating theory with media for: "${topic}" lesson ${lessonIndex}`);
+    
+    // Search for educational content
+    const webResults = await this.searchWeb(`${topic} урок ${lessonIndex} объяснение`);
+    
+    // Generate visual content
+    const visualContent = await this.generateVisualContentForLesson(topic, `Урок ${lessonIndex}`);
+    
+    // Generate AI image for theory
+    const theoryImage = await this.generateImageWithAI(
+      `Educational diagram explaining ${topic}, detailed illustration, academic style`,
+      { provider: 'pollinations' }
+    );
+    
+    return {
+      theory: webResults[0]?.snippet || `Изучаем ${topic} — урок ${lessonIndex}`,
+      image: theoryImage,
+      visualContent: visualContent,
+      hasMedia: true
+    };
+  }
+  
+  async processUserMedia(filePath, type = 'image') {
+    console.log(`📤 Processing user media: ${filePath}`);
+    
+    try {
+      if (!fs.existsSync(filePath)) {
+        throw new Error('File not found');
+      }
+      
+      const stats = fs.statSync(filePath);
+      const fileName = path.basename(filePath);
+      const targetDir = path.join(this.projectsDir, 'media');
+      fs.ensureDirSync(targetDir);
+      
+      const targetPath = path.join(targetDir, `${Date.now()}-${fileName}`);
+      fs.copySync(filePath, targetPath);
+      
+      console.log(`✅ Media processed: ${targetPath}`);
+      return {
+        originalPath: filePath,
+        processedPath: targetPath,
+        fileName: fileName,
+        size: stats.size,
+        type: type,
+        url: `/media/${path.basename(targetPath)}`
+      };
+    } catch (error) {
+      console.error('❌ Media processing error:', error.message);
+      return null;
+    }
+  }
+  
+  async generateSiteWithAI(project, description) {
+    console.log('=== AI SITE GENERATION (NO TEMPLATES) ===');
+    console.log('Generating complete website with AI based on user request...');
+    
+    // Extract topic and intent
+    const { analyzeIntent } = require('./websiteTemplates.js');
+    const intent = analyzeIntent ? analyzeIntent(description) : { category: 'general', siteType: 'general' };
+    const topic = this.extractTopic(description);
+    
+    console.log(`🎯 Topic: ${topic}`);
+    console.log(`📂 Category: ${intent.category}, Site Type: ${intent.siteType}`);
+    
+    // Search for real data about the topic
+    console.log('🔍 Searching internet for relevant information...');
+    const webResults = await this.searchWeb(`${topic} основная информация факты`);
+    const realInfo = webResults.slice(0, 3).map(r => r.snippet).join(' ').substring(0, 500);
+    
+    // Generate images for the site
+    console.log('🎨 Generating AI images for the site...');
+    const heroImage = await this.generateImageWithAI(
+      `Hero banner image for ${topic} website, modern professional design, high quality`,
+      { provider: 'pollinations' }
+    );
+    
+    // Create AI prompt for complete site generation
+    const sitePrompt = `Создай полноценный современный веб-сайт на тему "${topic}".
+
+ТИП САЙТА: ${intent.siteType}
+КАТЕГОРИЯ: ${intent.category}
+
+РЕАЛЬНАЯ ИНФОРМАЦИЯ (используй в контенте):
+${realInfo}
+
+СТРУКТУРА САЙТА (5 страниц):
+1. index.html - Главная страница с эффектным hero-блоком, градиентом, заголовком "${topic}", описанием, CTA-кнопкой
+2. about.html - О нас/О теме с фактами и информацией
+3. services.html - Услуги/разделы/контент по теме
+4. blog.html - Статьи/уроки по теме (если образовательный) или новости
+5. contact.html - Контактная страница с формой
+
+ДИЗАЙН ТРЕБОВАНИЯ:
+- Современный glassmorphism дизайн
+- Градиентные кнопки (border-radius: 50px)
+- Адаптивность
+- CSS variables для цветов
+- Плавные анимации
+- НИКАКИХ серых кнопок
+- Используй изображение: ${heroImage?.url || 'https://picsum.photos/800/600'}
+
+Контент должен быть на русском языке, уникальным, без шаблонных фраз. Используй реальные факты из предоставленной информации.
+
+ОТВЕТЬ в формате:
+filename.html
+\`\`\`html
+код
+\`\`\`
+
+styles.css
+\`\`\`css
+код
+\`\`\`
+
+main.js
+\`\`\`javascript
+код
+\`\`\``;
+
+    // Generate complete site with AI
+    let siteContent;
+    if (this.apiKey) {
+      console.log('🤖 Sending request to AI...');
+      siteContent = await this.generateCode(sitePrompt, { type: 'web' });
+    }
+    
+    // If AI generation failed or no API key, use smart template fallback
+    if (!siteContent || siteContent.startsWith('Error:')) {
+      console.log('⚠️ AI generation failed, using smart template fallback...');
+      return this.generateFromTemplate(project, description);
+    }
+    
+    // Parse and save generated files
+    console.log('💾 Parsing and saving generated files...');
+    const files = this.parseGeneratedContent(siteContent);
+    
+    for (const [filename, content] of Object.entries(files)) {
+      const filePath = path.join(project.path, filename);
+      fs.writeFileSync(filePath, content);
+      project.files.push(filename);
+      console.log(`✅ Saved: ${filename}`);
+    }
+    
+    // Ensure all required files exist
+    this.ensureRequiredFiles(project, files, topic, intent);
+    
+    // Save metadata
+    const metadata = {
+      generationMethod: 'AI_GENERATED',
+      topic,
+      intent,
+      hasAIImages: !!heroImage,
+      webResultsCount: webResults.length,
+      createdAt: new Date().toISOString(),
+      version: '5.0-ai-generated'
+    };
+    fs.writeFileSync(
+      path.join(project.path, '.project-metadata.json'),
+      JSON.stringify(metadata, null, 2)
+    );
+    project.files.push('.project-metadata.json');
+    
+    console.log(`✅ AI Generated ${project.files.length} files for "${topic}"`);
+  }
+  
+  parseGeneratedContent(content) {
+    const files = {};
+    const regex = /([\w.-]+)\s*\n```[\w]*\n([\s\S]*?)\n```/g;
+    let match;
+    
+    while ((match = regex.exec(content)) !== null) {
+      const filename = match[1].trim();
+      const fileContent = match[2].trim();
+      if (filename && fileContent) {
+        files[filename] = fileContent;
+      }
+    }
+    
+    return files;
+  }
+  
+  ensureRequiredFiles(project, files, topic, intent) {
+    const requiredFiles = ['index.html', 'styles.css', 'main.js'];
+    const optionalFiles = ['about.html', 'services.html', 'blog.html', 'contact.html'];
+    
+    // Check required files
+    for (const filename of requiredFiles) {
+      if (!files[filename]) {
+        console.log(`⚠️ Missing ${filename}, generating fallback...`);
+        const fallback = this.generateFallbackFile(filename, topic, intent);
+        const filePath = path.join(project.path, filename);
+        fs.writeFileSync(filePath, fallback);
+        if (!project.files.includes(filename)) {
+          project.files.push(filename);
+        }
+      }
+    }
+    
+    // Generate optional files if missing
+    for (const filename of optionalFiles) {
+      if (!files[filename]) {
+        const fallback = this.generateFallbackFile(filename, topic, intent);
+        const filePath = path.join(project.path, filename);
+        fs.writeFileSync(filePath, fallback);
+        project.files.push(filename);
+      }
+    }
+  }
+  
+  generateFallbackFile(filename, topic, intent) {
+    const title = topic.charAt(0).toUpperCase() + topic.slice(1);
+    
+    if (filename === 'index.html') {
+      return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container">
+      <a href="index.html" class="logo">${title}</a>
+      <ul class="nav-links">
+        <li><a href="index.html">Главная</a></li>
+        <li><a href="about.html">О нас</a></li>
+        <li><a href="services.html">Услуги</a></li>
+        <li><a href="blog.html">Блог</a></li>
+        <li><a href="contact.html">Контакты</a></li>
+      </ul>
+    </div>
+  </nav>
+  
+  <header class="hero">
+    <div class="container">
+      <h1>Добро пожаловать в ${title}</h1>
+      <p>Лучший ресурс по теме ${topic.toLowerCase()}</p>
+      <a href="services.html" class="btn-primary">Узнать больше</a>
+    </div>
+  </header>
+  
+  <main class="container">
+    <section class="features">
+      <h2>Наши преимущества</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Качество</h3>
+          <p>Только проверенная информация</p>
+        </div>
+        <div class="card">
+          <h3>Экспертность</h3>
+          <p>Материалы от профессионалов</p>
+        </div>
+        <div class="card">
+          <h3>Доступность</h3>
+          <p>Просто и понятно для всех</p>
+        </div>
+      </div>
+    </section>
+  </main>
+  
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2024 ${title}. Все права защищены.</p>
+    </div>
+  </footer>
+  
+  <script src="main.js"></script>
+</body>
+</html>`;
+    }
+    
+    if (filename === 'styles.css') {
+      return `:root {
+  --primary: #667eea;
+  --accent: #764ba2;
+  --text: #1e293b;
+  --bg: #ffffff;
+  --card-bg: rgba(255,255,255,0.8);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', sans-serif; color: var(--text); line-height: 1.6; }
+.container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
+
+.navbar { position: fixed; top: 0; width: 100%; background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); z-index: 100; padding: 1rem 0; }
+.navbar .container { display: flex; justify-content: space-between; align-items: center; }
+.logo { font-size: 1.5rem; font-weight: 700; background: linear-gradient(135deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.nav-links { display: flex; list-style: none; gap: 2rem; }
+.nav-links a { text-decoration: none; color: var(--text); font-weight: 500; transition: color 0.3s; }
+.nav-links a:hover { color: var(--primary); }
+
+.hero { padding: 10rem 0 6rem; background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color: white; text-align: center; }
+.hero h1 { font-size: 3rem; margin-bottom: 1rem; }
+.hero p { font-size: 1.25rem; margin-bottom: 2rem; opacity: 0.9; }
+
+.btn-primary { display: inline-block; padding: 1rem 2.5rem; background: white; color: var(--primary); border-radius: 50px; text-decoration: none; font-weight: 600; box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: transform 0.3s; }
+.btn-primary:hover { transform: translateY(-2px); }
+
+.features { padding: 5rem 0; }
+.features h2 { text-align: center; font-size: 2.5rem; margin-bottom: 3rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; }
+.card { background: var(--card-bg); padding: 2rem; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); backdrop-filter: blur(10px); }
+.card h3 { color: var(--primary); margin-bottom: 1rem; }
+
+.footer { background: var(--text); color: white; padding: 2rem 0; text-align: center; margin-top: 4rem; }`;
+    }
+    
+    if (filename === 'main.js') {
+      return `// Navigation toggle for mobile
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('${title} site loaded');
+  
+  // Smooth scroll
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      document.querySelector(this.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+});`;
+    }
+    
+    // Simple fallback for other pages
+    const pageName = filename.replace('.html', '');
+    const titles = {
+      'about': 'О нас',
+      'services': 'Услуги',
+      'blog': 'Блог',
+      'contact': 'Контакты'
+    };
+    
+    return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${titles[pageName] || pageName} | ${title}</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container">
+      <a href="index.html" class="logo">${title}</a>
+      <ul class="nav-links">
+        <li><a href="index.html">Главная</a></li>
+        <li><a href="about.html">О нас</a></li>
+        <li><a href="services.html">Услуги</a></li>
+        <li><a href="blog.html">Блог</a></li>
+        <li><a href="contact.html">Контакты</a></li>
+      </ul>
+    </div>
+  </nav>
+  
+  <main class="container" style="padding-top: 8rem; min-height: 60vh;">
+    <h1>${titles[pageName] || pageName}</h1>
+    <p>Страница ${titles[pageName] || pageName} сайта ${title}.</p>
+  </main>
+  
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2024 ${title}. Все права защищены.</p>
+    </div>
+  </footer>
+  
+  <script src="main.js"></script>
+</body>
+</html>`;
+  }
+
+  // ===== CHAT HISTORY & MEMORY =====
+
+  constructor(config = {}) {
+    this.apiKey = config.apiKey || this.getApiKey();
+    this.provider = config.provider || this.detectProvider();
+    this.projectsDir = config.projectsDir || './projects';
+    this.templatesDir = config.templatesDir || './templates';
+    this.memory = new Map();
+    this.activeProjects = new Map();
+    this.chatHistory = []; // Store chat history
+    this.maxHistoryLength = 50; // Maximum messages to remember
+    this.ensureDirectories();
+    this.loadChatHistory(); // Load previous history on startup
+  }
+
+  // Chat History Methods
+  addToChatHistory(role, content, metadata = {}) {
+    const message = {
+      id: Date.now() + Math.random().toString(36).substr(2, 9),
+      role, // 'user' or 'assistant'
+      content,
+      timestamp: new Date().toISOString(),
+      metadata
+    };
+    
+    this.chatHistory.push(message);
+    
+    // Keep only last N messages
+    if (this.chatHistory.length > this.maxHistoryLength) {
+      this.chatHistory = this.chatHistory.slice(-this.maxHistoryLength);
+    }
+    
+    // Save to file
+    this.saveChatHistory();
+    
+    return message;
+  }
+  
+  getChatHistory(limit = 20) {
+    return this.chatHistory.slice(-limit);
+  }
+  
+  getChatContextForAI() {
+    // Format history for AI context
+    return this.chatHistory.map(msg => ({
+      role: msg.role,
+      content: msg.content
+    }));
+  }
+  
+  saveChatHistory() {
+    try {
+      const historyPath = path.join(this.projectsDir, '.chat-history.json');
+      fs.writeFileSync(historyPath, JSON.stringify(this.chatHistory, null, 2));
+    } catch (error) {
+      console.error('Failed to save chat history:', error.message);
+    }
+  }
+  
+  loadChatHistory() {
+    try {
+      const historyPath = path.join(this.projectsDir, '.chat-history.json');
+      if (fs.existsSync(historyPath)) {
+        const data = fs.readFileSync(historyPath, 'utf8');
+        this.chatHistory = JSON.parse(data);
+        console.log(`📚 Loaded ${this.chatHistory.length} messages from history`);
+      }
+    } catch (error) {
+      console.error('Failed to load chat history:', error.message);
+      this.chatHistory = [];
+    }
+  }
+  
+  clearChatHistory() {
+    this.chatHistory = [];
+    this.saveChatHistory();
+    console.log('🗑️ Chat history cleared');
+  }
+  
+  // Memory/Context for specific projects
+  setMemory(key, value) {
+    this.memory.set(key, {
+      value,
+      timestamp: new Date().toISOString()
+    });
+  }
+  
+  getMemory(key) {
+    return this.memory.get(key)?.value;
+  }
+  
+  getAllMemory() {
+    const result = {};
+    for (const [key, data] of this.memory.entries()) {
+      result[key] = data.value;
+    }
+    return result;
+  }
+  
+  // Context-aware response generation
+  async generateResponseWithContext(message, options = {}) {
+    // Add user message to history
+    this.addToChatHistory('user', message);
+    
+    // Get recent context
+    const context = this.getChatContextForAI();
+    
+    // Generate response with context
+    const response = await this.generateAIResponse(message, context, options);
+    
+    // Add assistant response to history
+    if (response) {
+      this.addToChatHistory('assistant', response, {
+        model: this.provider,
+        hasContext: context.length > 0
+      });
+    }
+    
+    return response;
+  }
+  
+  async generateAIResponse(message, context = [], options = {}) {
+    if (!this.apiKey) {
+      return this.getFallbackResponse(message);
+    }
+    
+    try {
+      // Build messages with context
+      const messages = [
+        { role: 'system', content: this.getChatSystemPrompt() },
+        ...context.slice(-10), // Last 10 messages for context
+        { role: 'user', content: message }
+      ];
+      
+      // Call appropriate provider
+      let response;
+      switch (this.provider) {
+        case 'groq':
+          response = await this.generateChatWithMessagesGroq(messages);
+          break;
+        case 'openai':
+          response = await this.generateChatWithMessagesOpenAI(messages);
+          break;
+        case 'openrouter':
+          response = await this.generateChatWithMessagesOpenRouter(messages);
+          break;
+        default:
+          response = await this.generateChatWithMessagesAnthropic(messages);
+      }
+      
+      return response || this.getFallbackResponse(message);
+    } catch (error) {
+      console.error('AI response generation failed:', error);
+      return this.getFallbackResponse(message);
+    }
+  }
+  
+  getFallbackResponse(message) {
+    const fallbacks = [
+      'Я вас понял! Работаю над этим...',
+      'Интересный запрос! Дайте мне подумать...',
+      'Понял вас. Обрабатываю информацию...',
+      'Работаю над вашим запросом...',
+      'Обрабатываю...'
+    ];
+    return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+  }
+
   getApiProvider() {
     if (process.env.GROQ_API_KEY) return 'groq';
     if (process.env.OPENAI_API_KEY) return 'openai';
