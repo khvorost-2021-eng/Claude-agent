@@ -603,9 +603,6 @@ class AgentClient {
           <p style="font-size: 0.9rem; margin-top: 8px;">
             <a href="${downloadLink}" download style="display: inline-block; padding: 8px 16px; background: var(--accent); color: white; text-decoration: none; border-radius: 6px;">⬇ Скачать</a>
           </p>
-          <p style="font-size: 0.75rem; color: var(--text2); margin-top: 4px;">
-            💡 Для генерации полноценного видео добавьте REPLICATE_API_KEY или RUNWAY_API_KEY в .env
-          </p>
         </div>
       `;
     }

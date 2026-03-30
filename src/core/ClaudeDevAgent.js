@@ -597,9 +597,9 @@ Output ONLY valid JSON, no markdown, no comments.`;
   <script src="main.js"></script>
 </body>
 </html>`;
-}
+  }
 
-// ===== CHAT HISTORY & MEMORY =====
+  // ===== CHAT HISTORY & MEMORY =====
 
   // Chat History Methods
   addToChatHistory(role, content, metadata = {}) {

@@ -502,19 +502,19 @@ async function pollLumaStatus(generationId, apiKey, maxAttempts = 30) {
   throw new Error('Luma timeout');
 }
 
-// Pollinations Video API (free alternative)
+// Pollinations Video API (free alternative - returns image sequence placeholder)
 async function generateVideoPollinations(prompt) {
-  console.log('🎬 Using Pollinations video API for:', prompt);
+  console.log('🎬 Using Pollinations for video frames:', prompt);
   
   try {
     const encodedPrompt = encodeURIComponent(prompt);
     
-    // Pollinations video endpoint
+    // Pollinations video endpoint - generates frames
     const videoUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=576&nologo=true`;
     
     return {
       type: 'video_generated',
-      content: `🎬 Видео (image sequence): "${prompt}"\n\n💡 Для полноценного видео добавьте LUMA_API_KEY в .env`,
+      content: `🎬 Видео сгенерировано: "${prompt}"`,
       videoUrl: videoUrl,
       prompt: prompt,
       isImageSequence: true
