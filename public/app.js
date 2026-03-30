@@ -397,7 +397,11 @@ class AgentClient {
         break;
       case 'video_generated':
         this.hideTypingIndicator();
-        this.addMessage(data.content, 'bot');
+        if (data.videoUrl) {
+          this.addVideoMessage(data.videoUrl, data.prompt, data.isImageSequence);
+        } else {
+          this.addMessage(data.content, 'bot');
+        }
         break;
       case 'chat':
         this.hideTypingIndicator();
@@ -507,6 +511,44 @@ class AgentClient {
     
     if (save) {
       this.addMessageToCurrentChat(prompt, 'assistant', { type: 'image', imageUrl, prompt });
+    }
+  }
+  
+  addVideoMessage(videoUrl, prompt = '', isImageSequence = false, save = true) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message bot';
+    
+    const label = isImageSequence ? '🎬 Кадр видео (добавьте LUMA_API_KEY для полноценного видео):' : '🎬 Сгенерировано видео:';
+    
+    if (videoUrl.endsWith('.mp4') || videoUrl.includes('video')) {
+      // Real video
+      messageDiv.innerHTML = `
+        <div class="message-content">
+          <p>${label} "${prompt}"</p>
+          <video src="${videoUrl}" controls style="max-width: 100%; border-radius: 8px; margin-top: 8px;"></video>
+          <p style="font-size: 0.8rem; color: var(--text2); margin-top: 4px;">
+            <a href="${videoUrl}" target="_blank" download>Скачать видео</a>
+          </p>
+        </div>
+      `;
+    } else {
+      // Image/frame
+      messageDiv.innerHTML = `
+        <div class="message-content">
+          <p>${label} "${prompt}"</p>
+          <img src="${videoUrl}" alt="${prompt}" style="max-width: 100%; border-radius: 8px; margin-top: 8px;">
+          <p style="font-size: 0.75rem; color: var(--text2); margin-top: 4px;">
+            💡 Для генерации полноценного видео добавьте LUMA_API_KEY в .env файл
+          </p>
+        </div>
+      `;
+    }
+    
+    this.chatMessages.appendChild(messageDiv);
+    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    
+    if (save) {
+      this.addMessageToCurrentChat(prompt, 'assistant', { type: 'video', videoUrl, prompt, isImageSequence });
     }
   }
   

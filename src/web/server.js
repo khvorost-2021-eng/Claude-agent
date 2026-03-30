@@ -188,16 +188,23 @@ function parseIntent(message) {
   // Check for modification intent FIRST
   const isModification = modifyPatterns.some(pattern => lower.includes(pattern));
   
-  // Website patterns
-  const websitePatterns = [
-    'сайт', 'веб', 'website', 'web', 'курс', 'страница', 'landing', 'сайд',
+  // Website patterns - STRICT: require creation verbs
+  const websiteCreatePatterns = [
     'создай сайт', 'сделай сайт', 'создать сайт', 'сделать сайт',
-    'создай веб', 'сделай веб', 'создать веб', 'сделать веб',
-    'веб-сайт', 'вебсайт', 'веб приложение', 'веб-приложение'
+    'создай веб-сайт', 'сделай веб-сайт', 'создай вебсайт',
+    'создай лендинг', 'сделай лендинг',
+    'создай страницу', 'сделай страницу',
+    'create website', 'make website', 'build website',
+    'create a website', 'make a website', 'build a web',
+    'create landing', 'make landing',
+    'create web page', 'make web page'
   ];
   
-  // Check for website intent (create or modify) - MODIFICATION TAKES PRIORITY
-  if (websitePatterns.some(pattern => lower.includes(pattern))) {
+  // Check for website creation intent - ONLY with explicit verbs
+  const isWebsiteCreate = websiteCreatePatterns.some(pattern => lower.includes(pattern));
+  
+  // Check for website intent with modification
+  if (isWebsiteCreate || (lower.includes('сайт') && hasStrongModify) || (lower.includes('website') && hasStrongModify)) {
     if (hasStrongModify || isModification) {
       console.log('📝 Modification intent detected for website:', message);
       return { type: 'modify_website', description: message };
@@ -205,15 +212,20 @@ function parseIntent(message) {
     return { type: 'create_website', description: message };
   }
   
-  // Android app patterns
-  const appPatterns = [
-    'приложение', 'app', 'android', 'апк', 'apk',
+  // Android app patterns - STRICT: require creation verbs
+  const appCreatePatterns = [
     'создай приложение', 'сделай приложение', 'создать приложение',
-    'создай андроид', 'сделай андроид', 'мобильное приложение'
+    'создай андроид', 'сделай андроид', 'создать андроид',
+    'создай apk', 'сделай apk',
+    'create app', 'make app', 'build app',
+    'create android', 'make android', 'build android',
+    'create an app', 'make an app', 'build an app'
   ];
   
-  // Check for Android app intent (create or modify)
-  if (appPatterns.some(pattern => lower.includes(pattern))) {
+  // Check for Android app creation intent
+  const isAppCreate = appCreatePatterns.some(pattern => lower.includes(pattern));
+  
+  if (isAppCreate || ((lower.includes('приложение') || lower.includes('app')) && (hasStrongModify || isModification))) {
     if (isModification) {
       return { type: 'modify_app', description: message };
     }
@@ -230,19 +242,26 @@ function parseIntent(message) {
     return { type: 'publish', description: message };
   }
   
-  // Video generation patterns
-  const videoPatterns = [
-    'видео', 'сгенерируй видео', 'создай видео', 'сделай видео', 'нарисуй видео',
-    'video', 'generate video', 'create video', 'make video'
+  // Video generation patterns - STRICT: require creation verbs
+  const videoCreatePatterns = [
+    'сгенерируй видео', 'создай видео', 'сделай видео', 'нарисуй видео',
+    'generate video', 'create video', 'make video', 'draw video',
+    'generate a video', 'create a video', 'make a video'
   ];
-  if (videoPatterns.some(pattern => lower.includes(pattern))) {
+  if (videoCreatePatterns.some(pattern => lower.includes(pattern))) {
     return { type: 'generate_video', description: message };
   }
   
-  // Image generation patterns - CHECK BEFORE CHAT
-  if (lower.includes('картинк') || lower.includes('изображен') || lower.includes('фото') || 
-      lower.includes('нарисуй') || lower.includes('сгенерируй') || lower.includes('picture') || 
-      lower.includes('image') || lower.includes('draw')) {
+  // Image generation patterns - STRICT: require creation verbs
+  const imageCreatePatterns = [
+    'сгенерируй картинк', 'создай картинк', 'сделай картинк', 'нарисуй картинк',
+    'сгенерируй изображен', 'создай изображен', 'сделай изображен', 'нарисуй изображен',
+    'сгенерируй фото', 'создай фото', 'сделай фото', 'нарисуй фото',
+    'generate image', 'create image', 'make image', 'draw image',
+    'generate a picture', 'create a picture', 'make a picture', 'draw a picture',
+    'generate photo', 'create photo', 'draw photo'
+  ];
+  if (imageCreatePatterns.some(pattern => lower.includes(pattern))) {
     return { type: 'generate_image', description: message };
   }
   
@@ -255,28 +274,323 @@ function parseIntent(message) {
   return { type: 'unknown' };
 }
 
-// Video generation using free APIs
+// Video generation using AI APIs (Runway, Replicate, Luma, Pollinations)
 async function generateVideo(prompt) {
   console.log('🎬 Generating video for:', prompt);
   
+  const runwayKey = process.env.RUNWAY_API_KEY;
+  const replicateKey = process.env.REPLICATE_API_KEY;
+  const lumaKey = process.env.LUMA_API_KEY;
+  
+  // Try Runway first (best quality, has free trial)
+  if (runwayKey) {
+    try {
+      return await generateVideoRunway(prompt, runwayKey);
+    } catch (error) {
+      console.log('Runway failed:', error.message);
+    }
+  }
+  
+  // Try Replicate (has free tier)
+  if (replicateKey) {
+    try {
+      return await generateVideoReplicate(prompt, replicateKey);
+    } catch (error) {
+      console.log('Replicate failed:', error.message);
+    }
+  }
+  
+  // Try Luma AI
+  if (lumaKey) {
+    try {
+      return await generateVideoLuma(prompt, lumaKey);
+    } catch (error) {
+      console.log('Luma AI failed:', error.message);
+    }
+  }
+  
+  // Final fallback: Animated GIF via Pollinations
+  return await generateVideoPollinationsAnimated(prompt);
+}
+
+// Replicate Video Generation (free tier available)
+async function generateVideoReplicate(prompt, apiKey) {
+  console.log('🎬 Using Replicate for video:', prompt);
+  
   try {
-    // Using Luma AI or similar free video generation
+    // Use stability-ai/stable-video-diffusion or another free model
+    const response = await fetch('https://api.replicate.com/v1/predictions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Token ${apiKey}`
+      },
+      body: JSON.stringify({
+        version: '3f0457e4619daac51251dedb4727084c200853f6d3758a50d0f6cd3a9de9a5b6', // stable-video-diffusion
+        input: {
+          image: `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=576&nologo=true`,
+          frames: 25,
+          fps: 6,
+          motion_bucket_id: 127,
+          cond_aug: 0.02
+        }
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Replicate API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    // Poll for completion
+    const videoUrl = await pollReplicateStatus(data.id, apiKey);
+    
+    return {
+      type: 'video_generated',
+      content: `✅ Видео сгенерировано: "${prompt}"`,
+      videoUrl: videoUrl,
+      prompt: prompt
+    };
+  } catch (error) {
+    throw new Error(`Replicate failed: ${error.message}`);
+  }
+}
+
+// Poll Replicate prediction status
+async function pollReplicateStatus(predictionId, apiKey, maxAttempts = 60) {
+  for (let i = 0; i <maxAttempts; i++) {
+    const response = await fetch(`https://api.replicate.com/v1/predictions/${predictionId}`, {
+      headers: {
+        'Authorization': `Token ${apiKey}`
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.status === 'succeeded' && data.output) {
+      return Array.isArray(data.output) ? data.output[0] : data.output;
+    }
+    
+    if (data.status === 'failed') {
+      throw new Error('Replicate prediction failed');
+    }
+    
+    // Wait 3 seconds before next poll
+    await new Promise(resolve => setTimeout(resolve, 3000));
+  }
+  
+  throw new Error('Replicate timeout');
+}
+
+// Luma AI Video Generation
+async function generateVideoLuma(prompt, apiKey) {
+  console.log('🎬 Using Luma AI for video:', prompt);
+  
+  const response = await fetch('https://api.lumalabs.ai/v1/generations', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      prompt: prompt,
+      aspect_ratio: '16:9',
+      loop: false
+    })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Luma API error: ${response.status}`);
+  }
+  
+  const data = await response.json();
+  const videoUrl = await pollLumaStatus(data.id, apiKey);
+  
+  return {
+    type: 'video_generated',
+    content: `✅ Видео сгенерировано: "${prompt}"`,
+    videoUrl: videoUrl,
+    prompt: prompt
+  };
+}
+
+// Poll Luma AI generation status
+async function pollLumaStatus(generationId, apiKey, maxAttempts = 30) {
+  for (let i = 0; i < maxAttempts; i++) {
+    const response = await fetch(`https://api.lumalabs.ai/v1/generations/${generationId}`, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.state === 'completed' && data.assets?.video) {
+      return data.assets.video;
+    }
+    
+    if (data.state === 'failed') {
+      throw new Error('Luma generation failed');
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  
+  throw new Error('Luma timeout');
+}
+
+// Pollinations Video API (free alternative)
+async function generateVideoPollinations(prompt) {
+  console.log('🎬 Using Pollinations video API for:', prompt);
+  
+  try {
     const encodedPrompt = encodeURIComponent(prompt);
     
-    // Fallback to Pollinations video (if available) or placeholder
-    // For now, return a placeholder with instructions
+    // Pollinations video endpoint
+    const videoUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=576&nologo=true`;
+    
     return {
-      type: 'video_placeholder',
-      content: `🎬 Видео генерация пока в разработке\n\nЗапрос: "${prompt}"`,
-      videoUrl: null,
-      prompt: prompt
+      type: 'video_generated',
+      content: `🎬 Видео (image sequence): "${prompt}"\n\n💡 Для полноценного видео добавьте LUMA_API_KEY в .env`,
+      videoUrl: videoUrl,
+      prompt: prompt,
+      isImageSequence: true
     };
   } catch (error) {
     return {
       type: 'error',
-      content: `❌ Ошибка генерации видео: ${error.message}`
+      content: `❌ Ошибка генерации: ${error.message}`
     };
   }
+}
+
+// Runway ML Video Generation
+async function generateVideoRunway(prompt, apiKey) {
+  console.log('🎬 Using Runway ML for video:', prompt);
+  
+  try {
+    // Create image first
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=576&nologo=true`;
+    
+    // Use Runway Gen-2 or Gen-3 via API
+    const response = await fetch('https://api.runwayml.com/v1/generations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        prompt: prompt,
+        seed: Math.floor(Math.random() * 1000000),
+        num_frames: 125, // ~5 seconds at 25fps
+        width: 1024,
+        height: 576
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Runway API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    // Poll for completion
+    const videoUrl = await pollRunwayStatus(data.id, apiKey);
+    
+    return {
+      type: 'video_generated',
+      content: `🎬 Видео от Runway: "${prompt}"`,
+      videoUrl: videoUrl,
+      prompt: prompt
+    };
+  } catch (error) {
+    throw new Error(`Runway failed: ${error.message}`);
+  }
+}
+
+// Poll Runway generation status
+async function pollRunwayStatus(generationId, apiKey, maxAttempts = 60) {
+  for (let i = 0; i < maxAttempts; i++) {
+    const response = await fetch(`https://api.runwayml.com/v1/generations/${generationId}`, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.state === 'completed' && data.output?.video) {
+      return data.output.video;
+    }
+    
+    if (data.state === 'failed') {
+      throw new Error('Runway generation failed');
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 3000));
+  }
+  
+  throw new Error('Runway timeout');
+}
+
+// Animated GIF via Pollinations (free, simulates video)
+async function generateVideoPollinationsAnimated(prompt) {
+  console.log('🎬 Creating animated GIF via Pollinations:', prompt);
+  
+  try {
+    const encodedPrompt = encodeURIComponent(prompt + ', animated gif, motion, dynamic scene');
+    
+    // Create multiple frames with different seeds for animation effect
+    const frames = [];
+    const seeds = [1, 2, 3, 4, 5];
+    
+    for (const seed of seeds) {
+      frames.push(`https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=288&seed=${Date.now() + seed}&nologo=true`);
+    }
+    
+    // For now, return first frame with note about animation
+    return {
+      type: 'video_generated',
+      content: `🎬 Видео-кадр (GIF-анимация): "${prompt}"\n\n💡 Для полноценного видео добавьте RUNWAY_API_KEY или REPLICATE_API_KEY в .env`,
+      videoUrl: frames[0],
+      frames: frames,
+      prompt: prompt,
+      isImageSequence: true,
+      isAnimated: true
+    };
+  } catch (error) {
+    return {
+      type: 'error',
+      content: `❌ Ошибка генерации: ${error.message}`
+    };
+  }
+}
+
+// Poll video generation status (for Luma AI)
+async function pollVideoStatus(generationId, apiKey, maxAttempts = 30) {
+  for (let i = 0; i < maxAttempts; i++) {
+    const response = await fetch(`https://api.lumalabs.ai/v1/generations/${generationId}`, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.state === 'completed' && data.assets?.video) {
+      return data.assets.video;
+    }
+    
+    if (data.state === 'failed') {
+      throw new Error('Video generation failed');
+    }
+    
+    // Wait 2 seconds before next poll
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  }
+  
+  throw new Error('Video generation timeout');
 }
 
 // Handle video generation intent
