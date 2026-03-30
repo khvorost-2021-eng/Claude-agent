@@ -4,11 +4,48 @@ class AgentClient {
     this.connected = false;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
+    this.sessionId = localStorage.getItem('agent_session_id'); // Load saved session
     
     this.initElements();
     this.initEventListeners();
     this.connectWebSocket();
     this.loadProjects();
+    
+    // Load chat history from localStorage if exists
+    this.loadLocalHistory();
+  }
+
+  // Load history from localStorage as fallback
+  loadLocalHistory() {
+    const savedHistory = localStorage.getItem('agent_chat_history');
+    if (savedHistory) {
+      try {
+        const history = JSON.parse(savedHistory);
+        if (Array.isArray(history) && history.length > 0) {
+          // Clear default welcome message
+          this.chatMessages.innerHTML = '';
+          // Render saved messages
+          history.forEach(msg => {
+            this.addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot', false, false);
+          });
+        }
+      } catch (e) {
+        console.log('Failed to parse saved history');
+      }
+    }
+  }
+
+  // Save history to localStorage
+  saveLocalHistory() {
+    const messages = [];
+    this.chatMessages.querySelectorAll('.message').forEach(msg => {
+      const role = msg.classList.contains('user') ? 'user' : 'assistant';
+      const content = msg.querySelector('.message-content')?.innerHTML || '';
+      if (content && !msg.classList.contains('thinking')) {
+        messages.push({ role, content: content.replace(/<br>/g, '\n') });
+      }
+    });
+    localStorage.setItem('agent_chat_history', JSON.stringify(messages.slice(-20)));
   }
 
   // Initialize all DOM elements
@@ -130,6 +167,12 @@ class AgentClient {
       this.connected = true;
       this.reconnectAttempts = 0;
       this.updateStatus('online');
+      
+      // Send session initialization with our saved sessionId
+      this.ws.send(JSON.stringify({
+        type: 'init_session',
+        sessionId: this.sessionId
+      }));
     };
 
     this.ws.onmessage = (event) => {
@@ -189,6 +232,21 @@ class AgentClient {
 
   handleWebSocketMessage(data) {
     switch (data.type) {
+      case 'session_init':
+        // Save session ID from server
+        if (data.sessionId) {
+          this.sessionId = data.sessionId;
+          localStorage.setItem('agent_session_id', this.sessionId);
+        }
+        // Restore history from server if available
+        if (data.history && Array.isArray(data.history) && data.history.length > 0) {
+          // Clear current messages and restore from server
+          this.chatMessages.innerHTML = '';
+          data.history.forEach(msg => {
+            this.addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot', false, false);
+          });
+        }
+        break;
       case 'thinking':
         this.showTypingIndicator();
         break;
@@ -216,6 +274,7 @@ class AgentClient {
       case 'chat':
         this.hideTypingIndicator();
         this.addMessage(data.content, 'bot');
+        this.saveLocalHistory(); // Save after receiving response
         break;
       case 'deployed':
         this.hideTypingIndicator();
@@ -224,6 +283,7 @@ class AgentClient {
       case 'error':
         this.hideTypingIndicator();
         this.addMessage(`❌ ${data.content}`, 'bot');
+        this.saveLocalHistory();
         break;
       default:
         // Handle any other message types
@@ -236,10 +296,11 @@ class AgentClient {
     if (!content) return;
 
     this.addMessage(content, 'user');
+    this.saveLocalHistory(); // Save after adding user message
     this.messageInput.value = '';
 
     if (this.connected) {
-      this.ws.send(JSON.stringify({ type: 'chat', content }));
+      this.ws.send(JSON.stringify({ type: 'chat', content, sessionId: this.sessionId }));
     } else {
       // Fallback to HTTP API
       try {
@@ -251,6 +312,7 @@ class AgentClient {
         
         const data = await response.json();
         this.handleResponse(data.response);
+        this.saveLocalHistory();
       } catch (error) {
         this.addMessage('Ошибка соединения. Попробуйте позже.', 'bot');
       }
@@ -280,13 +342,19 @@ class AgentClient {
     }
   }
 
-  addMessage(content, sender, thinking = false) {
+  addMessage(content, sender, thinking = false, save = true) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${sender} ${thinking ? 'thinking' : ''}`;
     messageDiv.innerHTML = `<div class="message-content">${this.formatMessage(content)}</div>`;
     
     this.chatMessages.appendChild(messageDiv);
     this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    
+    // Save to localStorage (debounced)
+    if (save && !thinking) {
+      clearTimeout(this.saveTimeout);
+      this.saveTimeout = setTimeout(() => this.saveLocalHistory(), 500);
+    }
     
     if (thinking) {
       setTimeout(() => {

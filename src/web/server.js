@@ -285,8 +285,17 @@ async function handleCreateWebsite(intent, agent) {
 // Store chat history for each WebSocket connection
 const chatHistories = new Map();
 
+// Store chat history by session ID for persistence across reconnections
+const persistentHistories = new Map();
+
 // Helper to get or create chat history for a connection
-function getChatHistory(ws) {
+function getChatHistory(ws, sessionId = null) {
+  // If we have a sessionId, use persistent storage
+  if (sessionId && persistentHistories.has(sessionId)) {
+    return persistentHistories.get(sessionId);
+  }
+  
+  // Fallback to connection-based storage
   if (!chatHistories.has(ws)) {
     chatHistories.set(ws, []);
   }
@@ -294,13 +303,38 @@ function getChatHistory(ws) {
 }
 
 // Helper to add message to history
-function addToHistory(ws, role, content) {
-  const history = getChatHistory(ws);
+function addToHistory(ws, role, content, sessionId = null) {
+  const history = sessionId ? (persistentHistories.get(sessionId) || []) : getChatHistory(ws);
+  
   history.push({ role, content, timestamp: new Date().toISOString() });
+  
   // Keep only last 20 messages to prevent memory issues
   if (history.length > 20) {
     history.shift();
   }
+  
+  // Update persistent storage if we have sessionId
+  if (sessionId) {
+    persistentHistories.set(sessionId, history);
+  }
+}
+
+// Helper to get or create session ID
+function getOrCreateSessionId(ws, providedId = null) {
+  if (providedId && persistentHistories.has(providedId)) {
+    return providedId;
+  }
+  
+  // Check if ws already has a session
+  if (ws.sessionId && persistentHistories.has(ws.sessionId)) {
+    return ws.sessionId;
+  }
+  
+  // Generate new session ID
+  const newSessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  ws.sessionId = newSessionId;
+  persistentHistories.set(newSessionId, []);
+  return newSessionId;
 }
 
 async function handleChat(intent, agent, history = []) {
@@ -450,17 +484,36 @@ app.get('/api/settings', (req, res) => {
 wss.on('connection', (ws) => {
   console.log('Client connected');
   
-  // Initialize chat history for this connection
-  chatHistories.set(ws, []);
+  // Initialize session - will be set when client sends first message with sessionId
+  ws.sessionId = null;
   
   ws.on('message', async (data) => {
     const msg = JSON.parse(data);
     
+    // Handle session init
+    if (msg.type === 'init_session') {
+      ws.sessionId = getOrCreateSessionId(ws, msg.sessionId);
+      console.log('Session initialized:', ws.sessionId);
+      
+      // Send session ID back to client
+      ws.send(JSON.stringify({
+        type: 'session_init',
+        sessionId: ws.sessionId,
+        history: persistentHistories.get(ws.sessionId) || []
+      }));
+      return;
+    }
+    
+    // Ensure we have a session ID for regular messages
+    if (!ws.sessionId) {
+      ws.sessionId = getOrCreateSessionId(ws);
+    }
+    
     if (msg.type === 'chat') {
       const intent = parseIntent(msg.content);
       
-      // Add user message to history
-      addToHistory(ws, 'user', msg.content);
+      // Add user message to history (persistently)
+      addToHistory(ws, 'user', msg.content, ws.sessionId);
       
       ws.send(JSON.stringify({
         type: 'thinking',
@@ -468,8 +521,11 @@ wss.on('connection', (ws) => {
       }));
       
       try {
-        // Get current chat history
-        const history = getChatHistory(ws);
+        // Get current chat history (from persistent storage)
+        const history = getChatHistory(ws, ws.sessionId);
+        
+        console.log('Using session:', ws.sessionId);
+        console.log('History length:', history.length);
         
         // Broadcast progress updates
         switch (intent.type) {
@@ -546,8 +602,8 @@ wss.on('connection', (ws) => {
               const chatResponse = await handleChat(intent, agent, history);
               console.log('Chat response:', chatResponse);
               
-              // Add bot response to history
-              addToHistory(ws, 'assistant', chatResponse.content);
+              // Add bot response to history (persistently)
+              addToHistory(ws, 'assistant', chatResponse.content, ws.sessionId);
               
               ws.send(JSON.stringify({ 
                 type: 'chat', 
@@ -568,8 +624,8 @@ wss.on('connection', (ws) => {
               console.log('History length:', history.length);
               const feedbackResponse = await handleFeedback(intent, agent, history);
               
-              // Add bot response to history
-              addToHistory(ws, 'assistant', feedbackResponse.content);
+              // Add bot response to history (persistently)
+              addToHistory(ws, 'assistant', feedbackResponse.content, ws.sessionId);
               
               ws.send(JSON.stringify({ 
                 type: 'chat', 
@@ -617,8 +673,8 @@ wss.on('connection', (ws) => {
             // Treat anything else as a chat message
             const defaultResponse = await handleChat(intent, agent, history);
             
-            // Add bot response to history
-            addToHistory(ws, 'assistant', defaultResponse.content);
+            // Add bot response to history (persistently)
+            addToHistory(ws, 'assistant', defaultResponse.content, ws.sessionId);
             
             ws.send(JSON.stringify({ 
               type: 'chat', 
@@ -636,8 +692,9 @@ wss.on('connection', (ws) => {
   });
   
   ws.on('close', () => {
-    console.log('Client disconnected');
-    // Clean up chat history for this connection
+    console.log('Client disconnected, session preserved:', ws.sessionId);
+    // Note: We intentionally do NOT delete the persistent history
+    // so it can be restored when the client reconnects with the same sessionId
     chatHistories.delete(ws);
   });
 });

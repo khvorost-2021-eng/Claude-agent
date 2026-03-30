@@ -2218,6 +2218,8 @@ Generate main.js with ALL features above. Include comments and use modern JavaSc
     }
     
     // Step 4: Post-process and validate files
+    let needsFallback = false;
+    
     for (const [filename, content] of Object.entries(files)) {
       if (content && content.trim().length > 0) {
         let processedContent = content;
@@ -2237,8 +2239,45 @@ Generate main.js with ALL features above. Include comments and use modern JavaSc
           processedContent = this.fixImagePlaceholders(processedContent, description);
         }
         
+        // === QUALITY CONTROL ===
+        if (filename.endsWith('.html')) {
+          // Validate and fix titles
+          processedContent = this.validateAndFixTitle(processedContent, description);
+          
+          // Check for placeholder content
+          processedContent = this.validateAndFixContent(processedContent);
+          
+          // Ensure styles are linked
+          processedContent = this.ensureStylesLinked(processedContent);
+          
+          // Check if content quality is bad
+          if (this.isContentQualityBad(processedContent)) {
+            console.log(`WARNING: ${filename} has bad quality content, will use fallback`);
+            needsFallback = true;
+          }
+          
+          // Check for regeneration marker
+          if (processedContent.includes('data-needs-regeneration="true"')) {
+            needsFallback = true;
+          }
+        }
+        
+        files[filename] = processedContent;
+      }
+    }
+    
+    // If quality is bad, use fallback template
+    if (needsFallback) {
+      console.log('AI generated poor quality content, switching to fallback template');
+      await this.generateMinimalSite(project, description);
+      return;
+    }
+    
+    // Save all files
+    for (const [filename, content] of Object.entries(files)) {
+      if (content && content.trim().length > 0) {
         const filepath = path.join(project.path, filename);
-        fs.writeFileSync(filepath, processedContent);
+        fs.writeFileSync(filepath, content);
         project.files.push(filename);
         console.log('Created file:', filename);
       }
@@ -2390,6 +2429,158 @@ Generate main.js with ALL features above. Include comments and use modern JavaSc
     });
     
     return fixed;
+  }
+
+  // === QUALITY CONTROL METHODS ===
+
+  validateAndFixTitle(htmlContent, description) {
+    if (!htmlContent) return htmlContent;
+    
+    let fixed = htmlContent;
+    
+    // Extract current title
+    const titleMatch = fixed.match(/<title>([^<]*)<\/title>/i);
+    if (!titleMatch) return fixed;
+    
+    const currentTitle = titleMatch[1].trim();
+    
+    // Forbidden words in title
+    const forbiddenWords = ['создай', 'сделай', 'построй', 'сайт', 'веб', 'сгенерируй', 'сгенерировать', 'создать', 'сделать', 'добро пожаловать', 'welcome', 'homepage', 'главная'];
+    const hasForbidden = forbiddenWords.some(word => currentTitle.toLowerCase().includes(word.toLowerCase()));
+    
+    // Check if title is user's raw request
+    const descWords = description.toLowerCase().split(/\s+/).slice(0, 5);
+    const isRawRequest = descWords.every(word => currentTitle.toLowerCase().includes(word)) || 
+                         currentTitle.toLowerCase().includes(description.toLowerCase().substring(0, 20));
+    
+    if (hasForbidden || isRawRequest || currentTitle.length < 3 || currentTitle === 'Главная') {
+      // Generate creative title based on topic
+      const desc = description.toLowerCase();
+      let creativeTitle = '';
+      
+      if (desc.includes('кот') || desc.includes('кошк') || desc.includes('cat')) {
+        creativeTitle = 'Мир Удивительных Кошек';
+      } else if (desc.includes('собак') || desc.includes('dog') || desc.includes('пёс')) {
+        creativeTitle = 'Верные Друзья';
+      } else if (desc.includes('кулинар') || desc.includes('рецепт') || desc.includes('готовить')) {
+        creativeTitle = 'Вкус Жизни';
+      } else if (desc.includes('путешеств') || desc.includes('travel') || desc.includes('туризм')) {
+        creativeTitle = 'Вокруг Света';
+      } else if (desc.includes('музык') || desc.includes('music')) {
+        creativeTitle = 'Мир Музыки';
+      } else if (desc.includes('фото') || desc.includes('photo')) {
+        creativeTitle = 'Моменты Вдохновения';
+      } else if (desc.includes('спорт') || desc.includes('sport')) {
+        creativeTitle = 'Активная Жизнь';
+      } else if (desc.includes('технолог') || desc.includes('tech') || desc.includes('it')) {
+        creativeTitle = 'Будущее Технологий';
+      } else if (desc.includes('мода') || desc.includes('fashion') || desc.includes('style')) {
+        creativeTitle = 'Стиль и Элегантность';
+      } else if (desc.includes('книг') || desc.includes('литератур') || desc.includes('book')) {
+        creativeTitle = 'Мир Книг';
+      } else {
+        // Generic creative titles
+        const genericTitles = ['Вдохновение', 'Новые Горизонты', 'Мир Возможностей', 'Свежий Взгляд', 'Интересное Рядом'];
+        creativeTitle = genericTitles[Math.floor(Math.random() * genericTitles.length)];
+      }
+      
+      // Replace title in HTML
+      fixed = fixed.replace(/<title>[^<]*<\/title>/i, `<title>${creativeTitle}</title>`);
+      
+      // Also replace h1 in hero if it has similar issues
+      fixed = fixed.replace(/<h1[^>]*>([^<]*(?:добро пожаловать|главная|welcome|создай|сделай)[^<]*)<\/h1>/i, `<h1>${creativeTitle}</h1>`);
+      
+      console.log(`Fixed bad title "${currentTitle}" → "${creativeTitle}"`);
+    }
+    
+    return fixed;
+  }
+
+  validateAndFixContent(htmlContent) {
+    if (!htmlContent) return htmlContent;
+    
+    let fixed = htmlContent;
+    
+    // Placeholder patterns to detect
+    const placeholderPatterns = [
+      /это сгенерированный веб-сайт/i,
+      /здесь будет текст/i,
+      /вставьте содержимое/i,
+      /lorem ipsum/i,
+      /sample text/i,
+      /placeholder content/i,
+      /ваш контент здесь/i,
+      /content goes here/i,
+    ];
+    
+    const hasPlaceholder = placeholderPatterns.some(pattern => pattern.test(fixed));
+    
+    if (hasPlaceholder) {
+      console.log('WARNING: Placeholder content detected, marking for regeneration');
+      // Add a marker that will trigger fallback
+      fixed = fixed.replace(/<body[^>]*>/i, '<body data-needs-regeneration="true">');
+    }
+    
+    return fixed;
+  }
+
+  ensureStylesLinked(htmlContent) {
+    if (!htmlContent) return htmlContent;
+    
+    let fixed = htmlContent;
+    
+    // Check if styles.css is linked
+    const hasStylesLink = fixed.includes('styles.css') || fixed.includes('stylesheet');
+    
+    if (!hasStylesLink && fixed.includes('<head>')) {
+      // Inject styles.css link
+      const styleLink = '<link rel="stylesheet" href="styles.css">\n    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">\n    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">';
+      
+      fixed = fixed.replace(/<head[^>]*>/i, (match) => {
+        return `${match}\n    ${styleLink}`;
+      });
+      
+      console.log('Added missing styles.css link');
+    }
+    
+    // Check for favicon
+    const hasFavicon = fixed.includes('rel="icon"') || fixed.includes('rel="shortcut icon"');
+    if (!hasFavicon && fixed.includes('<head>')) {
+      const favicon = '<link rel="icon" href="data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><text y=\'.9em\' font-size=\'90\'>🚀</text></svg>">';
+      fixed = fixed.replace(/<head[^>]*>/i, (match) => `${match}\n    ${favicon}`);
+    }
+    
+    return fixed;
+  }
+
+  isContentQualityBad(htmlContent) {
+    if (!htmlContent) return true;
+    
+    const badPatterns = [
+      /добро пожаловать/i,
+      /это сгенерированный/i,
+      /это веб-сайт/i,
+      /сгенерировано ai/i,
+      /created by ai/i,
+      /generated website/i,
+      /ваш заголовок/i,
+      /ваш контент/i,
+      /lorem ipsum/i,
+      /<h1>\s*главная\s*<\/h1>/i,
+    ];
+    
+    const hasBadContent = badPatterns.some(pattern => pattern.test(htmlContent));
+    
+    // Check for inline styles (bad practice)
+    const hasInlineStyles = /style\s*=\s*"[^"]*"/i.test(htmlContent);
+    
+    // Check for missing CSS classes on key elements
+    const hasNoStyling = !htmlContent.includes('class="') || htmlContent.includes('class=""');
+    
+    // Check if it's very short
+    const isTooShort = htmlContent.length < 1000;
+    
+    return hasBadContent || (hasNoStyling && hasInlineStyles) || isTooShort;
   }
   
   shouldResearchTopic(description) {
