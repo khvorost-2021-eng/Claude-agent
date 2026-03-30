@@ -1335,30 +1335,940 @@ content
     return researchData;
   }
 
-  // ===== ADVANCED WEBSITE GENERATION (Template-Free) =====
+  // ===== TEMPLATE-BASED WEBSITE GENERATION (Primary Method) =====
   
   async generateWebProject(project, description) {
-    console.log('=== generateWebProject called ===');
-    console.log('API Key exists:', !!this.apiKey);
-    console.log('Provider:', this.provider);
+    console.log('=== generateWebProject (TEMPLATE-FIRST) ===');
     
-    // Always use AI-powered generation with internet research
+    // STEP 1: Always try template-based generation first (guaranteed quality)
+    try {
+      console.log('Using professional template...');
+      await this.generateFromTemplate(project, description);
+      return;
+    } catch (templateError) {
+      console.log('Template generation failed:', templateError.message);
+      // Continue to fallback
+    }
+    
+    // STEP 2: If no template matches, use AI with strict quality control
     if (this.apiKey) {
       try {
-        console.log('Using AI with internet research to generate custom website...');
+        console.log('No template found, using AI with quality control...');
         await this.generateWebProjectAdvanced(project, description);
         return;
       } catch (error) {
-        console.error('Advanced generation failed:', error.message);
-        // Last resort fallback - simplified generation
-        console.log('Using emergency fallback');
-        await this.generateMinimalSite(project, description);
+        console.error('AI generation failed:', error.message);
       }
+    }
+    
+    // STEP 3: Emergency fallback (guaranteed to work)
+    console.log('Using emergency fallback');
+    await this.generateMinimalSite(project, description);
+  }
+  
+  async generateFromTemplate(project, description) {
+    console.log('=== generateFromTemplate ===');
+    
+    // Import templates with extended detection
+    const { templates, detectTemplate } = require('./websiteTemplates.js');
+    
+    // Detect template using extended keyword matching
+    const templateKey = detectTemplate(description);
+    const template = templates[templateKey] || templates.default;
+    
+    console.log(`Using template: ${templateKey} (${template.title}) [${template.category}]`);
+    
+    // Generate CSS
+    const css = this.generateTemplateCSS(template);
+    fs.writeFileSync(path.join(project.path, 'styles.css'), css);
+    project.files.push('styles.css');
+    
+    // Generate HTML pages
+    const pages = ['index', 'about', 'contact'];
+    for (const pageName of pages) {
+      const html = this.generateTemplateHTML(template, pageName);
+      const filename = pageName === 'index' ? 'index.html' : `${pageName}.html`;
+      fs.writeFileSync(path.join(project.path, filename), html);
+      project.files.push(filename);
+    }
+    
+    // Generate JS
+    const js = this.generateTemplateJS();
+    fs.writeFileSync(path.join(project.path, 'main.js'), js);
+    project.files.push('main.js');
+    
+    // Save project metadata for future modifications
+    const metadata = {
+      templateKey,
+      template,
+      originalDescription: description,
+      createdAt: new Date().toISOString(),
+      pages: ['index', 'about', 'contact'],
+      version: '2.0'
+    };
+    fs.writeFileSync(
+      path.join(project.path, '.project-metadata.json'),
+      JSON.stringify(metadata, null, 2)
+    );
+    project.files.push('.project-metadata.json');
+    
+    console.log(`Generated ${project.files.length} files from template`);
+  }
+  
+  generateTemplateCSS(template) {
+    const { colors } = template;
+    return `/* Professional Template CSS */
+:root {
+  --primary: ${colors.primary};
+  --secondary: ${colors.secondary};
+  --accent: ${colors.accent};
+  --bg: ${colors.bg};
+  --text: ${colors.text};
+  --text-light: #64748b;
+  --gradient: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%);
+  --shadow: 0 10px 30px rgba(0,0,0,0.1);
+  --shadow-lg: 0 20px 40px rgba(0,0,0,0.15);
+  --radius: 16px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg);
+}
+
+/* Navigation */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 20px rgba(0,0,0,0.05);
+}
+
+.nav-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav-logo {
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-decoration: none;
+}
+
+.nav-menu {
+  display: flex;
+  gap: 2rem;
+  list-style: none;
+}
+
+.nav-link {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+.nav-link:hover { color: var(--primary); }
+
+/* Hero */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient);
+  padding: 8rem 2rem 4rem;
+  text-align: center;
+  position: relative;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 800px;
+}
+
+.hero h1 {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 800;
+  color: white;
+  margin-bottom: 1rem;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+.hero .subtitle {
+  font-size: 1.5rem;
+  color: rgba(255,255,255,0.9);
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+.hero .description {
+  font-size: 1.125rem;
+  color: rgba(255,255,255,0.85);
+  margin-bottom: 2.5rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.hero-emoji {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 2rem;
+  border-radius: 50px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.btn-primary {
+  background: white;
+  color: var(--primary);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: white;
+  border: 2px solid rgba(255,255,255,0.5);
+}
+
+.btn-secondary:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: white;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* Sections */
+section {
+  padding: 5rem 2rem;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 3rem;
+  color: var(--text);
+}
+
+/* Features Grid */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.feature-card {
+  background: white;
+  padding: 2rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+}
+
+.feature-icon {
+  width: 60px;
+  height: 60px;
+  background: var(--gradient);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  color: white;
+  font-size: 1.5rem;
+}
+
+.feature-card h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.feature-card p {
+  color: var(--text-light);
+  line-height: 1.6;
+}
+
+/* Gallery */
+.gallery {
+  background: white;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.gallery-img {
+  width: 100%;
+  height: 250px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  transition: transform 0.3s;
+}
+
+.gallery-img:hover {
+  transform: scale(1.05);
+}
+
+/* Page Hero */
+.page-hero {
+  background: var(--gradient);
+  padding: 10rem 2rem 4rem;
+  text-align: center;
+  color: white;
+}
+
+.page-hero h1 {
+  font-size: 3rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+}
+
+.page-hero p {
+  font-size: 1.25rem;
+  opacity: 0.9;
+}
+
+/* Content */
+.content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+}
+
+.content h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 2rem 0 1rem;
+  color: var(--text);
+}
+
+.content p {
+  color: var(--text-light);
+  line-height: 1.8;
+  margin-bottom: 1rem;
+}
+
+/* Contact */
+.contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.contact-info h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 0;
+  color: var(--text-light);
+}
+
+.contact-item i {
+  color: var(--primary);
+  font-size: 1.25rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* Footer */
+.footer {
+  background: var(--text);
+  color: white;
+  padding: 3rem 2rem 1rem;
+}
+
+.footer-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 3rem;
+  margin-bottom: 2rem;
+}
+
+.footer h3 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.footer p {
+  opacity: 0.8;
+  line-height: 1.6;
+}
+
+.footer-links ul {
+  list-style: none;
+}
+
+.footer-links li {
+  margin: 0.5rem 0;
+}
+
+.footer-links a {
+  color: rgba(255,255,255,0.8);
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.footer-links a:hover {
+  color: white;
+}
+
+.footer-bottom {
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding-top: 2rem;
+  text-align: center;
+  opacity: 0.6;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .nav-menu { display: none; }
+  .hero h1 { font-size: 2rem; }
+  .hero .subtitle { font-size: 1.25rem; }
+  .hero-buttons { flex-direction: column; }
+  .btn { width: 100%; justify-content: center; }
+  .features-grid { grid-template-columns: 1fr; }
+  .gallery-grid { grid-template-columns: 1fr; }
+  .contact-grid { grid-template-columns: 1fr; }
+  .footer-content { grid-template-columns: 1fr; }
+  .page-hero h1 { font-size: 2rem; }
+}`;
+  }
+  
+  generateTemplateHTML(template, pageName) {
+    const { title, hero, sections, gallery } = template;
+    const isHome = pageName === 'index';
+    
+    let content = '';
+    
+    if (isHome) {
+      content = `
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-content">
+        <div class="hero-emoji">${hero.emoji}</div>
+        <h1>${hero.title}</h1>
+        <p class="subtitle">${hero.subtitle}</p>
+        <p class="description">${hero.description}</p>
+        <div class="hero-buttons">
+          <a href="about.html" class="btn btn-primary">
+            <i class="fas fa-arrow-right"></i>
+            Узнать больше
+          </a>
+          <a href="contact.html" class="btn btn-secondary">
+            <i class="fas fa-envelope"></i>
+            Связаться
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features">
+      <div class="container">
+        <h2 class="section-title">${sections[0].title}</h2>
+        <div class="features-grid">
+          ${sections[0].items.map(item => `
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-${item.icon}"></i>
+            </div>
+            <h3>${item.title}</h3>
+            <p>${item.desc}</p>
+          </div>
+          `).join('')}
+        </div>
+      </div>
+    </section>
+
+    <!-- More Features -->
+    <section class="features" style="background: white;">
+      <div class="container">
+        <h2 class="section-title">${sections[1]?.title || 'Возможности'}</h2>
+        <div class="features-grid">
+          ${(sections[1]?.items || sections[0].items.slice(0, 3)).map(item => `
+          <div class="feature-card">
+            <div class="feature-icon">
+              <i class="fas fa-${item.icon}"></i>
+            </div>
+            <h3>${item.title}</h3>
+            <p>${item.desc}</p>
+          </div>
+          `).join('')}
+        </div>
+      </div>
+    </section>
+
+    <!-- Gallery -->
+    <section class="gallery">
+      <div class="container">
+        <h2 class="section-title">Галерея</h2>
+        <div class="gallery-grid">
+          ${gallery.map((img, i) => `
+          <img src="${img.url}" alt="${img.alt}" class="gallery-img">
+          `).join('')}
+        </div>
+      </div>
+    </section>`;
+    } else if (pageName === 'about') {
+      content = `
+    <!-- Page Hero -->
+    <section class="page-hero">
+      <h1>О нас</h1>
+      <p>Узнайте больше о нашем проекте</p>
+    </section>
+
+    <!-- Content -->
+    <section class="content">
+      <h2>Наша миссия</h2>
+      <p>${hero.description}</p>
+      <p>Мы создали этот ресурс, чтобы собрать лучшую информацию в одном месте. Наша цель — помочь каждому посетителю найти ответы на свои вопросы и вдохновиться новыми идеями.</p>
+      
+      <h2>Что мы предлагаем</h2>
+      <p>На нашем сайте вы найдёте подробную информацию, качественные материалы и полезные советы. Мы постоянно обновляем контент, чтобы он оставался актуальным и интересным.</p>
+      
+      <h2>Почему выбирают нас</h2>
+      <p>Качество, надёжность и внимание к деталям — наши главные принципы. Мы тщательно отбираем материалы и проверяем каждую публикацию.</p>
+    </section>`;
+    } else if (pageName === 'contact') {
+      content = `
+    <!-- Page Hero -->
+    <section class="page-hero">
+      <h1>Контакты</h1>
+      <p>Свяжитесь с нами</p>
+    </section>
+
+    <!-- Contact -->
+    <section class="content">
+      <div class="contact-grid">
+        <div class="contact-info">
+          <h2>Напишите нам</h2>
+          <p>Мы всегда рады общению и готовы ответить на ваши вопросы.</p>
+          
+          <div class="contact-item">
+            <i class="fas fa-envelope"></i>
+            <span>hello@${title.toLowerCase().replace(/\s+/g, '')}.ru</span>
+          </div>
+          <div class="contact-item">
+            <i class="fas fa-phone"></i>
+            <span>+7 (999) 123-45-67</span>
+          </div>
+          <div class="contact-item">
+            <i class="fas fa-map-marker-alt"></i>
+            <span>Москва, Россия</span>
+          </div>
+        </div>
+        
+        <form class="contact-form" onsubmit="event.preventDefault(); alert('Спасибо за сообщение!');">
+          <div class="form-group">
+            <label>Ваше имя</label>
+            <input type="text" placeholder="Иван Иванов" required>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" placeholder="ivan@example.com" required>
+          </div>
+          <div class="form-group">
+            <label>Сообщение</label>
+            <textarea rows="4" placeholder="Ваше сообщение..." required></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <i class="fas fa-paper-plane"></i>
+            Отправить
+          </button>
+        </form>
+      </div>
+    </section>`;
+    }
+
+    return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${isHome ? title : pageName === 'about' ? 'О нас' : 'Контакты'} | ${title}</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>${hero.emoji}</text></svg>">
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <!-- Navigation -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="nav-logo">${hero.emoji} ${title}</a>
+      <ul class="nav-menu">
+        <li><a href="index.html" class="nav-link ${isHome ? 'active' : ''}">Главная</a></li>
+        <li><a href="about.html" class="nav-link ${pageName === 'about' ? 'active' : ''}">О нас</a></li>
+        <li><a href="contact.html" class="nav-link ${pageName === 'contact' ? 'active' : ''}">Контакты</a></li>
+      </ul>
+    </div>
+  </nav>
+
+${content}
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-content">
+      <div>
+        <h3>${hero.emoji} ${title}</h3>
+        <p>${hero.description.substring(0, 100)}...</p>
+      </div>
+      <div class="footer-links">
+        <h4>Навигация</h4>
+        <ul>
+          <li><a href="index.html">Главная</a></li>
+          <li><a href="about.html">О нас</a></li>
+          <li><a href="contact.html">Контакты</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2024 ${title}. Все права защищены.</p>
+    </div>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>`;
+  }
+  
+  generateTemplateJS() {
+    return `// Mobile Navigation
+document.addEventListener('DOMContentLoaded', () => {
+  // Smooth scroll for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+
+  // Scroll animations
+  const observerOptions = {
+    root: null,
+    rootMargin: '0px',
+    threshold: 0.1
+  };
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.opacity = '1';
+        entry.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, observerOptions);
+
+  // Animate feature cards
+  document.querySelectorAll('.feature-card').forEach((el, i) => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(30px)';
+    el.style.transition = 'all 0.6s ease';
+    el.style.transitionDelay = (i * 0.1) + 's';
+    observer.observe(el);
+  });
+
+  // Navbar shadow on scroll
+  const navbar = document.querySelector('.navbar');
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 50) {
+      navbar.style.boxShadow = '0 4px 30px rgba(0,0,0,0.1)';
     } else {
-      console.log('No API key, using minimal generation');
-      await this.generateMinimalSite(project, description);
+      navbar.style.boxShadow = '0 2px 20px rgba(0,0,0,0.05)';
+    }
+  });
+});
+
+console.log('Сайт загружен успешно! 🚀');`;
+  }
+
+  // ===== WEBSITE MODIFICATION SYSTEM (Better than base44) =====
+  
+  async modifyWebsite(projectPath, modificationRequest) {
+    console.log('=== modifyWebsite ===');
+    console.log('Request:', modificationRequest);
+    
+    // Load project metadata
+    const metadataPath = path.join(projectPath, '.project-metadata.json');
+    let metadata = null;
+    
+    if (fs.existsSync(metadataPath)) {
+      try {
+        metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+        console.log('Loaded metadata for template:', metadata.templateKey);
+      } catch (e) {
+        console.log('Failed to load metadata');
+      }
+    }
+    
+    // Parse modification type
+    const modType = this.detectModificationType(modificationRequest);
+    console.log('Modification type:', modType);
+    
+    switch (modType.type) {
+      case 'color':
+        await this.applyColorChange(projectPath, modType.value);
+        break;
+      case 'section_add':
+        await this.addSection(projectPath, modType.value, metadata);
+        break;
+      case 'section_remove':
+        await this.removeSection(projectPath, modType.value);
+        break;
+      case 'content_update':
+        await this.updateContent(projectPath, modificationRequest, metadata);
+        break;
+      case 'page_add':
+        await this.addPage(projectPath, modType.value, metadata);
+        break;
+      default:
+        // General AI-powered modification
+        await this.aiModifyWebsite(projectPath, modificationRequest, metadata);
+    }
+    
+    return { success: true, message: 'Изменения применены успешно' };
+  }
+  
+  detectModificationType(request) {
+    const r = request.toLowerCase();
+    
+    // Color changes
+    if (r.includes('цвет') || r.includes('цвета') || r.includes('color') || r.includes('theme')) {
+      const colorMatch = r.match(/(синий|красный|зеленый|желтый|черный|белый|фиолетовый|оранжевый|розовый|голубой|blue|red|green|yellow|black|white|purple|orange|pink)/);
+      if (colorMatch) {
+        return { type: 'color', value: colorMatch[1] };
+      }
+    }
+    
+    // Add section/page
+    if (r.includes('добавь') || r.includes('создай') || r.includes('add') || r.includes('create')) {
+      if (r.includes('страниц') || r.includes('страница') || r.includes('page')) {
+        const pageMatch = r.match(/(страницу|страницу\s+)?([а-яa-z]+)/i);
+        return { type: 'page_add', value: pageMatch ? pageMatch[2] : 'new' };
+      }
+      if (r.includes('секци') || r.includes('блок') || r.includes('section')) {
+        return { type: 'section_add', value: r };
+      }
+    }
+    
+    // Remove section
+    if ((r.includes('удали') || r.includes('убери') || r.includes('remove') || r.includes('delete')) && 
+        (r.includes('секци') || r.includes('блок') || r.includes('section'))) {
+      return { type: 'section_remove', value: r };
+    }
+    
+    // Content updates
+    if (r.includes('измени') || r.includes('обнови') || r.includes('поменяй') || r.includes('update') || r.includes('change')) {
+      return { type: 'content_update', value: r };
+    }
+    
+    return { type: 'ai_general', value: r };
+  }
+  
+  async applyColorChange(projectPath, colorName) {
+    console.log('Applying color change:', colorName);
+    
+    const colorMap = {
+      'синий': { primary: '#0984e3', secondary: '#74b9ff', accent: '#00cec9' },
+      'blue': { primary: '#0984e3', secondary: '#74b9ff', accent: '#00cec9' },
+      'красный': { primary: '#e17055', secondary: '#fab1a0', accent: '#ff7675' },
+      'red': { primary: '#e17055', secondary: '#fab1a0', accent: '#ff7675' },
+      'зеленый': { primary: '#00b894', secondary: '#55efc4', accent: '#00cec9' },
+      'green': { primary: '#00b894', secondary: '#55efc4', accent: '#00cec9' },
+      'желтый': { primary: '#fdcb6e', secondary: '#ffeaa7', accent: '#f39c12' },
+      'yellow': { primary: '#fdcb6e', secondary: '#ffeaa7', accent: '#f39c12' },
+      'фиолетовый': { primary: '#6c5ce7', secondary: '#a29bfe', accent: '#b39ddb' },
+      'purple': { primary: '#6c5ce7', secondary: '#a29bfe', accent: '#b39ddb' },
+      'оранжевый': { primary: '#e67e22', secondary: '#f39c12', accent: '#d35400' },
+      'orange': { primary: '#e67e22', secondary: '#f39c12', accent: '#d35400' },
+      'розовый': { primary: '#e84393', secondary: '#fd79a8', accent: '#ff9ff3' },
+      'pink': { primary: '#e84393', secondary: '#fd79a8', accent: '#ff9ff3' }
+    };
+    
+    const colors = colorMap[colorName] || colorMap['синий'];
+    
+    // Update CSS file
+    const cssPath = path.join(projectPath, 'styles.css');
+    if (fs.existsSync(cssPath)) {
+      let css = fs.readFileSync(cssPath, 'utf8');
+      css = css.replace(/--primary: #[a-f0-9]{6}/i, `--primary: ${colors.primary}`);
+      css = css.replace(/--secondary: #[a-f0-9]{6}/i, `--secondary: ${colors.secondary}`);
+      css = css.replace(/--accent: #[a-f0-9]{6}/i, `--accent: ${colors.accent}`);
+      fs.writeFileSync(cssPath, css);
+      console.log('CSS colors updated');
     }
   }
+  
+  async addPage(projectPath, pageName, metadata) {
+    console.log('Adding new page:', pageName);
+    
+    // Create basic HTML structure
+    const html = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${pageName.charAt(0).toUpperCase() + pageName.slice(1)}</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="nav-logo">🏠 Главная</a>
+      <ul class="nav-menu">
+        <li><a href="index.html" class="nav-link">Главная</a></li>
+        <li><a href="about.html" class="nav-link">О нас</a></li>
+        <li><a href="contact.html" class="nav-link">Контакты</a></li>
+        <li><a href="${pageName}.html" class="nav-link active">${pageName.charAt(0).toUpperCase() + pageName.slice(1)}</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <section class="page-hero">
+    <h1>${pageName.charAt(0).toUpperCase() + pageName.slice(1)}</h1>
+    <p>Новая страница</p>
+  </section>
+
+  <section class="content">
+    <div class="container">
+      <h2>Содержимое страницы</h2>
+      <p>Здесь будет контент для страницы ${pageName}.</p>
+    </div>
+  </section>
+
+  <script src="main.js"></script>
+</body>
+</html>`;
+    
+    fs.writeFileSync(path.join(projectPath, `${pageName}.html`), html);
+    console.log(`Created ${pageName}.html`);
+  }
+  
+  async aiModifyWebsite(projectPath, request, metadata) {
+    console.log('Using AI to modify website...');
+    
+    if (!this.apiKey) {
+      console.log('No API key available for AI modification');
+      return;
+    }
+    
+    // Read current index.html
+    const indexPath = path.join(projectPath, 'index.html');
+    const currentHTML = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, 'utf8') : '';
+    
+    const prompt = `You are modifying an existing website based on this request: "${request}"
+
+Current HTML structure:
+${currentHTML.substring(0, 3000)}
+
+Apply the requested changes while maintaining the existing structure and styles.
+Return ONLY the complete modified HTML code for index.html.
+Do not change the CSS link or basic structure unless specifically requested.`;
+
+    try {
+      const response = await this.generateCode(prompt, { type: 'web' });
+      const newHTML = this.extractCodeBlock(response) || response;
+      
+      fs.writeFileSync(indexPath, newHTML);
+      console.log('AI modification applied to index.html');
+    } catch (error) {
+      console.error('AI modification failed:', error.message);
+    }
+  }
+
+  // ===== ADVANCED AI GENERATION (Fallback Only) =====
   
   async generateWebProjectAdvanced(project, description) {
     console.log('=== generateWebProjectAdvanced called ===');
