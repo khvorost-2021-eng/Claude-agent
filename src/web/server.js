@@ -867,6 +867,60 @@ app.get('/api/settings', (req, res) => {
   });
 });
 
+// Download project as ZIP
+app.get('/api/download/:projectId', async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const projectPath = path.join(process.cwd(), 'projects', projectId);
+    
+    if (!fs.existsSync(projectPath)) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    
+    const zip = new AdmZip();
+    zip.addLocalFolder(projectPath);
+    
+    const zipBuffer = zip.toBuffer();
+    
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${projectId}.zip"`);
+    res.send(zipBuffer);
+  } catch (error) {
+    console.error('Download error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Download video file (proxy for external URLs)
+app.get('/api/download-video', async (req, res) => {
+  try {
+    const { url, filename } = req.query;
+    
+    if (!url) {
+      return res.status(400).json({ error: 'URL required' });
+    }
+    
+    console.log('📥 Downloading video from:', url);
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch: ${response.status}`);
+    }
+    
+    const contentType = response.headers.get('content-type') || 'video/mp4';
+    const safeFilename = filename || 'generated-video.mp4';
+    
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
+    
+    // Stream the response
+    response.body.pipe(res);
+  } catch (error) {
+    console.error('Video download error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Media upload endpoint
 app.post('/api/upload', upload.array('files', 5), async (req, res) => {
   try {
@@ -1167,7 +1221,10 @@ wss.on('connection', (ws) => {
                 type: 'video_generated', 
                 content: videoResponse.content,
                 videoUrl: videoResponse.videoUrl,
-                prompt: videoResponse.prompt
+                prompt: videoResponse.prompt,
+                downloadUrl: videoResponse.videoUrl ? `/api/download-video?url=${encodeURIComponent(videoResponse.videoUrl)}&filename=video-${Date.now()}.mp4` : null,
+                isImageSequence: videoResponse.isImageSequence || false,
+                isAnimated: videoResponse.isAnimated || false
               }));
             } catch (videoError) {
               console.error('Video generation handler error:', videoError);

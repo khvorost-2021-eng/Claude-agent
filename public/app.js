@@ -398,7 +398,7 @@ class AgentClient {
       case 'video_generated':
         this.hideTypingIndicator();
         if (data.videoUrl) {
-          this.addVideoMessage(data.videoUrl, data.prompt, data.isImageSequence);
+          this.addVideoMessage(data.videoUrl, data.prompt, data.isImageSequence, data.downloadUrl);
         } else {
           this.addMessage(data.content, 'bot');
         }
@@ -514,11 +514,12 @@ class AgentClient {
     }
   }
   
-  addVideoMessage(videoUrl, prompt = '', isImageSequence = false, save = true) {
+  addVideoMessage(videoUrl, prompt = '', isImageSequence = false, downloadUrl = null, save = true) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message bot';
     
-    const label = isImageSequence ? '🎬 Кадр видео (добавьте LUMA_API_KEY для полноценного видео):' : '🎬 Сгенерировано видео:';
+    const label = isImageSequence ? '🎬 Кадр видео (добавьте API ключ для полноценного видео):' : '🎬 Сгенерировано видео:';
+    const downloadLink = downloadUrl || videoUrl;
     
     if (videoUrl.endsWith('.mp4') || videoUrl.includes('video')) {
       // Real video
@@ -526,8 +527,8 @@ class AgentClient {
         <div class="message-content">
           <p>${label} "${prompt}"</p>
           <video src="${videoUrl}" controls style="max-width: 100%; border-radius: 8px; margin-top: 8px;"></video>
-          <p style="font-size: 0.8rem; color: var(--text2); margin-top: 4px;">
-            <a href="${videoUrl}" target="_blank" download>Скачать видео</a>
+          <p style="font-size: 0.9rem; margin-top: 8px;">
+            <a href="${downloadLink}" download style="display: inline-block; padding: 8px 16px; background: var(--accent); color: white; text-decoration: none; border-radius: 6px;">⬇ Скачать видео</a>
           </p>
         </div>
       `;
@@ -537,8 +538,11 @@ class AgentClient {
         <div class="message-content">
           <p>${label} "${prompt}"</p>
           <img src="${videoUrl}" alt="${prompt}" style="max-width: 100%; border-radius: 8px; margin-top: 8px;">
+          <p style="font-size: 0.9rem; margin-top: 8px;">
+            <a href="${downloadLink}" download style="display: inline-block; padding: 8px 16px; background: var(--accent); color: white; text-decoration: none; border-radius: 6px;">⬇ Скачать</a>
+          </p>
           <p style="font-size: 0.75rem; color: var(--text2); margin-top: 4px;">
-            💡 Для генерации полноценного видео добавьте LUMA_API_KEY в .env файл
+            💡 Для генерации полноценного видео добавьте REPLICATE_API_KEY или RUNWAY_API_KEY в .env
           </p>
         </div>
       `;
@@ -548,7 +552,7 @@ class AgentClient {
     this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
     
     if (save) {
-      this.addMessageToCurrentChat(prompt, 'assistant', { type: 'video', videoUrl, prompt, isImageSequence });
+      this.addMessageToCurrentChat(prompt, 'assistant', { type: 'video', videoUrl, prompt, isImageSequence, downloadUrl });
     }
   }
   

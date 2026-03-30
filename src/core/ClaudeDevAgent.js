@@ -1019,6 +1019,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Prompt length:', prompt.length);
     console.log('Options:', options);
     
+    // Try paid APIs first if key available
     if (this.apiKey) {
       let result;
       console.log('Calling AI API...');
@@ -1042,10 +1043,69 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       console.log('API failed or returned error content');
     } else {
-      console.log('No API key available');
+      console.log('No API key available, trying free alternatives...');
     }
+    
+    // FREE ALTERNATIVE: Pollinations Text API (no API key needed)
+    console.log('Trying Pollinations Text API (FREE)...');
+    const pollinationsResult = await this.generateCodePollinations(prompt, options);
+    if (pollinationsResult && !pollinationsResult.startsWith('Error:')) {
+      console.log('✅ Pollinations AI generated content successfully');
+      return pollinationsResult;
+    }
+    
     console.log('Returning null - AI generation failed');
     return null;  // Return null instead of template so caller knows AI failed
+  }
+
+  // FREE AI Code Generation via Pollinations (no API key required)
+  async generateCodePollinations(prompt, options = {}) {
+    console.log('=== generateCodePollinations (FREE) called ===');
+    try {
+      // Pollinations text generation API (completely free)
+      const encodedPrompt = encodeURIComponent(prompt);
+      const seed = Date.now();
+      
+      // Use Pollinations text API with a code-optimized prompt
+      const url = `https://text.pollinations.ai/${encodedPrompt}?seed=${seed}&json=false`;
+      
+      console.log('Fetching from Pollinations Text API...');
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 90000); // 90 second timeout
+      
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'Accept': 'text/plain',
+        }
+      });
+      
+      clearTimeout(timeout);
+      
+      if (!response.ok) {
+        throw new Error(`Pollinations API error: ${response.status}`);
+      }
+      
+      const content = await response.text();
+      
+      if (content && content.length > 100) {
+        console.log('✅ Pollinations content length:', content.length);
+        console.log('Preview:', content.substring(0, 300));
+        
+        // Check if response looks like code/files
+        if (content.includes('```') || content.includes('<!DOCTYPE') || content.includes('<html')) {
+          return content;
+        }
+        
+        // If not code format, wrap it
+        return `index.html\n\`\`\`html\n${content}\n\`\`\``;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('❌ Pollinations API error:', error.message);
+      return null;
+    }
   }
 
   generateFromTemplate(type) {
