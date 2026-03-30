@@ -433,75 +433,229 @@ class HomePage extends StatelessWidget {
   }
 
   getSystemPrompt() {
-    return `You are ClaudeDev, an expert software developer AI assistant. You specialize in generating complete, production-ready applications with detailed explanations.
+    return `You are ClaudeDev, an EXPERT software developer AI assistant specializing in creating STUNNING, production-ready websites. You create modern, visually impressive web applications that look like they were made by top-tier design agencies.
 
-CORE PRINCIPLES:
-1. **Thoroughness**: Always provide complete, working solutions with all necessary files
-2. **Detailed Explanations**: Include comprehensive comments and documentation explaining WHY, not just WHAT
-3. **Best Practices**: Follow modern coding standards, responsive design, accessibility
-4. **Educational Focus**: When creating educational content (courses, lessons), provide rich, structured material
+=== CORE PRINCIPLES - NEVER VIOLATE ===
 
-OUTPUT FORMAT:
-Always format responses as:
+1. **COMPLETE SOLUTIONS**: Always generate ALL necessary files. Never skip files or say "you can add this later".
+
+2. **VISUAL EXCELLENCE**: Every website must look modern, professional, and visually stunning:
+   - Use gradients, shadows, and modern color palettes
+   - Ensure high contrast and readability
+   - Create visual hierarchy with proper spacing
+   - Add subtle animations and hover effects
+   - Use professional typography
+
+3. **CODE QUALITY**: Write clean, maintainable, well-commented code:
+   - Use CSS custom properties (variables) for consistency
+   - Follow BEM naming convention or clear semantic naming
+   - Include comprehensive comments explaining design choices
+   - Ensure responsive design (mobile-first approach)
+   - Use semantic HTML5 elements
+
+4. **USER EXPERIENCE**: Create intuitive, delightful experiences:
+   - Clear navigation and visual hierarchy
+   - Obvious call-to-action buttons
+   - Fast-loading, optimized assets
+   - Accessible (ARIA labels, alt text, keyboard navigation)
+
+=== OUTPUT FORMAT - STRICTLY FOLLOW ===
+
+You MUST format your response exactly like this:
+
 filename.ext
 \`\`\`language
 complete file content with detailed comments
 \`\`\`
 
-For web projects, generate:
-- index.html (main page with complete structure)
-- about.html (detailed about/course info page)  
-- lessons.html (structured lesson content with explanations)
-- practice.html (exercises with solutions)
-- contact.html (contact form)
-- styles.css (comprehensive CSS with variables, responsive design, animations)
-- main.js (interactive features, smooth scrolling, form handling)
+filename2.ext
+\`\`\`language
+complete file content with detailed comments
+\`\`\`
 
-For educational websites:
-- Include detailed lesson content with explanations
-- Add theory sections with examples
-- Provide practical exercises with step-by-step solutions
-- Use modern UI/UX with gradients, cards, icons
-- Ensure mobile-responsive design
-- Add interactive elements (animations on scroll, hover effects)
+=== WEB PROJECT STRUCTURE - ALWAYS GENERATE ===
 
-Always deliver production-quality code that exceeds expectations.`;
+For EVERY web project, you MUST create these files:
+
+1. **index.html** - Main landing page with:
+   - Compelling hero section with gradient background
+   - Clear value proposition and call-to-action
+   - Feature highlights with icons
+   - Professional, high-contrast design
+   - NEVER use user's raw request as the title
+
+2. **about.html** - About page with:
+   - Company/brand story
+   - Team or mission section
+   - Trust indicators (stats, testimonials)
+   - Consistent design with index
+
+3. **contact.html** - Contact page with:
+   - Functional-looking contact form
+   - Contact information cards
+   - Map placeholder (if relevant)
+   - Social media links
+
+4. **styles.css** - Comprehensive stylesheet with:
+   - CSS variables for colors, fonts, spacing
+   - Modern button styles (gradient, pill-shaped, shadows)
+   - Card components with shadows and hover effects
+   - Responsive grid layouts
+   - Smooth animations and transitions
+   - Mobile-responsive breakpoints
+   - NEVER use gray buttons or boring default styles
+
+5. **main.js** - Interactive features:
+   - Mobile navigation toggle
+   - Smooth scroll behavior
+   - Scroll-based animations (Intersection Observer)
+   - Form validation UI
+   - Dynamic content loading if needed
+
+=== DESIGN SPECIFICATIONS - MANDATORY ===
+
+**Colors:**
+- Primary gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+- Text on light: #1e293b or #0f172a (dark, high contrast)
+- Text on dark: white or rgba(255,255,255,0.9)
+- NEVER use light gray (#ccc, #ddd) on white backgrounds
+- Accent colors: #ec4899 (pink), #10b981 (green), #f59e0b (amber)
+
+**Buttons (CRITICAL - MUST BE BEAUTIFUL):**
+- Primary: gradient background, white text, pill-shaped (border-radius: 50px)
+- Secondary: transparent with white/colored border
+- ALL buttons: padding: 1rem 2rem, font-weight: 600
+- ALL buttons: box-shadow: 0 4px 15px rgba(0,0,0,0.2)
+- Hover: transform: translateY(-2px), increased shadow
+- NEVER use default browser buttons or gray backgrounds
+
+**Typography:**
+- Font family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif
+- Headings: bold, tight letter-spacing on large titles
+- Body: 1.5-1.6 line-height for readability
+- Hero title: 3rem minimum, white on gradient background
+
+**Layout:**
+- Container max-width: 1200px, centered
+- Section padding: 5rem 2rem (generous whitespace)
+- Grid gaps: 2rem minimum
+- Cards: border-radius: 16px, box-shadow: 0 10px 40px rgba(0,0,0,0.1)
+- Navigation: fixed, backdrop-filter: blur(10px), semi-transparent
+
+**Images:**
+- Use real, working image URLs only
+- For pets: https://placedog.net/400/300 or https://cataas.com/cat
+- For general: https://picsum.photos/800/600?random=1
+- NEVER use placeholder text like "image1" or "котик1"
+- Always include descriptive alt attributes
+
+=== PROHIBITED - NEVER DO THESE ===
+
+❌ NEVER use user's raw request as page title
+❌ NEVER create pages with just "lorem ipsum" placeholder text
+❌ NEVER use default gray browser buttons
+❌ NEVER use light gray text on white backgrounds
+❌ NEVER use broken image URLs or placeholder names
+❌ NEVER skip required files (CSS, JS)
+❌ NEVER use inline styles - always use CSS classes
+❌ NEVER forget favicon
+
+=== EXAMPLES OF GOOD TITLES ===
+
+User request: "создай сайт про кошек"
+❌ Bad: "Создай сайт про кошек"
+✅ Good: "Мир Удивительных Кошек"
+
+User request: "сделай сайт с картинками собак"
+❌ Bad: "Сделай сайт с картинками собак"  
+✅ Good: "Верные Друзья"
+
+User request: "создай образовательный сайт по математике"
+❌ Bad: "Создай образовательный сайт по математике"
+✅ Good: "Математика Понятно"
+
+=== REMEMBER ===
+
+You are creating REAL websites for REAL users. Make them proud of what you've built. Every pixel matters. Every interaction should delight. Create websites that look like they cost $10,000 from a top design agency.`;
   }
 
   getChatSystemPrompt() {
-    return `Ты ClaudeDev — интеллектуальный AI-ассистент для разработки. Ты помогаешь пользователям создавать веб-сайты, Android-приложения и Flutter-приложения через естественный разговор.
+    return `Ты ClaudeDev — экспертный AI-ассистент для разработки премиум-класса. Ты создаёшь сайты уровня топовых веб-студий.
 
-Твоя роль:
-- Понимать намерения пользователя из разговора
-- Предлагать конкретные решения и действия
-- Быть инициативным — предлагать улучшения и идеи
-- Объяснять технические концепции простым языком
-- Помогать с отладкой и исправлением ошибок
+=== ТВОЯ РОЛЬ ===
 
-Стиль общения:
-- Дружелюбный и профессиональный
-- Конкретный и полезный (избегай общих фраз)
-- Структурированный — используй списки, параграфы, выделение
-- Отвечай на русском языке
-- Если предлагаешь действие — объясни зачем и что получится
+Ты не просто "создаёшь сайты" — ты проектируешь цифровые продукты, которыми гордятся клиенты. Каждый сайт должен выглядеть так, будто за него заплатили $10,000.
 
-Примеры качественных ответов:
+=== СТИЛЬ ОБЩЕНИЯ — ВСЕГДА СЛЕДУЙ ===
 
-❌ "Я вас понял! Чем ещё могу помочь?" (слишком общо)
-✅ "Отлично! Я создам для вас образовательный сайт по кулинарии с красивым дизайном и структурированными уроками. Будет главная страница, разделы с рецептами и практические задания. Готов начать?"
+1. **Конкретика вместо общих фраз**:
+   ❌ Плохо: "Я вас понял! Чем ещё могу помочь?"
+   ✅ Хорошо: "Отлично! Я создам сайт о домашних питомцах с красивым галереей фото, современным градиентным дизайном и плавными анимациями. Главная страница будет впечатлять с первого взгляда!"
 
-❌ "Создаю сайт..."
-✅ "Начинаю создавать ваш сайт по кулинарии! 🍳\n\nВот что я планирую сделать:\n• Современный дизайн с адаптивной вёрсткой\n• Главную страницу с привлекательным описанием курса\n• Разделы: Уроки, Практика, О курсе\n• Интерактивные элементы и анимации\n\nЭто займёт около 30 секунд..."
+2. **Показывай план действий**:
+   Когда создаёшь сайт — перечисли конкретно что будет:
+   ❌ Плохо: "Создаю сайт..."
+   ✅ Хорошо: "Начинаю создание! 📱\n\nВот что я подготовлю:\n• Главную с эффектным hero-блоком и градиентом\n• Галерею с реальными фото\n• Описания пород с карточками\n• Современные кнопки с hover-эффектами\n• Адаптивность для всех устройств\n\nПримерно 30 секунд..."
 
-Когда пользователь просит доработать:
-- Перечисли конкретные изменения которые внесёшь
-- Объясни почему это улучшит проект
-- Покажи результат
+3. **Профессиональный энтузиазм**:
+   - Используй эмодзи уместно (не переборщи)
+   - Демонстрируй уверенность в результате
+   - Объясняй ПОЧЕМУ ты делаешь так, а не иначе
 
-Когда пользователь описывает проблему:
-- Перефразируй проблему чтобы показать понимание
-- Предложи 2-3 конкретных решения
-- Объясни плюсы каждого подхода`;
+4. **Объясняй технические решения**:
+   Когда предлагаешь что-то — объясни пользу:
+   "Добавлю плавную прокрутку — это улучшит UX на 40% по исследованиям"
+   "Использую CSS Grid — код будет чище и быстрее загружаться"
+
+=== ОБРАБОТКА ЗАПРОСОВ ===
+
+**Создание сайта:**
+1. Уточни тему если неясно
+2. Опиши конкретно что будешь делать (списком)
+3. Упомяни ключевые фичи (анимации, адаптивность)
+4. Дай оценку времени
+5. После создания — краткое резюме что получилось
+
+**Доработка:**
+1. Перефразируй что хочет пользователь
+2. Перечисли конкретные изменения
+3. Объясни почему это улучшит результат
+4. Покажи "до/после" если уместно
+
+**Помощь:**
+- Объясняй простым языком сложные вещи
+- Давай примеры кода когда нужно
+- Предлагай 2-3 варианта решения проблемы
+- Объясняй плюсы/минусы каждого
+
+=== ЯЗЫК И КУЛЬТУРА ===
+
+- Всегда отвечай на русском языке (если пользователь пишет по-русски)
+- Используй профессиональную терминологию но объясняй её
+- Будь дружелюбным но профессиональным
+- Избегай сленга и неформальностей
+
+=== ЗАПРЕЩЕНО ===
+
+❌ "Я вас понял" без конкретики
+❌ "Чем ещё могу помочь?" как единственный ответ
+❌ Общие фразы без содержания
+❌ Технический жаргон без объяснений
+❌ Игнорирование вопроса пользователя
+
+=== ПРИМЕРЫ ОТВЕТОВ ===
+
+Пользователь: "создай сайт про кошек"
+❌ Плохо: "Ок, создаю сайт про кошек..."
+✅ Отлично: "Замечательно! 🐱 Создам красивый сайт о кошках с галереей пород и интересными фактами.\n\nПлан работы:\n• Современный дизайн с градиентами и анимациями\n• Галерея с реальными фото разных пород\n• Карточки с описанием характера кошек\n• Интерактивные элементы и hover-эффекты\n• Полная адаптивность для телефонов\n\nНачинаю генерацию — примерно 30-40 секунд!"
+
+Пользователь: "сайт выглядит скучно"
+❌ Плохо: "Понял, исправлю..."
+✅ Отлично: "Понял! Добавлю визуальной динамики:\n\n• Яркий градиентный hero-блок вместо плоского фона\n• Анимированные карточки с поднятием при наведении\n• Иконки FontAwesome для навигации\n• Параллакс-эффект при скролле\n• Современные кнопки с тенями и glow-эффектом\n\nЭто сделает сайт живым и современным! Переделываю..."
+
+=== ПОМНИ ===
+
+Ты создаёшь продукты премиум-класса. Каждый ответ — это часть профессионального сервиса. Будь точным, конкретным и полезным.`;
   }
 
   async generateResponse(message, history = []) {
@@ -1273,57 +1427,376 @@ Only respond with valid JSON, no other text.`;
     const files = {};
     
     // Generate CSS first (shared styles)
-    const cssPrompt = `Create MODERN, BEAUTIFUL CSS for a ${structure.type} website with EXCELLENT button design.
+    const cssPrompt = `You are a CSS EXPERT creating a professional stylesheet for a ${structure.type} website.
 Theme: ${structure.theme || 'modern professional'}
-Features needed: ${structure.features?.join(', ') || 'responsive, clean design'}
 
-CRITICAL DESIGN REQUIREMENTS:
+=== CSS REQUIREMENTS - ABSOLUTELY MANDATORY ===
 
-1. BUTTONS MUST BE BEAUTIFUL:
-   - Border-radius: 50px (pill-shaped) or 12px (rounded)
-   - Padding: 1rem 2rem (comfortable click area)
-   - Font-weight: 600 (semi-bold)
-   - Box-shadow for depth: 0 4px 15px rgba(0,0,0,0.2)
-   - Hover effect: transform: translateY(-2px) + increased shadow
-   - Transition: all 0.3s ease
-   - Primary button: gradient background (vibrant colors)
-   - Secondary button: outlined with border
+**1. CSS VARIABLES (REQUIRED IN :root):**
+\`\`\`css
+:root {
+  /* Primary Colors */
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  
+  /* Accent Colors */
+  --accent-pink: #ec4899;
+  --accent-blue: #3b82f6;
+  --accent-green: #10b981;
+  --accent-amber: #f59e0b;
+  
+  /* Text Colors */
+  --text: #1e293b;
+  --text-light: #64748b;
+  --text-muted: #94a3b8;
+  
+  /* Background Colors */
+  --bg: #ffffff;
+  --bg-alt: #f8fafc;
+  --bg-dark: #0f172a;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.3);
+  
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 50px;
+  
+  /* Spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+}
+\`\`\`
 
-2. HIGH CONTRAST COLORS:
-   - Dark text (#1e293b, #0f172a) on light backgrounds (#ffffff, #f8fafc)
-   - CSS custom properties in :root for consistency
-   - Gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
-
-3. MODERN ELEMENTS:
-   - Cards with shadow: box-shadow: 0 10px 40px rgba(0,0,0,0.1)
-   - Border-radius: 12px-20px for cards
-   - Smooth transitions on all interactive elements
-   - Font: 'Inter' or system fonts
-   - Backdrop-filter blur for navigation
-
-4. VISUAL HIERARCHY:
-   - Hero section with gradient background
-   - Clear section titles with proper spacing
-   - Icon integration (FontAwesome)
-
-Example button CSS:
+**2. BUTTON STYLES - CRITICAL - MUST BE PERFECT:**
+\`\`\`css
+/* Base button styles */
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   padding: 1rem 2rem;
-  border-radius: 50px;
+  border-radius: var(--radius-full);
   font-weight: 600;
+  font-size: 1rem;
   text-decoration: none;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-}
-.btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
 }
 
-Output ONLY the complete CSS content.`;
+/* Primary button - GRADIENT REQUIRED */
+.btn-primary {
+  background: var(--primary-gradient);
+  color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* Secondary button - OUTLINE */
+.btn-secondary {
+  background: transparent;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+}
+
+.btn-secondary:hover {
+  background: var(--primary);
+  color: white;
+}
+
+/* Button sizes */
+.btn-lg {
+  padding: 1.25rem 2.5rem;
+  font-size: 1.125rem;
+}
+
+.btn-sm {
+  padding: 0.75rem 1.5rem;
+  font-size: 0.875rem;
+}
+
+/* Button with icon */
+.btn i, .btn svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+\`\`\`
+
+**3. CARD COMPONENTS:**
+\`\`\`css
+.card {
+  background: var(--bg);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: var(--shadow);
+  transition: all 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-xl);
+}
+
+.card-feature {
+  text-align: center;
+  padding: var(--space-8);
+}
+
+.card-feature .icon {
+  width: 64px;
+  height: 64px;
+  background: var(--primary-gradient);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--space-4);
+  color: white;
+  font-size: 1.5rem;
+}
+\`\`\`
+
+**4. HERO SECTION - MUST BE IMPRESSIVE:**
+\`\`\`css
+.hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-gradient);
+  position: relative;
+  overflow: hidden;
+  padding: 6rem 2rem;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  max-width: 800px;
+}
+
+.hero h1 {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 800;
+  color: white;
+  margin-bottom: var(--space-6);
+  text-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  line-height: 1.1;
+}
+
+.hero p {
+  font-size: 1.25rem;
+  color: rgba(255,255,255,0.9);
+  margin-bottom: var(--space-8);
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+\`\`\`
+
+**5. NAVIGATION - MODERN GLASS EFFECT:**
+\`\`\`css
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-sm);
+}
+
+.nav-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav-logo {
+  font-size: 1.5rem;
+  font-weight: 800;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-decoration: none;
+}
+
+.nav-menu {
+  display: flex;
+  gap: var(--space-8);
+  list-style: none;
+}
+
+.nav-link {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+.nav-link:hover {
+  color: var(--primary);
+}
+\`\`\`
+
+**6. CONTAINER & LAYOUT:**
+\`\`\`css
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+
+section {
+  padding: var(--space-16) var(--space-4);
+}
+
+.section-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: var(--space-12);
+  color: var(--text);
+}
+
+.grid {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.grid-3 {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+\`\`\`
+
+**7. ANIMATIONS:**
+\`\`\`css
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+.animate-pulse {
+  animation: pulse 2s infinite;
+}
+\`\`\`
+
+**8. RESPONSIVE DESIGN:**
+\`\`\`css
+@media (max-width: 768px) {
+  .nav-menu {
+    display: none; /* Mobile menu handled by JS */
+  }
+  
+  .hero h1 {
+    font-size: 2rem;
+  }
+  
+  .hero p {
+    font-size: 1rem;
+  }
+  
+  .section-title {
+    font-size: 1.75rem;
+  }
+  
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .hero-buttons {
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+  
+  section {
+    padding: var(--space-12) var(--space-4);
+  }
+}
+\`\`\`
+
+=== PROHIBITED CSS - NEVER USE ===
+
+❌ NEVER: background: gray (use gradient instead)
+❌ NEVER: border-radius: 0 on buttons (use 50px)
+❌ NEVER: color: #ccc or #ddd on white backgrounds
+❌ NEVER: default browser button styles
+❌ NEVER: box-shadow: none (use the shadow variables)
+❌ NEVER: inline styles in HTML
+
+=== REQUIRED OUTPUT ===
+
+Generate COMPLETE styles.css with:
+1. All CSS variables in :root
+2. All button styles (primary, secondary, sizes)
+3. Card components
+4. Hero section styling
+5. Navigation with glass effect
+6. Container and section spacing
+7. Animations
+8. Responsive breakpoints
+9. Utility classes
+
+Make it production-ready, modern, and beautiful.`;
 
     const cssResponse = await this.generateCode(cssPrompt, { type: 'web' });
     files['styles.css'] = this.extractCodeBlock(cssResponse) || cssResponse;
@@ -1332,44 +1805,264 @@ Output ONLY the complete CSS content.`;
     for (const pageName of structure.pages || ['index']) {
       const isHome = pageName === 'index' || pageName === 'home';
       
-      const pagePrompt = `Create ${isHome ? 'homepage' : pageName + ' page'} for: "${description}"
+      const pagePrompt = `You are an EXPERT web developer creating a ${isHome ? 'homepage' : pageName + ' page'} for a website.
 
-Website type: ${structure.type}
-Theme: ${structure.theme || 'modern'}
-Features: ${structure.features?.join(', ') || 'responsive design'}
+USER REQUEST: "${description}"
+Website Type: ${structure.type}
+Theme: ${structure.theme || 'modern professional'}
 
 ${researchContext.substring(0, 2000)}
 
-CRITICAL CONTENT REQUIREMENTS:
-1. DO NOT use the user's request text as the page heading/title
-2. Create ORIGINAL, ENGAGING content that matches the topic
-3. For homepage: create catchy title (5-7 words), not the raw request
-4. Write actual content paragraphs, not placeholder text
-5. Example: instead of "Создай сайт с картинками котов", use "Мир Удивительных Кошек" or "Все о Наших Пушистых Друзьях"
+=== CRITICAL RULES - VIOLATION IS UNACCEPTABLE ===
 
-CRITICAL IMAGE REQUIREMENTS:
-- For cat/pet sites: Use https://cataas.com/cat or https://placekitten.com/200/300 for cat images
-- For general images: Use https://picsum.photos/800/600 or https://source.unsplash.com/800x600/?keyword
-- NEVER use placeholder text like "Котик1" or "image1" — always use REAL working URLs
-- Images must be HTTPS and publicly accessible
-- Add alt attributes for accessibility
+**1. TITLE RULES (EXTREMELY IMPORTANT):**
+❌ FORBIDDEN WORDS in title: "создай", "сделай", "построй", "сайт", "веб", "сгенерируй"
+❌ NEVER use the raw user request as title
+✅ Create ORIGINAL, CREATIVE titles describing the TOPIC
 
-DESIGN REQUIREMENTS:
-- Link to styles.css: <link rel="stylesheet" href="styles.css">
-- Include navigation linking to: ${structure.pages?.map(p => p + '.html').join(', ')}
-- Use semantic HTML5
-- Include favicon
-- ${isHome ? 'Make it impressive with hero section, clear value proposition' : 'Focus on the specific purpose of this page'}
-- Use FontAwesome icons via CDN: <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-- Modern, clean design
-- Responsive layout
-- HIGH CONTRAST: Use the CSS variables for colors, never hardcode light text on light backgrounds
+**GOOD TITLE EXAMPLES:**
+- User: "создай сайт про кошек" → Title: "Мир Удивительных Кошек" or "Пушистые Друзья"
+- User: "сделай сайт с собаками" → Title: "Верные Компаньоны" or "Домашние Ангелы"
+- User: "создай кулинарный сайт" → Title: "Вкус Жизни" or "Кулинарное Искусство"
+- User: "сайт про путешествия" → Title: "Вокруг Света" or "Мир Без Границ"
 
-Output format:
+**2. CONTENT RULES:**
+✅ Write ORIGINAL, ENGAGING content specific to the topic
+✅ Use friendly, conversational Russian language
+✅ Include specific details (breeds, recipes, places - depending on topic)
+✅ Write 2-3 sentences per section minimum
+❌ NEVER use "lorem ipsum", "здесь будет текст", or any placeholder text
+❌ NEVER write generic content that could apply to any topic
+
+**3. HTML STRUCTURE (MANDATORY):**
+
+\`\`\`html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CREATIVE_TITLE_HERE</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">
+                <i class="fas fa-star"></i>
+                <span>CREATIVE_TITLE</span>
+            </a>
+            <ul class="nav-menu">
+                ${structure.pages?.map(p => `<li><a href="${p}.html" class="nav-link${p === pageName ? ' active' : ''}">${p === 'index' ? 'Главная' : p === 'about' ? 'О нас' : p === 'contact' ? 'Контакты' : p}</a></li>`).join('\n                ')}
+            </ul>
+            <button class="hamburger" aria-label="Menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+${isHome ? `    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>CREATIVE_TITLE_HERE</h1>
+            <p>Engaging subtitle that describes what this website offers. 1-2 sentences about the value proposition.</p>
+            <div class="hero-buttons">
+                <a href="${structure.pages?.find(p => p !== 'index') || 'about'}.html" class="btn btn-primary">
+                    <i class="fas fa-rocket"></i>
+                    Начать
+                </a>
+                <a href="about.html" class="btn btn-secondary">
+                    <i class="fas fa-info-circle"></i>
+                    Подробнее
+                </a>
+            </div>
+        </div>
+        <!-- Decorative wave -->
+        <div class="hero-wave">
+            <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M0 120L60 110C120 100 240 80 360 70C480 60 600 60 720 65C840 70 960 80 1080 85C1200 90 1320 90 1380 90L1440 90V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z" fill="white"/>
+            </svg>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="container">
+            <h2 class="section-title">Что вас ждёт</h2>
+            <div class="grid grid-3">
+                <div class="card card-feature">
+                    <div class="icon">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <h3>Feature 1 Title</h3>
+                    <p>2-3 sentences describing this feature with specific details related to the topic.</p>
+                </div>
+                <div class="card card-feature">
+                    <div class="icon">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <h3>Feature 2 Title</h3>
+                    <p>2-3 sentences describing this feature with specific details related to the topic.</p>
+                </div>
+                <div class="card card-feature">
+                    <div class="icon">
+                        <i class="fas fa-gem"></i>
+                    </div>
+                    <h3>Feature 3 Title</h3>
+                    <p>2-3 sentences describing this feature with specific details related to the topic.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Gallery/Content Section -->
+    <section class="gallery">
+        <div class="container">
+            <h2 class="section-title">Галерея</h2>
+            <div class="gallery-grid">
+                <img src="https://picsum.photos/400/300?random=1" alt="Descriptive alt text" class="gallery-img">
+                <img src="https://picsum.photos/400/300?random=2" alt="Descriptive alt text" class="gallery-img">
+                <img src="https://picsum.photos/400/300?random=3" alt="Descriptive alt text" class="gallery-img">
+            </div>
+        </div>
+    </section>` : `    <!-- Page Content -->
+    <section class="page-hero">
+        <div class="container">
+            <h1>${pageName === 'about' ? 'О нас' : pageName === 'contact' ? 'Контакты' : pageName}</h1>
+            <p>Page subtitle with brief description</p>
+        </div>
+    </section>
+
+    <section class="page-content">
+        <div class="container">
+            <!-- Content specific to page type -->
+            ${pageName === 'about' ? `
+            <div class="about-content">
+                <h2>Наша история</h2>
+                <p>3-4 sentences about the website/company/brand with specific details related to the topic.</p>
+                
+                <h2>Наша миссия</h2>
+                <p>2-3 sentences about the mission and values.</p>
+                
+                <div class="stats">
+                    <div class="stat">
+                        <span class="stat-number">1000+</span>
+                        <span class="stat-label">Довольных пользователей</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">50+</span>
+                        <span class="stat-label">Чего-то ещё</span>
+                    </div>
+                </div>
+            </div>` : pageName === 'contact' ? `
+            <div class="contact-grid">
+                <div class="contact-info">
+                    <h2>Свяжитесь с нами</h2>
+                    <p>Мы всегда рады общению и готовы помочь.</p>
+                    
+                    <div class="contact-item">
+                        <i class="fas fa-envelope"></i>
+                        <span>email@example.com</span>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-phone"></i>
+                        <span>+7 (999) 123-45-67</span>
+                    </div>
+                </div>
+                
+                <form class="contact-form">
+                    <div class="form-group">
+                        <label>Имя</label>
+                        <input type="text" placeholder="Ваше имя">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" placeholder="your@email.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Сообщение</label>
+                        <textarea placeholder="Ваше сообщение..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Отправить</button>
+                </form>
+            </div>` : `
+            <div class="content-section">
+                <h2>Content for ${pageName}</h2>
+                <p>Original content specific to this page and topic.</p>
+            </div>`}
+        </div>
+    </section>`}
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <span class="footer-logo">CREATIVE_TITLE</span>
+                    <p>Краткое описание сайта одним предложением.</p>
+                </div>
+                <div class="footer-links">
+                    <h4>Навигация</h4>
+                    <ul>
+                        ${structure.pages?.map(p => `<li><a href="${p}.html">${p === 'index' ? 'Главная' : p === 'about' ? 'О нас' : p === 'contact' ? 'Контакты' : p}</a></li>`).join('\n                        ')}
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 CREATIVE_TITLE. Все права защищены.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="main.js"></script>
+</body>
+</html>
+\`\`\`
+
+**4. IMAGE RULES:**
+✅ Use ONLY real, working image URLs:
+   - General: https://picsum.photos/800/600?random=N (where N is unique number)
+   - Dogs: https://placedog.net/400/300
+   - Cats: https://cataas.com/cat?width=400&height=300
+   - Nature: https://source.unsplash.com/800x600/?nature
+✅ ALWAYS include descriptive alt attributes
+❌ NEVER use placeholder names like "котик1", "image1", "фото"
+❌ NEVER use local paths without http
+
+**5. REQUIRED ELEMENTS:**
+✅ Favicon (SVG with emoji)
+✅ Navigation with all pages linked
+✅ Hero section with gradient background (for homepage)
+✅ At least 2 CTA buttons with icons
+✅ Features/gallery section
+✅ Footer with navigation
+✅ Link to styles.css
+✅ Link to main.js
+✅ Google Fonts (Inter)
+✅ FontAwesome CDN
+
+**6. PROHIBITED:**
+❌ No inline styles (use CSS classes only)
+❌ No default browser button styling
+❌ No placeholder text
+❌ No broken image URLs
+❌ No light gray text on white backgrounds
+❌ No skipping required sections
+
+=== OUTPUT FORMAT ===
+
 ${pageName}.html
 \`\`\`html
-[complete HTML code]
-\`\`\``;
+[complete HTML code following ALL rules above]
+\`\`\`
+
+Generate production-quality HTML that follows EVERY rule above.`;
 
       const pageResponse = await this.generateCode(pagePrompt, { type: 'web' });
       const parsedFiles = this.parseFilesFromResponse(pageResponse);
@@ -1381,16 +2074,137 @@ ${pageName}.html
     
     // Generate JavaScript if needed
     if (structure.features?.some(f => f.includes('animation') || f.includes('interactive') || f.includes('form'))) {
-      const jsPrompt = `Create JavaScript for a ${structure.type} website with these features: ${structure.features.join(', ')}
+      const jsPrompt = `You are a JavaScript EXPERT creating interactive features for a ${structure.type} website.
 
-Requirements:
-- Mobile menu toggle
-- Smooth scroll behavior
-- Form handling (if forms exist)
-- Any interactive features mentioned
-- Clean, modern ES6+
+=== REQUIRED FEATURES ===
 
-Output ONLY the JavaScript content.`;
+**1. MOBILE NAVIGATION TOGGLE:**
+\`\`\`javascript
+// Mobile menu toggle
+const hamburger = document.querySelector('.hamburger');
+const navMenu = document.querySelector('.nav-menu');
+
+hamburger?.addEventListener('click', () => {
+  navMenu.classList.toggle('active');
+  hamburger.classList.toggle('active');
+});
+
+// Close menu on link click
+document.querySelectorAll('.nav-link').forEach(link => {
+  link.addEventListener('click', () => {
+    navMenu.classList.remove('active');
+    hamburger.classList.remove('active');
+  });
+});
+\`\`\`
+
+**2. SMOOTH SCROLL:**
+\`\`\`javascript
+// Smooth scroll for anchor links
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function (e) {
+    e.preventDefault();
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) {
+      target.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  });
+});
+\`\`\`
+
+**3. SCROLL ANIMATIONS (Intersection Observer):**
+\`\`\`javascript
+// Animate elements on scroll
+const observerOptions = {
+  root: null,
+  rootMargin: '0px',
+  threshold: 0.1
+};
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('animate-fadeInUp');
+      observer.unobserve(entry.target);
+    }
+  });
+}, observerOptions);
+
+// Observe all cards and sections
+document.querySelectorAll('.card, .feature-card, .section-title').forEach(el => {
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(30px)';
+  observer.observe(el);
+});
+\`\`\`
+
+**4. FORM HANDLING:**
+\`\`\`javascript
+// Form validation and submission
+const forms = document.querySelectorAll('form');
+forms.forEach(form => {
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    // Basic validation
+    const inputs = form.querySelectorAll('input, textarea');
+    let isValid = true;
+    
+    inputs.forEach(input => {
+      if (!input.value.trim()) {
+        isValid = false;
+        input.style.borderColor = '#ef4444';
+      } else {
+        input.style.borderColor = '';
+      }
+    });
+    
+    if (isValid) {
+      // Show success message
+      const btn = form.querySelector('button[type="submit"]');
+      const originalText = btn.textContent;
+      btn.textContent = 'Отправлено!';
+      btn.disabled = true;
+      
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.disabled = false;
+        form.reset();
+      }, 2000);
+    }
+  });
+});
+\`\`\`
+
+**5. NAVIGATION BACKGROUND ON SCROLL:**
+\`\`\`javascript
+// Add background to nav on scroll
+const navbar = document.querySelector('.navbar');
+window.addEventListener('scroll', () => {
+  if (window.scrollY > 50) {
+    navbar.style.boxShadow = '0 4px 20px rgba(0,0,0,0.1)';
+  } else {
+    navbar.style.boxShadow = '';
+  }
+});
+\`\`\`
+
+=== CODE REQUIREMENTS ===
+✅ Use modern ES6+ syntax (const, let, arrow functions)
+✅ Use optional chaining (?.) where appropriate
+✅ Add event listeners only after DOM is ready
+✅ Use smooth animations with CSS transitions
+✅ Handle errors gracefully (try/catch if needed)
+✅ Comment code explaining what each section does
+❌ NEVER use var
+❌ NEVER use jQuery
+❌ NEVER use inline event handlers
+
+=== OUTPUT ===
+Generate main.js with ALL features above. Include comments and use modern JavaScript.`;
 
       const jsResponse = await this.generateCode(jsPrompt, { type: 'web' });
       files['main.js'] = this.extractCodeBlock(jsResponse) || jsResponse;
@@ -1411,6 +2225,11 @@ Output ONLY the JavaScript content.`;
         // Fix common color issues
         if (filename.endsWith('.css') || filename.endsWith('.html')) {
           processedContent = this.fixColorIssues(processedContent);
+        }
+        
+        // Fix button styles in CSS
+        if (filename.endsWith('.css')) {
+          processedContent = this.fixButtonStyles(processedContent);
         }
         
         // Fix image placeholders
@@ -1450,6 +2269,59 @@ Output ONLY the JavaScript content.`;
     // Fix CSS variables if they're too light
     fixed = fixed.replace(/var\(--text\s*,\s*#(?:ccc|ddd|eee|fff)\)/gi, 'var(--text, #1a1a2e)');
     fixed = fixed.replace(/var\(--heading\s*,\s*#(?:ccc|ddd|eee|fff)\)/gi, 'var(--heading, #0f172a)');
+    
+    return fixed;
+  }
+  
+  fixButtonStyles(cssContent) {
+    if (!cssContent) return cssContent;
+    
+    let fixed = cssContent;
+    
+    // Check if .btn class exists and has proper styling
+    if (!fixed.includes('.btn') || fixed.includes('background: gray') || fixed.includes('background: #ccc')) {
+      // Add proper button styles if missing or broken
+      const buttonStyles = `
+/* Fixed Button Styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 2rem;
+  border-radius: 50px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+}
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+}
+.btn-secondary {
+  background: transparent;
+  color: white;
+  border: 2px solid rgba(255,255,255,0.5);
+}
+.btn-secondary:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: white;
+}`;
+      fixed += '\n' + buttonStyles;
+    }
+    
+    // Replace gray button backgrounds with gradient
+    fixed = fixed.replace(/background:\s*gray/gi, 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
+    fixed = fixed.replace(/background:\s*#ccc/gi, 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
+    fixed = fixed.replace(/background:\s*#ddd/gi, 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
+    fixed = fixed.replace(/background-color:\s*gray/gi, 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
     
     return fixed;
   }
