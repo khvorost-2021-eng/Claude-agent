@@ -1061,7 +1061,6 @@ class AgentClient {
     // Add text message if content exists
     if (content) {
       this.addMessage(content, 'user');
-      this.saveLocalHistory();
     }
     
     this.messageInput.value = '';
