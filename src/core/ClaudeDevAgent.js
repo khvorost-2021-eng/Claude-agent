@@ -1815,24 +1815,47 @@ ${researchContext.substring(0, 2000)}
 
 === CRITICAL RULES - VIOLATION IS UNACCEPTABLE ===
 
-**1. TITLE RULES (EXTREMELY IMPORTANT):**
-❌ FORBIDDEN WORDS in title: "создай", "сделай", "построй", "сайт", "веб", "сгенерируй"
-❌ NEVER use the raw user request as title
-✅ Create ORIGINAL, CREATIVE titles describing the TOPIC
+**1. TITLE RULES - ABSOLUTE ZERO TOLERANCE:**
 
-**GOOD TITLE EXAMPLES:**
-- User: "создай сайт про кошек" → Title: "Мир Удивительных Кошек" or "Пушистые Друзья"
-- User: "сделай сайт с собаками" → Title: "Верные Компаньоны" or "Домашние Ангелы"
-- User: "создай кулинарный сайт" → Title: "Вкус Жизни" or "Кулинарное Искусство"
-- User: "сайт про путешествия" → Title: "Вокруг Света" or "Мир Без Границ"
+🚫 **ABSOLUTELY FORBIDDEN - NEVER DO THESE:**
+- NEVER use the raw user request as title
+- NEVER use words: "создай", "сделай", "построй", "сайт", "веб", "сгенерируй", "сгенерировать", "создать", "сделать"
+- NEVER use: "добро пожаловать", "welcome", "homepage", "главная", "about", "contact"
+- NEVER copy words from USER REQUEST directly into title
+- NEVER use lowercase words like "c", "скортинками", "собак", "красивым"
 
-**2. CONTENT RULES:**
-✅ Write ORIGINAL, ENGAGING content specific to the topic
-✅ Use friendly, conversational Russian language
-✅ Include specific details (breeds, recipes, places - depending on topic)
-✅ Write 2-3 sentences per section minimum
-❌ NEVER use "lorem ipsum", "здесь будет текст", or any placeholder text
-❌ NEVER write generic content that could apply to any topic
+✅ **CORRECT APPROACH:**
+- Create a PROPER NOUN - name of the website/brand
+- Use 2-4 words maximum
+- Capitalize first letter of each word
+- Make it sound like a real product/brand name
+
+**BAD vs GOOD EXAMPLES:**
+- ❌ "создай сайт скортинками собак" → ✅ "Верные Друзья" or "Мир Собак"
+- ❌ "сделай сайт про кошек" → ✅ "Пушистый Мир" or "Кошачье Царство"  
+- ❌ "создай кулинарный сайт" → ✅ "Вкус Жизни" or "Кулинарная Магия"
+- ❌ "сайт с фото природы" → ✅ "Природное Вдохновение" or "Мир Природы"
+
+**TITLE MUST BE:** Original brand name, not description of request!
+
+**2. CONTENT RULES - ZERO PLACEHOLDERS:**
+✅ Write ORIGINAL content that sounds human and engaging
+✅ First sentence must hook the reader - specific detail about topic
+✅ Each paragraph 2-4 sentences with concrete facts/info
+✅ Use warm, conversational Russian
+
+🚫 **FORBIDDEN PHRASES - NEVER USE:**
+- "Добро пожаловать на наш..."
+- "Это сгенерированный..."
+- "Здесь вы найдёте..."
+- "Это веб-сайт о..."
+- "Мы рады приветствовать..."
+- "Вас ждёт удивительный..."
+- Any generic welcome text
+
+**CORRECT EXAMPLE:**
+❌ "Добро пожаловать на наш удивительный сайт! Здесь вы найдёте интересный контент."
+✅ "Знаете ли вы, что собаки понимают до 250 слов? От верных лабрадоров до игривых пуделей — каждая порода дарит уникальную радость."
 
 **3. HTML STRUCTURE (MANDATORY):**
 
@@ -2437,63 +2460,190 @@ Generate main.js with ALL features above. Include comments and use modern JavaSc
     if (!htmlContent) return htmlContent;
     
     let fixed = htmlContent;
-    
-    // Extract current title
     const titleMatch = fixed.match(/<title>([^<]*)<\/title>/i);
-    if (!titleMatch) return fixed;
+    
+    if (!titleMatch) {
+      // No title found - add one
+      const creativeTitle = this.generateCreativeTitle(description);
+      if (fixed.includes('<head>')) {
+        fixed = fixed.replace(/<head[^>]*>/i, (match) => `${match}\n    <title>${creativeTitle}</title>`);
+      }
+      return fixed;
+    }
     
     const currentTitle = titleMatch[1].trim();
     
-    // Forbidden words in title
-    const forbiddenWords = ['создай', 'сделай', 'построй', 'сайт', 'веб', 'сгенерируй', 'сгенерировать', 'создать', 'сделать', 'добро пожаловать', 'welcome', 'homepage', 'главная'];
-    const hasForbidden = forbiddenWords.some(word => currentTitle.toLowerCase().includes(word.toLowerCase()));
+    // ALWAYS fix if title contains ANY bad patterns - no exceptions
+    const mustFixPatterns = [
+      /создай/i, /сделай/i, /построй/i, /сайт/i, /веб/i, 
+      /сгенерируй/i, /сгенерировать/i, /создать/i, /сделать/i,
+      /добро пожаловать/i, /welcome/i, /homepage/i, /главная/i,
+      /about/i, /contact/i, /скортинками/i, /красивым/i,
+      /собак/i, /кошек/i, /кот/i, /про/i, /с фото/i,
+      /^с\s/i,  // starts with "с "
+    ];
     
-    // Check if title is user's raw request
-    const descWords = description.toLowerCase().split(/\s+/).slice(0, 5);
-    const isRawRequest = descWords.every(word => currentTitle.toLowerCase().includes(word)) || 
-                         currentTitle.toLowerCase().includes(description.toLowerCase().substring(0, 20));
+    const isRawRequest = mustFixPatterns.some(pattern => pattern.test(currentTitle));
+    const isTooShort = currentTitle.length < 5;
+    const isTooLong = currentTitle.length > 40;
+    const hasLowercaseStart = currentTitle[0] && currentTitle[0] === currentTitle[0].toLowerCase() && /[а-яa-z]/.test(currentTitle[0]);
     
-    if (hasForbidden || isRawRequest || currentTitle.length < 3 || currentTitle === 'Главная') {
-      // Generate creative title based on topic
-      const desc = description.toLowerCase();
-      let creativeTitle = '';
-      
-      if (desc.includes('кот') || desc.includes('кошк') || desc.includes('cat')) {
-        creativeTitle = 'Мир Удивительных Кошек';
-      } else if (desc.includes('собак') || desc.includes('dog') || desc.includes('пёс')) {
-        creativeTitle = 'Верные Друзья';
-      } else if (desc.includes('кулинар') || desc.includes('рецепт') || desc.includes('готовить')) {
-        creativeTitle = 'Вкус Жизни';
-      } else if (desc.includes('путешеств') || desc.includes('travel') || desc.includes('туризм')) {
-        creativeTitle = 'Вокруг Света';
-      } else if (desc.includes('музык') || desc.includes('music')) {
-        creativeTitle = 'Мир Музыки';
-      } else if (desc.includes('фото') || desc.includes('photo')) {
-        creativeTitle = 'Моменты Вдохновения';
-      } else if (desc.includes('спорт') || desc.includes('sport')) {
-        creativeTitle = 'Активная Жизнь';
-      } else if (desc.includes('технолог') || desc.includes('tech') || desc.includes('it')) {
-        creativeTitle = 'Будущее Технологий';
-      } else if (desc.includes('мода') || desc.includes('fashion') || desc.includes('style')) {
-        creativeTitle = 'Стиль и Элегантность';
-      } else if (desc.includes('книг') || desc.includes('литератур') || desc.includes('book')) {
-        creativeTitle = 'Мир Книг';
-      } else {
-        // Generic creative titles
-        const genericTitles = ['Вдохновение', 'Новые Горизонты', 'Мир Возможностей', 'Свежий Взгляд', 'Интересное Рядом'];
-        creativeTitle = genericTitles[Math.floor(Math.random() * genericTitles.length)];
-      }
-      
-      // Replace title in HTML
+    if (isRawRequest || isTooShort || isTooLong || hasLowercaseStart) {
+      const creativeTitle = this.generateCreativeTitle(description);
       fixed = fixed.replace(/<title>[^<]*<\/title>/i, `<title>${creativeTitle}</title>`);
       
-      // Also replace h1 in hero if it has similar issues
-      fixed = fixed.replace(/<h1[^>]*>([^<]*(?:добро пожаловать|главная|welcome|создай|сделай)[^<]*)<\/h1>/i, `<h1>${creativeTitle}</h1>`);
+      // Also fix h1 if it has same bad title
+      const h1Match = fixed.match(/<h1[^>]*>([^<]*)<\/h1>/i);
+      if (h1Match) {
+        const h1Content = h1Match[1].trim();
+        if (mustFixPatterns.some(pattern => pattern.test(h1Content)) || 
+            h1Content.toLowerCase() === currentTitle.toLowerCase()) {
+          fixed = fixed.replace(/<h1[^>]*>[^<]*<\/h1>/i, `<h1>${creativeTitle}</h1>`);
+        }
+      }
       
-      console.log(`Fixed bad title "${currentTitle}" → "${creativeTitle}"`);
+      console.log(`FORCED FIX: "${currentTitle}" → "${creativeTitle}"`);
     }
     
     return fixed;
+  }
+  
+  // Helper to generate creative titles
+  generateCreativeTitle(description) {
+    const desc = description.toLowerCase();
+    
+    // Cat-related
+    if (desc.includes('кот') || desc.includes('кошк') || desc.includes('cat')) {
+      const titles = ['Мурлыка', 'Кошачий Мир', 'Пушистые Друзья', 'Мяу-Мир', 'Котейка'];
+      return titles[Math.floor(Math.random() * titles.length)];
+    }
+    
+    // Dog-related
+    if (desc.includes('собак') || desc.includes('dog') || desc.includes('пёс') || desc.includes('пес')) {
+      const titles = ['Верные Друзья', 'Мир Собак', 'Лапы и Хвосты', 'Гав-Гав', 'Пёсик'];
+      return titles[Math.floor(Math.random() * titles.length)];
+    }
+    
+    // Cooking
+    if (desc.includes('кулинар') || desc.includes('рецепт') || desc.includes('готовить') || desc.includes('еду')) {
+      const titles = ['Вкус Жизни', 'Кулинарная Магия', 'Вкусняшки', 'Кухня', 'Гурман'];
+      return titles[Math.floor(Math.random() * titles.length)];
+    }
+    
+    // Travel
+    if (desc.includes('путешеств') || desc.includes('travel') || desc.includes('туризм') || desc.includes('поездки')) {
+      const titles = ['Вокруг Света', 'Мир Без Границ', 'Путешественник', 'На Багажнике', 'Вдали от Дома'];
+      return titles[Math.floor(Math.random() * titles.length)];
+    }
+    
+    // Music
+    if (desc.includes('музык') || desc.includes('music')) {
+      const titles = ['Мир Музыки', 'Меломан', 'Ноты', 'Ритм', 'Гитара'];
+      return titles[Math.floor(Math.random() * titles.length)];
+    }
+    
+    // Photo
+    if (desc.includes('фото') || desc.includes('photo') || desc.includes('картинк')) {
+      const titles = ['Моменты', 'Вдохновение', 'Кадр', 'Объектив', 'Фотосвет'];
+      return titles[Math.floor(Math.random() * titles.length)];
+    }
+    
+    // Sport
+    if (desc.includes('спорт') || desc.includes('sport')) {
+      const titles = ['Активная Жизнь', 'Фитнес', 'Спортсмен', 'Движение', 'Тренировка'];
+      return titles[Math.floor(Math.random() * titles.length)];
+    }
+    
+    // Tech
+    if (desc.includes('технолог') || desc.includes('tech') || desc.includes('it') || desc.includes('ai')) {
+      const titles = ['Будущее', 'Техно', 'Инновации', 'Код', 'Цифра'];
+      return titles[Math.floor(Math.random() * titles.length)];
+    }
+    
+    // Fashion
+    if (desc.includes('мода') || desc.includes('fashion') || desc.includes('style')) {
+      const titles = ['Стиль', 'Мода', 'Гламур', 'Тренд', 'Вид'];
+      return titles[Math.floor(Math.random() * titles.length)];
+    }
+    
+    // Books
+    if (desc.includes('книг') || desc.includes('литератур') || desc.includes('book')) {
+      const titles = ['Мир Книг', 'Читайка', 'Библио', 'Страницы', 'История'];
+      return titles[Math.floor(Math.random() * titles.length)];
+    }
+    
+    // Nature
+    if (desc.includes('природ') || desc.includes('nature') || desc.includes('лес') || desc.includes('море')) {
+      const titles = ['Природа', 'Эко', 'Зелёный Мир', 'Лес', 'Озеро'];
+      return titles[Math.floor(Math.random() * titles.length)];
+    }
+    
+    // Default creative titles
+    const genericTitles = ['Вдохновение', 'Новые Горизонты', 'Мир Возможностей', 'Свежий Взгляд', 'Интересное Рядом', 'Волна', 'Пульс', 'Фокус'];
+    return genericTitles[Math.floor(Math.random() * genericTitles.length)];
+  }
+
+  // Helper to generate hero subtitles
+  generateHeroSubtitle(description) {
+    const desc = description.toLowerCase();
+    
+    // Cat-related
+    if (desc.includes('кот') || desc.includes('кошк') || desc.includes('cat')) {
+      return 'Откройте мир пушистых друзей. Узнайте всё о породах, уходе и характере кошек.';
+    }
+    
+    // Dog-related
+    if (desc.includes('собак') || desc.includes('dog') || desc.includes('пёс') || desc.includes('пес')) {
+      return 'Познакомьтесь с самыми верными друзьями человека. Породы, дрессировка, уход.';
+    }
+    
+    // Cooking
+    if (desc.includes('кулинар') || desc.includes('рецепт') || desc.includes('готовить') || desc.includes('еду')) {
+      return 'Вкусные рецепты для каждого дня. Готовьте с удовольствием и делитесь с близкими.';
+    }
+    
+    // Travel
+    if (desc.includes('путешеств') || desc.includes('travel') || desc.includes('туризм') || desc.includes('поездки')) {
+      return 'Исследуйте мир вместе с нами. Места, которые вдохновляют и остаются в сердце навсегда.';
+    }
+    
+    // Music
+    if (desc.includes('музык') || desc.includes('music')) {
+      return 'Погрузитесь в мир звуков и мелодий. Открывайте новых исполнителей и наслаждайтесь музыкой.';
+    }
+    
+    // Photo
+    if (desc.includes('фото') || desc.includes('photo') || desc.includes('картинк')) {
+      return 'Красивые моменты запечатлены навсегда. Галерея вдохновляющих фотографий.';
+    }
+    
+    // Sport
+    if (desc.includes('спорт') || desc.includes('sport')) {
+      return 'Двигайтесь к цели вместе с нами. Тренировки, советы и мотивация для активной жизни.';
+    }
+    
+    // Tech
+    if (desc.includes('технолог') || desc.includes('tech') || desc.includes('it') || desc.includes('ai')) {
+      return 'Будущее уже здесь. Новейшие технологии, гаджеты и инновации меняют наш мир.';
+    }
+    
+    // Fashion
+    if (desc.includes('мода') || desc.includes('fashion') || desc.includes('style')) {
+      return 'Ваш стиль — это вы. Тренды, советы по образам и вдохновение для модных решений.';
+    }
+    
+    // Books
+    if (desc.includes('книг') || desc.includes('литератур') || desc.includes('book')) {
+      return 'Миры, созданные словами. Открывайте новые истории и находите книги по душе.';
+    }
+    
+    // Nature
+    if (desc.includes('природ') || desc.includes('nature') || desc.includes('лес') || desc.includes('море')) {
+      return 'Красота природы в каждом кадре. Узнайте больше о нашем удивительном мире.';
+    }
+    
+    // Default subtitle
+    return 'Откройте для себя что-то новое. Качественный контент и современный подход к каждой теме.';
   }
 
   validateAndFixContent(htmlContent) {
@@ -2554,33 +2704,68 @@ Generate main.js with ALL features above. Include comments and use modern JavaSc
   }
 
   isContentQualityBad(htmlContent) {
-    if (!htmlContent) return true;
+    if (!htmlContent || htmlContent.length < 500) return true;
     
-    const badPatterns = [
+    const content = htmlContent.toLowerCase();
+    
+    // Critical bad patterns - if ANY found, content is bad
+    const criticalBadPatterns = [
       /добро пожаловать/i,
+      /welcome to/i,
       /это сгенерированный/i,
       /это веб-сайт/i,
       /сгенерировано ai/i,
       /created by ai/i,
       /generated website/i,
+      /здесь вы найдёте/i,
+      /здесь вы найдете/i,
+      /здесь будет/i,
       /ваш заголовок/i,
       /ваш контент/i,
       /lorem ipsum/i,
-      /<h1>\s*главная\s*<\/h1>/i,
+      /ваш сайт/i,
+      /this is a website/i,
+      /это сайт о/i,
+      /создан автоматически/i,
+      /скортинками/i,  // specific bad word from screenshot
+      /красивым/i,
     ];
     
-    const hasBadContent = badPatterns.some(pattern => pattern.test(htmlContent));
+    const hasCriticalBad = criticalBadPatterns.some(pattern => pattern.test(htmlContent));
+    
+    // Check for bad title patterns in h1
+    const h1Match = htmlContent.match(/<h1[^>]*>([^<]*)<\/h1>/i);
+    if (h1Match) {
+      const h1Text = h1Match[1].toLowerCase();
+      const badTitleWords = ['создай', 'сделай', 'сайт', 'веб', 'главная', 'добро пожаловать', 'welcome', 'скортинками', 'красивым', 'собак и'];
+      const hasBadTitle = badTitleWords.some(word => h1Text.includes(word));
+      if (hasBadTitle) return true;
+    }
+    
+    // Check body content quality
+    const bodyMatch = htmlContent.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+    if (bodyMatch) {
+      const bodyContent = bodyMatch[1];
+      // Count meaningful paragraphs (with >100 chars)
+      const meaningfulParas = bodyContent.split(/<p[^>]*>/).filter(p => p.length > 100).length;
+      if (meaningfulParas < 2) return true;
+    }
     
     // Check for inline styles (bad practice)
     const hasInlineStyles = /style\s*=\s*"[^"]*"/i.test(htmlContent);
     
-    // Check for missing CSS classes on key elements
-    const hasNoStyling = !htmlContent.includes('class="') || htmlContent.includes('class=""');
+    // Check for missing essential classes
+    const hasNoBtnClasses = !htmlContent.includes('btn ') && !htmlContent.includes('btn-primary');
+    const hasNoCardClasses = !htmlContent.includes('card');
     
-    // Check if it's very short
-    const isTooShort = htmlContent.length < 1000;
+    // If critical bad patterns found, it's bad
+    if (hasCriticalBad) return true;
     
-    return hasBadContent || (hasNoStyling && hasInlineStyles) || isTooShort;
+    // Multiple issues = bad
+    const issueCount = (hasInlineStyles ? 1 : 0) + (hasNoBtnClasses ? 1 : 0) + (hasNoCardClasses ? 1 : 0);
+    if (issueCount >= 2) return true;
+    
+    return false;
   }
   
   shouldResearchTopic(description) {
@@ -2665,14 +2850,15 @@ Generate main.js with ALL features above. Include comments and use modern JavaSc
     // Emergency fallback - create beautiful modern site
     console.log('Creating beautiful minimal site as fallback');
     
-    const title = description.replace(/создай сайт|создай|сделай/gi, '').trim().split(' ').slice(0, 4).join(' ') || 'Классный Сайт';
+    const creativeTitle = this.generateCreativeTitle(description);
+    const heroSubtitle = this.generateHeroSubtitle(description);
     
     const html = `<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${title}</title>
+    <title>${creativeTitle}</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -2705,7 +2891,6 @@ Generate main.js with ALL features above. Include comments and use modern JavaSc
             background: var(--bg);
         }
         
-        /* Navigation */
         .navbar {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
@@ -2752,7 +2937,6 @@ Generate main.js with ALL features above. Include comments and use modern JavaSc
             color: var(--primary);
         }
         
-        /* Hero Section */
         .hero {
             min-height: 100vh;
             display: flex;
@@ -2799,7 +2983,6 @@ Generate main.js with ALL features above. Include comments and use modern JavaSc
             margin-right: auto;
         }
         
-        /* Buttons */
         .btn {
             display: inline-flex;
             align-items: center;
@@ -2843,7 +3026,6 @@ Generate main.js with ALL features above. Include comments and use modern JavaSc
             flex-wrap: wrap;
         }
         
-        /* Features Section */
         .features {
             padding: 5rem 2rem;
             background: var(--bg-alt);
@@ -2909,7 +3091,6 @@ Generate main.js with ALL features above. Include comments and use modern JavaSc
             line-height: 1.6;
         }
         
-        /* Footer */
         .footer {
             background: var(--text);
             color: white;
@@ -2917,7 +3098,6 @@ Generate main.js with ALL features above. Include comments and use modern JavaSc
             text-align: center;
         }
         
-        /* Responsive */
         @media (max-width: 768px) {
             .hero h1 { font-size: 2rem; }
             .nav-menu { display: none; }
@@ -2929,7 +3109,7 @@ Generate main.js with ALL features above. Include comments and use modern JavaSc
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <a href="#" class="nav-logo">✨ ${title}</a>
+            <a href="#" class="nav-logo">✨ ${creativeTitle}</a>
             <ul class="nav-menu">
                 <li><a href="#" class="nav-link">Главная</a></li>
                 <li><a href="#" class="nav-link">О нас</a></li>
@@ -2940,8 +3120,8 @@ Generate main.js with ALL features above. Include comments and use modern JavaSc
 
     <section class="hero">
         <div class="hero-content">
-            <h1>${title}</h1>
-            <p>Добро пожаловать на наш удивительный сайт! Здесь вы найдете интересный контент и современный дизайн.</p>
+            <h1>${creativeTitle}</h1>
+            <p>${heroSubtitle}</p>
             <div class="hero-buttons">
                 <a href="#" class="btn btn-primary">
                     <i class="fas fa-rocket"></i>
@@ -2985,7 +3165,7 @@ Generate main.js with ALL features above. Include comments and use modern JavaSc
     </section>
 
     <footer class="footer">
-        <p>&copy; 2024 ${title}. Создано с любовью ❤️</p>
+        <p>&copy; 2024 ${creativeTitle}. Создано с любовью ❤️</p>
     </footer>
 </body>
 </html>`;
