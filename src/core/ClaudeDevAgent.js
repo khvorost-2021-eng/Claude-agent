@@ -3,6 +3,7 @@ import path from 'path';
 import { execSync } from 'child_process';
 import AdmZip from 'adm-zip';
 import fetch from 'node-fetch';
+import https from 'https';
 
 class ClaudeDevAgent {
   constructor(config = {}) {
@@ -13,6 +14,139 @@ class ClaudeDevAgent {
     this.memory = new Map();
     this.activeProjects = new Map();
     this.ensureDirectories();
+  }
+
+  // ===== INTERNET ACCESS METHODS =====
+  
+  async searchWeb(query, limit = 5) {
+    console.log(`🔍 Searching web for: "${query}"`);
+    try {
+      // Use DuckDuckGo Lite or other search API
+      const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+      const response = await fetch(searchUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      });
+      
+      if (!response.ok) throw new Error(`Search failed: ${response.status}`);
+      
+      const html = await response.text();
+      
+      // Extract results (basic parsing)
+      const results = [];
+      const titleMatches = html.match(/<a[^>]*class="result__a"[^>]*>([^<]*)<\/a>/gi);
+      const snippetMatches = html.match(/<a[^>]*class="result__snippet"[^>]*>([^<]*)<\/a>/gi);
+      
+      if (titleMatches && snippetMatches) {
+        for (let i = 0; i < Math.min(limit, titleMatches.length); i++) {
+          const title = titleMatches[i]?.replace(/<[^>]*>/g, '') || '';
+          const snippet = snippetMatches[i]?.replace(/<[^>]*>/g, '') || '';
+          if (title && snippet) {
+            results.push({ title, snippet, source: 'web' });
+          }
+        }
+      }
+      
+      console.log(`✅ Found ${results.length} search results`);
+      return results;
+    } catch (error) {
+      console.error('❌ Web search error:', error.message);
+      return [];
+    }
+  }
+  
+  async fetchWebPage(url) {
+    console.log(`🌐 Fetching: ${url}`);
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        timeout: 10000
+      });
+      
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const content = await response.text();
+      console.log(`✅ Fetched ${content.length} bytes`);
+      return content;
+    } catch (error) {
+      console.error('❌ Fetch error:', error.message);
+      return null;
+    }
+  }
+  
+  async downloadImage(imageUrl, savePath) {
+    console.log(`📥 Downloading image: ${imageUrl}`);
+    return new Promise((resolve, reject) => {
+      const file = fs.createWriteStream(savePath);
+      https.get(imageUrl, (response) => {
+        if (response.statusCode === 200) {
+          response.pipe(file);
+          file.on('finish', () => {
+            file.close();
+            console.log(`✅ Image saved: ${savePath}`);
+            resolve(savePath);
+          });
+        } else {
+          reject(new Error(`HTTP ${response.statusCode}`));
+        }
+      }).on('error', (err) => {
+        fs.unlink(savePath, () => {});
+        reject(err);
+      });
+    });
+  }
+  
+  async searchImages(query, count = 3) {
+    console.log(`🖼️ Searching images for: "${query}"`);
+    
+    // Use Unsplash Source API or other image sources
+    const imageApis = [
+      `https://source.unsplash.com/featured/?${encodeURIComponent(query)}`,
+      `https://picsum.photos/800/600?random=${Math.random()}`,
+      `https://placedog.net/800/600`,
+      `https://cataas.com/cat`
+    ];
+    
+    const images = [];
+    for (let i = 0; i < count; i++) {
+      const api = imageApis[i % imageApis.length];
+      images.push({
+        url: `${api}${i > 0 ? `&sig=${i}` : ''}`,
+        alt: query,
+        source: 'unsplash'
+      });
+    }
+    
+    return images;
+  }
+  
+  async enrichContentWithWebData(topic, template) {
+    console.log(`🌐 Enriching content with web data for: ${topic}`);
+    
+    // Search for information
+    const searchResults = await this.searchWeb(`${topic} основные концепции уроки`);
+    
+    if (searchResults.length > 0) {
+      // Update template description with real info
+      const combinedInfo = searchResults
+        .slice(0, 3)
+        .map(r => r.snippet)
+        .join(' ')
+        .substring(0, 300);
+      
+      template.hero.description = combinedInfo || template.hero.description;
+      
+      console.log(`✅ Content enriched with web data`);
+    }
+    
+    // Get real images
+    const images = await this.searchImages(topic, 3);
+    template.gallery = images;
+    
+    return template;
   }
 
   getApiProvider() {
@@ -1367,7 +1501,7 @@ content
   }
   
   async generateFromTemplate(project, description) {
-    console.log('=== SMART TEMPLATE GENERATION v3.0 ===');
+    console.log('=== SMART TEMPLATE GENERATION v3.0 + INTERNET ===');
     
     // Import templates with AI-enhanced detection
     const { templates, detectTemplate, analyzeIntent } = require('./websiteTemplates.js');
@@ -1380,11 +1514,24 @@ content
     const templateKey = detectTemplate(description, intent);
     const baseTemplate = templates[templateKey] || templates.default;
     
+    // DYNAMIC CONTENT GENERATION - Generate lessons for ANY educational topic
+    const dynamicTemplate = this.generateDynamicContent(baseTemplate, description, intent);
+    
+    // INTERNET ENRICHMENT - Get real data from web
+    let enrichedTemplate = { ...dynamicTemplate };
+    if (dynamicTemplate.isEducational || dynamicTemplate.siteType === 'blog') {
+      console.log('🌐 Enriching content with internet data...');
+      enrichedTemplate = await this.enrichContentWithWebData(dynamicTemplate.topic, dynamicTemplate);
+    }
+    
     // SMART CONTENT GENERATION - Create unique content based on user request
-    const smartTemplate = this.generateSmartContent(baseTemplate, description, intent);
+    const smartTemplate = this.generateSmartContent(enrichedTemplate, description, intent);
     
     console.log(`Using SMART template: ${templateKey} (${smartTemplate.title})`);
     console.log(`Generated unique title: "${smartTemplate.hero.title}"`);
+    if (smartTemplate.lessons && smartTemplate.lessons.length > 0) {
+      console.log(`📚 Generated ${smartTemplate.lessons.length} lessons for topic: ${smartTemplate.topic}`);
+    }
     
     // Generate CSS with smart colors
     const css = this.generateSmartCSS(smartTemplate);
@@ -1413,7 +1560,7 @@ content
       intent,
       createdAt: new Date().toISOString(),
       pages: ['index', 'about', 'services', 'blog', 'contact'],
-      version: '4.0-premium'
+      version: '4.0-internet'
     };
     fs.writeFileSync(
       path.join(project.path, '.project-metadata.json'),
@@ -1421,7 +1568,191 @@ content
     );
     project.files.push('.project-metadata.json');
     
-    console.log(`✅ SMART generated ${project.files.length} files with unique content`);
+    console.log(`✅ SMART generated ${project.files.length} files with INTERNET content`);
+  }
+  
+  // ===== DYNAMIC CONTENT GENERATION - Works for ANY topic =====
+  generateDynamicContent(baseTemplate, description, intent) {
+    const topic = this.extractTopic(description);
+    const siteType = intent?.siteType || 'general';
+    const isEducational = siteType === 'course' || 
+                           intent?.category === 'education' || 
+                           intent?.tone === 'educational' ||
+                           description.toLowerCase().includes('курс') ||
+                           description.toLowerCase().includes('урок') ||
+                           description.toLowerCase().includes('обучение');
+    
+    // Generate content based on site type
+    let lessons = baseTemplate.lessons || [];
+    let sections = baseTemplate.sections || [];
+    let courseContent = baseTemplate.courseContent || null;
+    
+    // For educational sites - generate lessons if not present
+    if (isEducational && lessons.length === 0) {
+      lessons = this.generateLessonsForTopic(topic, 6);
+      courseContent = this.generateCourseStructure(topic);
+    }
+    
+    // For blog sites - generate article structure
+    if (siteType === 'blog' && sections.length === 0) {
+      sections = this.generateBlogSections(topic);
+    }
+    
+    // For shop sites - generate product structure  
+    if (siteType === 'shop' && sections.length === 0) {
+      sections = this.generateShopSections(topic);
+    }
+    
+    // For portfolio sites - generate project structure
+    if (siteType === 'portfolio' && sections.length === 0) {
+      sections = this.generatePortfolioSections(topic);
+    }
+    
+    return {
+      ...baseTemplate,
+      lessons: lessons,
+      sections: sections,
+      courseContent: courseContent,
+      isEducational: isEducational,
+      siteType: siteType,
+      topic: topic
+    };
+  }
+  
+  generateBlogSections(topic) {
+    return [
+      { title: 'Последние статьи', items: [
+        { title: 'Начало пути', desc: `Первые шаги в мире ${topic.toLowerCase()}`, icon: 'feather' },
+        { title: 'Советы экспертов', desc: 'Проверенные рекомендации', icon: 'star' },
+        { title: 'Тренды', desc: 'Что актуально сейчас', icon: 'trending-up' },
+        { title: 'Case Studies', desc: 'Реальные примеры', icon: 'briefcase' }
+      ]},
+      { title: 'Рубрики', items: [
+        { title: 'Для начинающих', desc: 'Базовые знания', icon: 'book-open' },
+        { title: 'Продвинутый уровень', desc: 'Углублённый контент', icon: 'zap' },
+        { title: 'Инструменты', desc: 'Полезные ресурсы', icon: 'tool' },
+        { title: 'Сообщество', desc: 'Обсуждения', icon: 'message-circle' }
+      ]}
+    ];
+  }
+  
+  generateShopSections(topic) {
+    return [
+      { title: 'Категории товаров', items: [
+        { title: 'Популярное', desc: 'Лучшие продажи', icon: 'fire' },
+        { title: 'Новинки', desc: 'Свежие поступления', icon: 'sparkles' },
+        { title: 'Скидки', desc: 'Выгодные предложения', icon: 'percent' },
+        { title: 'Премиум', desc: 'Элитный выбор', icon: 'crown' }
+      ]},
+      { title: 'Почему мы', items: [
+        { title: 'Качество', desc: 'Только лучшее', icon: 'award' },
+        { title: 'Доставка', desc: 'Быстро и надёжно', icon: 'truck' },
+        { title: 'Поддержка', desc: '24/7 на связи', icon: 'headphones' },
+        { title: 'Гарантия', desc: 'Возврат без проблем', icon: 'shield-check' }
+      ]}
+    ];
+  }
+  
+  generatePortfolioSections(topic) {
+    return [
+      { title: 'Навыки', items: [
+        { title: 'Экспертиза', desc: `Профессионал в ${topic.toLowerCase()}`, icon: 'award' },
+        { title: 'Опыт', desc: 'Более 5 лет работы', icon: 'clock' },
+        { title: 'Проекты', desc: '50+ выполненных работ', icon: 'folder' },
+        { title: 'Клиенты', desc: '100+ довольных заказчиков', icon: 'users' }
+      ]},
+      { title: 'Услуги', items: [
+        { title: 'Консультация', desc: 'Бесплатная оценка', icon: 'message-square' },
+        { title: 'Разработка', desc: 'Под ключ', icon: 'code' },
+        { title: 'Поддержка', desc: 'После проекта', icon: 'life-buoy' },
+        { title: 'Обучение', desc: 'Менторство', icon: 'graduation-cap' }
+      ]}
+    ];
+  }
+  
+  generateLessonsForTopic(topic, count = 6) {
+    // Dynamic lesson generation based on topic keywords
+    const topicLower = topic.toLowerCase();
+    
+    // Topic-specific lesson templates
+    const lessonTemplates = {
+      'default': [
+        { id: 'lesson-1', title: `Введение в ${topic}`, content: `Добро пожаловать в мир ${topic.toLowerCase()}! В этом уроке мы разберём основные понятия и подготовимся к изучению.`, examples: ['Пример базового понятия', 'Разбор простой задачи'], practice: ['Найдите пример из жизни', 'Опишите своими словами'] },
+        { id: 'lesson-2', title: `Основы ${topic}`, content: `Фундаментальные принципы ${topic.toLowerCase()}. Эти знания станут базой для всего курса.`, examples: ['Конкретный пример применения', 'Разбор типичной ситуации'], practice: ['Решите базовую задачу', 'Приведите свой пример'] },
+        { id: 'lesson-3', title: `Практическое применение`, content: `Как использовать знания о ${topic.toLowerCase()} в реальной жизни. Практические кейсы и примеры.`, examples: ['Реальный пример из практики', 'Case study'], practice: ['Примените на практике', 'Составьте план действий'] },
+        { id: 'lesson-4', title: `Продвинутые техники`, content: `Углублённое изучение ${topic.toLowerCase()}. Тонкости и нюансы, которые отличают профессионала.`, examples: ['Сложный пример', 'Оптимизационная задача'], practice: ['Решите продвинутую задачу', 'Найдите ошибку в примере'] },
+        { id: 'lesson-5', title: `Частые ошибки`, content: `Чего избегать при работе с ${topic.toLowerCase()}. Советы экспертов и best practices.`, examples: ['Пример неправильного подхода', 'Как исправить ошибку'], practice: ['Найдите ошибку', 'Исправьте пример'] },
+        { id: 'lesson-6', title: `Итоговый проект`, content: `Закрепите знания по ${topic.toLowerCase()} на практике. Финальный проект и план дальнейшего развития.`, examples: ['Пример готового проекта', 'Шаблон для работы'], practice: ['Выполните проект', 'Представьте результаты'] }
+      ]
+    };
+    
+    // Get lessons (default template works for any topic)
+    const lessons = lessonTemplates['default'];
+    
+    // Customize titles with topic
+    return lessons.map((lesson, idx) => ({
+      ...lesson,
+      id: `${this.slugify(topic)}-${idx + 1}`,
+      title: idx === 0 ? `${topic}: Введение` : 
+             idx === 1 ? `${topic}: Основы` :
+             idx === 2 ? `${topic}: Практика` :
+             idx === 3 ? `${topic}: Продвинутый уровень` :
+             idx === 4 ? `${topic}: Типичные ошибки` :
+             `${topic}: Итоговый проект`
+    }));
+  }
+  
+  // AI-powered lesson generation for truly unique content
+  async generateAILessons(topic, count = 6) {
+    if (!this.apiKey) {
+      return this.generateLessonsForTopic(topic, count);
+    }
+    
+    try {
+      const prompt = `Создай образовательный курс по теме "${topic}". 
+      
+Сгенерируй ${count} уроков в формате JSON массива. Каждый урок должен содержать:
+- id: уникальный идентификатор
+- title: название урока (2-4 слова)
+- content: теория (3-4 предложения с конкретной информацией)
+- examples: массив из 2-3 примеров
+- practice: массив из 2 заданий для практики
+
+Тема: ${topic}
+
+Ответь ТОЛЬКО валидным JSON массивом без markdown formatting:`;
+
+      const response = await this.generateCode(prompt, { type: 'web' });
+      const lessons = JSON.parse(response);
+      
+      if (Array.isArray(lessons) && lessons.length > 0) {
+        console.log(`🤖 AI generated ${lessons.length} unique lessons for "${topic}"`);
+        return lessons;
+      }
+    } catch (error) {
+      console.log('AI lesson generation failed, using templates:', error.message);
+    }
+    
+    return this.generateLessonsForTopic(topic, count);
+  }
+  
+  generateCourseStructure(topic) {
+    return {
+      title: topic,
+      description: `Полный курс по ${topic.toLowerCase()} — от основ до профессионального уровня`,
+      modules: [
+        { title: 'Введение', lessons: ['Знакомство с темой', 'Базовые термины', 'Подготовка окружения'] },
+        { title: 'Основы', lessons: ['Фундаментальные принципы', 'Ключевые концепции', 'Первые шаги'] },
+        { title: 'Практика', lessons: ['Практическое применение', 'Реальные примеры', 'Отработка навыков'] }
+      ]
+    };
+  }
+  
+  slugify(text) {
+    return text.toLowerCase()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .substring(0, 20);
   }
   
   // SMART CONTENT GENERATION - Creates unique content from user request
@@ -2320,6 +2651,282 @@ section { padding: 7rem 2rem; }
 .animate-on-scroll.visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* ===== EDUCATIONAL CONTENT STYLES ===== */
+.lessons-preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.lesson-preview-card {
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: var(--shadow);
+  transition: all 0.3s ease;
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.lesson-preview-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+}
+
+.lesson-preview-number {
+  width: 50px;
+  height: 50px;
+  background: var(--primary-gradient);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.lesson-preview-content h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
+  color: var(--text);
+}
+
+.lesson-preview-content p {
+  color: var(--text-light);
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+/* Course page styles */
+.courses-list {
+  display: grid;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.course-card {
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.course-header {
+  background: var(--primary-gradient);
+  color: white;
+  padding: 2rem;
+  text-align: center;
+}
+
+.course-header h2 {
+  font-size: 1.75rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.course-header p {
+  opacity: 0.9;
+}
+
+.course-icon {
+  font-size: 3rem;
+}
+
+.course-modules {
+  padding: 2rem;
+}
+
+.course-modules h3 {
+  font-size: 1.25rem;
+  margin-bottom: 1.5rem;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.module-item {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--bg-alt);
+}
+
+.module-item:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.module-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.module-number {
+  width: 36px;
+  height: 36px;
+  background: var(--bg-alt);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.module-header h4 {
+  font-size: 1.1rem;
+  color: var(--text);
+}
+
+.lessons-list {
+  list-style: none;
+  padding-left: 3rem;
+}
+
+.lessons-list li {
+  padding: 0.5rem 0;
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lessons-list li i {
+  color: var(--primary);
+}
+
+/* Lesson detail page */
+.lessons-container {
+  display: grid;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.lesson-card {
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.lesson-header {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  color: white;
+  padding: 1.5rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.lesson-number {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.lesson-header h2 {
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.lesson-content {
+  padding: 2rem;
+}
+
+.lesson-text {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: var(--text);
+  margin-bottom: 2rem;
+}
+
+.lesson-examples {
+  background: var(--bg-alt);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.lesson-examples h3 {
+  font-size: 1.1rem;
+  color: var(--primary);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lesson-examples ul {
+  list-style: none;
+}
+
+.lesson-examples li {
+  padding: 0.75rem 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.lesson-examples li:last-child {
+  border-bottom: none;
+}
+
+.lesson-examples code {
+  background: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-family: 'Monaco', 'Menlo', monospace;
+  color: var(--accent);
+}
+
+.lesson-practice {
+  background: linear-gradient(135deg, #fef9e7 0%, #fdebd0 100%);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  border-left: 4px solid var(--accent);
+}
+
+.lesson-practice h3 {
+  font-size: 1.1rem;
+  color: #b7950b;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lesson-practice ul {
+  list-style: none;
+  margin-bottom: 1.5rem;
+}
+
+.lesson-practice li {
+  padding: 0.5rem 0;
+  padding-left: 1.5rem;
+  position: relative;
+  color: var(--text);
+}
+
+.lesson-practice li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #7cb342;
+  font-weight: bold;
 }
 
 /* ===== RESPONSIVE ===== */
@@ -6601,12 +7208,15 @@ Format each file with path and content. Use markdown code blocks with file paths
   // ===== MULTI-PAGE GENERATION v4.0 =====
   
   getPageContent(template, pageName, intent) {
+    // Check if this is an educational/course template
+    const isEducational = template.lessons || template.category === 'education';
+    
     const pageContents = {
       index: this.generateHomePage(template, intent),
       about: this.generateAboutPage(template, intent),
       contact: this.generateContactPage(template, intent),
-      services: this.generateServicesPage(template, intent),
-      blog: this.generateBlogPage(template, intent),
+      services: isEducational ? this.generateCoursesPage(template, intent) : this.generateServicesPage(template, intent),
+      blog: isEducational ? this.generateLessonsPage(template, intent) : this.generateBlogPage(template, intent),
       portfolio: this.generatePortfolioPage(template, intent)
     };
     return pageContents[pageName] || pageContents.about;
@@ -6614,6 +7224,37 @@ Format each file with path and content. Use markdown code blocks with file paths
   
   generateHomePage(template, intent) {
     const { hero, sections } = template;
+    
+    // Check if this is an educational template with lessons
+    const hasLessons = template.lessons && template.lessons.length > 0;
+    
+    // Generate lessons preview section if lessons exist
+    const lessonsSection = hasLessons ? `
+    <section class="features" style="background: var(--bg-alt);">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-label">Уроки</span>
+          <h2 class="section-title">Начните <span>обучение</span></h2>
+          <p class="section-subtitle">Пошаговые материалы с примерами и практикой</p>
+        </div>
+        <div class="lessons-preview">
+          ${template.lessons.slice(0, 3).map((lesson, idx) => `
+          <div class="lesson-preview-card">
+            <div class="lesson-preview-number">${idx + 1}</div>
+            <div class="lesson-preview-content">
+              <h3>${lesson.title}</h3>
+              <p>${lesson.content.substring(0, 100)}...</p>
+              <a href="blog.html#lesson-${lesson.id}" class="btn btn-sm btn-secondary">Изучить</a>
+            </div>
+          </div>
+          `).join('')}
+        </div>
+        <div class="text-center" style="margin-top: 2rem;">
+          <a href="blog.html" class="btn btn-primary"><i class="fas fa-book-open"></i> Все уроки</a>
+        </div>
+      </div>
+    </section>` : '';
+    
     return `
     <section class="hero">
       <div class="hero-content">
@@ -6623,7 +7264,7 @@ Format each file with path and content. Use markdown code blocks with file paths
         <p class="subtitle">${hero.subtitle}</p>
         <p class="description">${hero.description}</p>
         <div class="hero-buttons">
-          <a href="services.html" class="btn btn-primary"><i class="fas fa-rocket"></i> Наши услуги</a>
+          <a href="${hasLessons ? 'blog.html' : 'services.html'}" class="btn btn-primary"><i class="fas fa-${hasLessons ? 'book-open' : 'rocket'}"></i> ${hasLessons ? 'Начать обучение' : 'Наши услуги'}</a>
           <a href="about.html" class="btn btn-secondary"><i class="fas fa-info-circle"></i> Подробнее</a>
         </div>
       </div>
@@ -6631,9 +7272,9 @@ Format each file with path and content. Use markdown code blocks with file paths
     <section class="features">
       <div class="container">
         <div class="section-header">
-          <span class="section-label">Возможности</span>
-          <h2 class="section-title">Что мы <span>предлагаем</span></h2>
-          <p class="section-subtitle">Профессиональный подход и качественные решения</p>
+          <span class="section-label">${hasLessons ? 'Темы' : 'Возможности'}</span>
+          <h2 class="section-title">${hasLessons ? 'Что вы <span>изучите</span>' : 'Что мы <span>предлагаем</span>'}</h2>
+          <p class="section-subtitle">${hasLessons ? 'Структурированная программа обучения' : 'Профессиональный подход и качественные решения'}</p>
         </div>
         <div class="features-grid">
           ${sections[0].items.map(item => `
@@ -6649,8 +7290,8 @@ Format each file with path and content. Use markdown code blocks with file paths
     <section class="features" style="background: var(--bg-alt);">
       <div class="container">
         <div class="section-header">
-          <span class="section-label">Преимущества</span>
-          <h2 class="section-title">Почему выбирают <span>нас</span></h2>
+          <span class="section-label">${hasLessons ? 'Преимущества' : 'Преимущества'}</span>
+          <h2 class="section-title">${hasLessons ? 'Почему выбирают <span>нас</span>' : 'Почему выбирают <span>нас</span>'}</h2>
         </div>
         <div class="features-grid">
           ${(sections[1]?.items || sections[0].items).map(item => `
@@ -6662,7 +7303,7 @@ Format each file with path and content. Use markdown code blocks with file paths
           `).join('')}
         </div>
       </div>
-    </section>`;
+    </section>${lessonsSection}`;
   }
   
   generateAboutPage(template, intent) {
@@ -6763,6 +7404,131 @@ Format each file with path and content. Use markdown code blocks with file paths
         <div class="content-grid">
           <div class="content-card"><div class="content-card-image"><i class="fas fa-image"></i></div><div class="content-card-body"><h3>Проект 1</h3><p>Описание работы</p></div></div>
           <div class="content-card"><div class="content-card-image"><i class="fas fa-image"></i></div><div class="content-card-body"><h3>Проект 2</h3><p>Описание работы</p></div></div>
+        </div>
+      </div>
+    </section>`;
+  }
+  
+  // ===== EDUCATIONAL/COURSE PAGES with REAL CONTENT =====
+  
+  generateCoursesPage(template, intent) {
+    const { hero } = template;
+    
+    // Check if template has courseContent structure
+    if (template.courseContent) {
+      const courses = Object.entries(template.courseContent);
+      return `
+    <section class="page-hero">
+      <h1>Курсы</h1>
+      <p>Структурированные программы обучения от ${hero.title}</p>
+    </section>
+    <section class="content">
+      <div class="container">
+        <div class="courses-list">
+          ${courses.map(([key, course]) => `
+          <div class="course-card">
+            <div class="course-header">
+              <div class="course-icon"><i class="fas fa-graduation-cap"></i></div>
+              <h2>${course.title}</h2>
+              <p>${course.description}</p>
+            </div>
+            <div class="course-modules">
+              <h3><i class="fas fa-list-ul"></i> Модули курса</h3>
+              ${course.modules.map((module, idx) => `
+              <div class="module-item">
+                <div class="module-header">
+                  <span class="module-number">${idx + 1}</span>
+                  <h4>${module.title}</h4>
+                </div>
+                <ul class="lessons-list">
+                  ${module.lessons.map(lesson => `<li><i class="fas fa-play-circle"></i> ${lesson}</li>`).join('')}
+                </ul>
+              </div>
+              `).join('')}
+            </div>
+          </div>
+          `).join('')}
+        </div>
+      </div>
+    </section>`;
+    }
+    
+    // Fallback to generic services-style page
+    return `
+    <section class="page-hero">
+      <h1>Курсы</h1>
+      <p>Образовательные программы от ${hero.title}</p>
+    </section>
+    <section class="content">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-label">Обучение</span>
+          <h2 class="section-title">Наши <span>курсы</span></h2>
+        </div>
+        <div class="features-grid">
+          <div class="feature-card"><div class="feature-icon"><i class="fas fa-book"></i></div><h3>Базовый курс</h3><p>Фундаментальные знания с нуля</p></div>
+          <div class="feature-card"><div class="feature-icon"><i class="fas fa-rocket"></i></div><h3>Продвинутый</h3><p>Углублённое изучение темы</p></div>
+          <div class="feature-card"><div class="feature-icon"><i class="fas fa-certificate"></i></div><h3>Экспертный</h3><p>Профессиональный уровень</p></div>
+        </div>
+      </div>
+    </section>`;
+  }
+  
+  generateLessonsPage(template, intent) {
+    const { hero } = template;
+    
+    // If template has actual lessons, display them
+    if (template.lessons && template.lessons.length > 0) {
+      return `
+    <section class="page-hero">
+      <h1>Уроки</h1>
+      <p>Детальные материалы с примерами и заданиями</p>
+    </section>
+    <section class="content">
+      <div class="container">
+        <div class="lessons-container">
+          ${template.lessons.map((lesson, idx) => `
+          <article class="lesson-card" id="lesson-${lesson.id}">
+            <div class="lesson-header">
+              <span class="lesson-number">Урок ${idx + 1}</span>
+              <h2>${lesson.title}</h2>
+            </div>
+            <div class="lesson-content">
+              <p class="lesson-text">${lesson.content}</p>
+              
+              <div class="lesson-examples">
+                <h3><i class="fas fa-lightbulb"></i> Примеры</h3>
+                <ul>
+                  ${lesson.examples.map(ex => `<li><code>${ex}</code></li>`).join('')}
+                </ul>
+              </div>
+              
+              <div class="lesson-practice">
+                <h3><i class="fas fa-pencil-alt"></i> Практика</h3>
+                <ul>
+                  ${lesson.practice.map(task => `<li>${task}</li>`).join('')}
+                </ul>
+                <button class="btn btn-primary" onclick="alert('Отлично! Продолжайте в том же духе!')"><i class="fas fa-check"></i> Проверить</button>
+              </div>
+            </div>
+          </article>
+          `).join('')}
+        </div>
+      </div>
+    </section>`;
+    }
+    
+    // Fallback to generic blog-style page
+    return `
+    <section class="page-hero">
+      <h1>Материалы</h1>
+      <p>Учебные материалы и статьи</p>
+    </section>
+    <section class="content">
+      <div class="container">
+        <div class="content-grid">
+          <div class="content-card"><div class="content-card-image"><i class="fas fa-book-open"></i></div><div class="content-card-body"><h3>Начало обучения</h3><p>Основы и базовые концепции</p></div></div>
+          <div class="content-card"><div class="content-card-image"><i class="fas fa-star"></i></div><div class="content-card-body"><h3>Продвинутые темы</h3><p>Углублённое изучение</p></div></div>
         </div>
       </div>
     </section>`;
