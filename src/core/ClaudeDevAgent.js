@@ -2636,8 +2636,9 @@ content
   async generateFromTemplate(project, description) {
     console.log('=== SMART TEMPLATE GENERATION v3.0 + INTERNET ===');
     
-    // Import templates with AI-enhanced detection
-    const { templates, detectTemplate, analyzeIntent } = require('./websiteTemplates.js');
+    // Dynamic import for ES modules compatibility
+    const websiteTemplates = await import('./websiteTemplates.js');
+    const { templates, detectTemplate, analyzeIntent } = websiteTemplates;
     
     // AI-powered intent analysis
     const intent = analyzeIntent ? analyzeIntent(description) : { category: 'general', keywords: [] };
