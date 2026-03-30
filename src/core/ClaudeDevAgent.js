@@ -1246,18 +1246,34 @@ Only respond with valid JSON, no other text.`;
     const files = {};
     
     // Generate CSS first (shared styles)
-    const cssPrompt = `Create modern CSS for a ${structure.type} website.
+    const cssPrompt = `Create modern, BEAUTIFUL CSS for a ${structure.type} website.
 Theme: ${structure.theme || 'modern professional'}
 Features needed: ${structure.features?.join(', ') || 'responsive, clean design'}
 
-Requirements:
-- Use CSS custom properties (variables) for colors
-- Mobile-first responsive design
-- Modern layout techniques (flexbox, grid)
-- Smooth animations and transitions
-- Professional typography
+CRITICAL REQUIREMENTS:
+1. HIGH CONTRAST: Dark text (#1a1a2e, #16213e) on light backgrounds (#f8f9fa, #ffffff) OR light text (#ffffff) on dark backgrounds (#0f0f23, #1a1a2e)
+2. NEVER use light gray text (#cccccc, #dddddd) on white backgrounds
+3. USE CSS CUSTOM PROPERTIES for consistent colors:
+   --primary: vibrant accent color
+   --text: high contrast dark color
+   --bg: clean light background
+   --heading: very dark for maximum readability
+4. Modern design: subtle shadows, rounded corners (8-16px), smooth transitions
+5. Typography: Clear hierarchy, readable sizes (16px+ for body)
+6. Mobile-first responsive with breakpoints
 
-Output ONLY the CSS content, no markdown formatting.`;
+Example color scheme (adjust to match theme):
+:root {
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --text: #1e293b;
+  --text-light: #64748b;
+  --bg: #ffffff;
+  --bg-alt: #f1f5f9;
+  --heading: #0f172a;
+}
+
+Output ONLY valid CSS with these color variables.`;
 
     const cssResponse = await this.generateCode(cssPrompt, { type: 'web' });
     files['styles.css'] = this.extractCodeBlock(cssResponse) || cssResponse;
@@ -1274,15 +1290,23 @@ Features: ${structure.features?.join(', ') || 'responsive design'}
 
 ${researchContext.substring(0, 2000)}
 
-Requirements:
+CRITICAL IMAGE REQUIREMENTS:
+- For cat/pet sites: Use https://cataas.com/cat or https://placekitten.com/200/300 for cat images
+- For general images: Use https://picsum.photos/800/600 or https://source.unsplash.com/800x600/?keyword
+- NEVER use placeholder text like "Котик1" or "image1" — always use REAL working URLs
+- Images must be HTTPS and publicly accessible
+- Add alt attributes for accessibility
+
+DESIGN REQUIREMENTS:
 - Link to styles.css: <link rel="stylesheet" href="styles.css">
 - Include navigation linking to: ${structure.pages?.map(p => p + '.html').join(', ')}
 - Use semantic HTML5
 - Include favicon
 - ${isHome ? 'Make it impressive with hero section, clear value proposition' : 'Focus on the specific purpose of this page'}
-- Use FontAwesome icons via CDN
+- Use FontAwesome icons via CDN: <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 - Modern, clean design
 - Responsive layout
+- HIGH CONTRAST: Use the CSS variables for colors, never hardcode light text on light backgrounds
 
 Output format:
 ${pageName}.html
@@ -1322,17 +1346,98 @@ Output ONLY the JavaScript content.`;
       }
     }
     
-    // Step 4: Save all files
+    // Step 4: Post-process and validate files
     for (const [filename, content] of Object.entries(files)) {
       if (content && content.trim().length > 0) {
+        let processedContent = content;
+        
+        // Fix common color issues
+        if (filename.endsWith('.css') || filename.endsWith('.html')) {
+          processedContent = this.fixColorIssues(processedContent);
+        }
+        
+        // Fix image placeholders
+        if (filename.endsWith('.html')) {
+          processedContent = this.fixImagePlaceholders(processedContent, description);
+        }
+        
         const filepath = path.join(project.path, filename);
-        fs.writeFileSync(filepath, content);
+        fs.writeFileSync(filepath, processedContent);
         project.files.push(filename);
         console.log('Created file:', filename);
       }
     }
     
     console.log(`Generated ${Object.keys(files).length} files via AI without templates`);
+  }
+  
+  fixColorIssues(content) {
+    if (!content) return content;
+    
+    let fixed = content;
+    
+    // Fix light gray on white backgrounds
+    const badColorPairs = [
+      { bad: '#cccccc', good: '#4a5568' },
+      { bad: '#dddddd', good: '#4a5568' },
+      { bad: '#eeeeee', good: '#2d3748' },
+      { bad: 'rgb(200, 200, 200)', good: '#4a5568' },
+      { bad: 'rgb(204, 204, 204)', good: '#4a5568' },
+      { bad: 'rgba(255, 255, 255, 0.3)', good: 'rgba(0, 0, 0, 0.7)' },
+    ];
+    
+    for (const pair of badColorPairs) {
+      fixed = fixed.replace(new RegExp(pair.bad, 'gi'), pair.good);
+    }
+    
+    // Fix CSS variables if they're too light
+    fixed = fixed.replace(/var\(--text\s*,\s*#(?:ccc|ddd|eee|fff)\)/gi, 'var(--text, #1a1a2e)');
+    fixed = fixed.replace(/var\(--heading\s*,\s*#(?:ccc|ddd|eee|fff)\)/gi, 'var(--heading, #0f172a)');
+    
+    return fixed;
+  }
+  
+  fixImagePlaceholders(content, description) {
+    if (!content) return content;
+    
+    let fixed = content;
+    const desc = description.toLowerCase();
+    
+    // Fix cat images
+    if (desc.includes('кот') || desc.includes('кошк') || desc.includes('cat')) {
+      // Replace placeholder text with real cat images
+      const catServices = [
+        'https://cataas.com/cat?width=400&height=300',
+        'https://placekitten.com/400/300',
+        'https://cataas.com/cat?width=600&height=400',
+        'https://placekitten.com/600/400'
+      ];
+      
+      // Replace text placeholders
+      fixed = fixed.replace(/src="[^"]*(?:котик|кот|cat|kitty|placeholder)[^"]*"/gi, (match, index) => {
+        const service = catServices[index % catServices.length];
+        return `src="${service}"`;
+      });
+      
+      // Replace broken image paths
+      fixed = fixed.replace(/src="[^"]*\.(?:jpg|jpeg|png|gif|webp)"/gi, (match) => {
+        if (match.includes('http')) return match; // Already a URL
+        const service = catServices[Math.floor(Math.random() * catServices.length)];
+        return `src="${service}"`;
+      });
+    }
+    
+    // Fix generic placeholders
+    fixed = fixed.replace(/src="[^"]*(?:placeholder|image|img)\d*[^"]*"/gi, (match, index) => {
+      const width = 400 + (index * 100);
+      const height = 300 + (index * 50);
+      return `src="https://picsum.photos/${width}/${height}?random=${index}"`;
+    });
+    
+    // Ensure alt attributes exist
+    fixed = fixed.replace(/<img(?!\s+alt)/gi, '<img alt="Image"');
+    
+    return fixed;
   }
   
   shouldResearchTopic(description) {
