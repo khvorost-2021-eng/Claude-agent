@@ -233,9 +233,8 @@ class AgentClient {
 
     // New chat button - clear chat and start fresh
     document.getElementById('newChatBtn')?.addEventListener('click', () => {
-      this.chatMessages.innerHTML = '';
-      this.addMessage('Привет! Я Claude Dev Agent. Я могу:\n<ul><li>Создавать веб-сайты</li><li>Создавать Android приложения</li><li>Показывать код и превью в реальном времени</li></ul>Что хотите создать?', 'bot');
-      this.saveLocalHistory();
+      this.createNewChat();
+      this.loadCurrentChat();
       this.showToast('Новый чат создан');
     });
 
