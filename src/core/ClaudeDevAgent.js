@@ -1290,6 +1290,13 @@ Features: ${structure.features?.join(', ') || 'responsive design'}
 
 ${researchContext.substring(0, 2000)}
 
+CRITICAL CONTENT REQUIREMENTS:
+1. DO NOT use the user's request text as the page heading/title
+2. Create ORIGINAL, ENGAGING content that matches the topic
+3. For homepage: create catchy title (5-7 words), not the raw request
+4. Write actual content paragraphs, not placeholder text
+5. Example: instead of "Создай сайт с картинками котов", use "Мир Удивительных Кошек" or "Все о Наших Пушистых Друзьях"
+
 CRITICAL IMAGE REQUIREMENTS:
 - For cat/pet sites: Use https://cataas.com/cat or https://placekitten.com/200/300 for cat images
 - For general images: Use https://picsum.photos/800/600 or https://source.unsplash.com/800x600/?keyword
@@ -1403,39 +1410,62 @@ Output ONLY the JavaScript content.`;
     let fixed = content;
     const desc = description.toLowerCase();
     
-    // Fix cat images
-    if (desc.includes('кот') || desc.includes('кошк') || desc.includes('cat')) {
-      // Replace placeholder text with real cat images
-      const catServices = [
-        'https://cataas.com/cat?width=400&height=300',
-        'https://placekitten.com/400/300',
-        'https://cataas.com/cat?width=600&height=400',
-        'https://placekitten.com/600/400'
-      ];
-      
-      // Replace text placeholders
-      fixed = fixed.replace(/src="[^"]*(?:котик|кот|cat|kitty|placeholder)[^"]*"/gi, (match, index) => {
-        const service = catServices[index % catServices.length];
-        return `src="${service}"`;
-      });
-      
-      // Replace broken image paths
-      fixed = fixed.replace(/src="[^"]*\.(?:jpg|jpeg|png|gif|webp)"/gi, (match) => {
-        if (match.includes('http')) return match; // Already a URL
-        const service = catServices[Math.floor(Math.random() * catServices.length)];
-        return `src="${service}"`;
+    // Replace ANY broken image src (cat-related or not)
+    const imageReplacements = [
+      // Specific placeholder patterns
+      { pattern: /src="[^"]*(?:котик|кот|кошка|cat|kitty|мурка)[^"]*"/gi, url: 'https://cataas.com/cat?width=400&height=300' },
+      { pattern: /src="[^"]*placeholder[^"]*"/gi, url: 'https://picsum.photos/400/300' },
+      { pattern: /src="[^"]*image\d*[^"]*"/gi, url: 'https://picsum.photos/400/300?random=1' },
+      { pattern: /src="[^"]*img\d*[^"]*"/gi, url: 'https://picsum.photos/400/300?random=2' },
+      // Empty or broken paths
+      { pattern: /src=""/gi, url: 'https://picsum.photos/400/300' },
+      // Local file paths without http
+      { pattern: /src="(?!https?:\/\/)[^"]*\.(?:jpg|jpeg|png|gif|webp)"/gi, url: 'https://picsum.photos/400/300' },
+    ];
+    
+    let imgCounter = 0;
+    for (const replacement of imageReplacements) {
+      fixed = fixed.replace(replacement.pattern, () => {
+        imgCounter++;
+        // Add random parameter for unique images
+        const separator = replacement.url.includes('?') ? '&' : '?';
+        return `src="${replacement.url}${separator}r=${imgCounter}"`;
       });
     }
     
-    // Fix generic placeholders
-    fixed = fixed.replace(/src="[^"]*(?:placeholder|image|img)\d*[^"]*"/gi, (match, index) => {
-      const width = 400 + (index * 100);
-      const height = 300 + (index * 50);
-      return `src="https://picsum.photos/${width}/${height}?random=${index}"`;
+    // Replace ALL img src that don't have http with proper image URLs
+    fixed = fixed.replace(/src="(?!https?:\/\/)[^"]*"/g, (match) => {
+      imgCounter++;
+      // Check if it's already been replaced
+      if (match.includes('picsum') || match.includes('cataas') || match.includes('placekitten')) {
+        return match;
+      }
+      return `src="https://picsum.photos/400/300?r=${imgCounter}"`;
     });
     
-    // Ensure alt attributes exist
-    fixed = fixed.replace(/<img(?!\s+alt)/gi, '<img alt="Image"');
+    // For cat sites, specifically replace with cat images
+    if (desc.includes('кот') || desc.includes('кошк') || desc.includes('cat')) {
+      const catUrls = [
+        'https://cataas.com/cat?width=400&height=300',
+        'https://placekitten.com/400/300',
+        'https://cataas.com/cat?width=600&height=400',
+        'https://placekitten.com/600/400',
+        'https://cataas.com/cat/gif',
+        'https://placekitten.com/300/300'
+      ];
+      
+      // Replace picsum images with cat images for cat-related sites
+      fixed = fixed.replace(/src="https:\/\/picsum\.photos\/[^"]*"/g, () => {
+        const catUrl = catUrls[imgCounter % catUrls.length];
+        imgCounter++;
+        return `src="${catUrl}"`;
+      });
+    }
+    
+    // Ensure all images have proper alt attributes
+    fixed = fixed.replace(/<img(?![^>]*alt=)[^>]*>/gi, (match) => {
+      return match.replace(/>$/, ' alt="Изображение">');
+    });
     
     return fixed;
   }
