@@ -1439,4 +1439,4 @@ function analyzeIntent(description) {
   };
 }
 
-module.exports = { templates: websiteTemplates, detectTemplate, analyzeIntent, templateKeywords };
+export { websiteTemplates as templates, detectTemplate, analyzeIntent, templateKeywords };
