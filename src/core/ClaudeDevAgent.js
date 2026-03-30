@@ -377,9 +377,10 @@ class ClaudeDevAgent {
     console.log(`✅ Hybrid site generated for "${topic}"`);
   }
 
-  // Generate content via Pollinations AI
+  // Generate content via Pollinations AI - FULL HTML
   async generateSiteContentWithAI(topic, intent) {
-    const contentPrompt = `Create website content about "${topic}". 
+    const contentPrompt = `Create a complete modern website about "${topic}".
+
 Write a JSON object with these fields:
 - title: catchy 2-3 word title
 - headline: compelling hero headline (max 6 words)  
@@ -388,6 +389,9 @@ Write a JSON object with these fields:
 - features: array of 3 feature objects with title and description
 - aboutTitle: title for about page
 - aboutText: 3 sentences about ${topic}
+- services: array of 3 service objects with name and description
+- heroGradient: CSS gradient like "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+- accentColor: hex color like "#667eea"
 
 Output ONLY valid JSON, no markdown, no comments.`;
 
@@ -416,7 +420,60 @@ Output ONLY valid JSON, no markdown, no comments.`;
     return null;
   }
 
-  // Generate hybrid site: template structure + AI content
+  // Generate AI-powered full HTML page
+  async generateAIPage(pageName, content, topic, intent, heroImage) {
+    const pagePrompt = `Create complete HTML code for a ${pageName} page about "${topic}".
+    
+Use this content:
+- Title: ${content.title}
+- Headline: ${content.headline}
+- Subtitle: ${content.subtitle}
+- Description: ${content.description}
+- Features: ${JSON.stringify(content.features)}
+- About Title: ${content.aboutTitle}
+- About Text: ${content.aboutText}
+
+Generate a modern, beautiful, responsive HTML page with inline CSS. Include:
+- Modern CSS with glassmorphism effects
+- Gradient backgrounds
+- Smooth animations
+- Professional typography
+- Responsive design
+- Navigation menu
+- Hero section with image placeholder
+- Content sections
+- Footer
+
+Output ONLY the HTML code, no markdown, no explanations. The HTML must be complete and valid.`;
+
+    try {
+      const encoded = encodeURIComponent(pagePrompt);
+      const url = `https://text.pollinations.ai/${encoded}?seed=${Date.now()}`;
+      
+      const response = await fetch(url);
+      let html = await response.text();
+      
+      // Clean up the response
+      html = html.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
+      
+      // Ensure it has proper HTML structure
+      if (!html.includes('<!DOCTYPE')) {
+        html = `<!DOCTYPE html>\n${html}`;
+      }
+      if (!html.includes('<html')) {
+        html = html.replace('<!DOCTYPE html>', '<!DOCTYPE html>\n<html lang="ru">');
+        html += '\n</html>';
+      }
+      
+      console.log(`✅ AI generated ${pageName} page`);
+      return html;
+    } catch (e) {
+      console.error(`AI page generation error for ${pageName}:`, e.message);
+      return null;
+    }
+  }
+
+  // Generate hybrid site: AI-powered full HTML generation
   async generateHybridSite(project, description, topic, intent, aiContent) {
     // Default content if AI fails
     const content = aiContent || {
@@ -430,25 +487,47 @@ Output ONLY valid JSON, no markdown, no comments.`;
         { title: 'Современный подход', description: 'Актуальная информация и последние тренды' }
       ],
       aboutTitle: `О ${topic}`,
-      aboutText: `${topic} занимает важное место в современном мире. Эта тема охватывает множество аспектов и предлагает глубокое понимание предмета. Изучение ${topic} открывает новые возможности и перспективы.`
+      aboutText: `${topic} занимает важное место в современном мире. Эта тема охватывает множество аспектов и предлагает глубокое понимание предмета. Изучение ${topic} открывает новые возможности и перспективы.`,
+      services: [
+        { name: 'Консультация', description: 'Профессиональная консультация по теме' },
+        { name: 'Обучение', description: 'Полный курс обучения' },
+        { name: 'Поддержка', description: 'Постоянная поддержка 24/7' }
+      ],
+      heroGradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      accentColor: '#667eea'
     };
 
     // Generate hero image via Pollinations
     const heroImage = `https://image.pollinations.ai/prompt/${encodeURIComponent(`modern ${topic} website hero, professional, clean design`)}?width=1200&height=600&nologo=true&seed=${Date.now()}`;
     
-    // Generate CSS
-    const css = this.generateSmartCSS({ title: content.title, category: intent.category });
-    fs.writeFileSync(path.join(project.path, 'styles.css'), css);
-    project.files.push('styles.css');
-    
-    // Generate pages with AI content injected
-    const pages = ['index', 'about', 'services', 'blog', 'contact'];
+    // Generate pages with FULL AI HTML generation
+    const pages = ['index', 'about', 'services', 'contact'];
     for (const pageName of pages) {
-      const html = this.generatePageWithContent(pageName, content, topic, intent, heroImage);
+      console.log(`🤖 Generating ${pageName} page with AI...`);
+      
+      // Try AI generation first
+      let html = await this.generateAIPage(pageName, content, topic, intent, heroImage);
+      
+      // Fallback to template if AI fails
+      if (!html || html.length < 500) {
+        console.log(`⚠️ AI failed for ${pageName}, using smart template fallback`);
+        html = this.generatePageWithContent(pageName, content, topic, intent, heroImage);
+      }
+      
       const filename = pageName === 'index' ? 'index.html' : `${pageName}.html`;
       fs.writeFileSync(path.join(project.path, filename), html);
       project.files.push(filename);
     }
+    
+    // Generate CSS with AI styling
+    const css = this.generateSmartCSS({ 
+      title: content.title, 
+      category: intent.category,
+      accentColor: content.accentColor || '#667eea',
+      heroGradient: content.heroGradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    });
+    fs.writeFileSync(path.join(project.path, 'styles.css'), css);
+    project.files.push('styles.css');
     
     // Generate JS
     const js = this.generateSmartJS({ title: content.title });
@@ -458,9 +537,11 @@ Output ONLY valid JSON, no markdown, no comments.`;
     // Metadata
     fs.writeFileSync(
       path.join(project.path, '.project-metadata.json'),
-      JSON.stringify({ method: 'HYBRID_AI', topic, intent, aiContent: !!aiContent, createdAt: new Date().toISOString() }, null, 2)
+      JSON.stringify({ method: 'FULL_AI', topic, intent, aiContent: !!aiContent, createdAt: new Date().toISOString() }, null, 2)
     );
     project.files.push('.project-metadata.json');
+    
+    console.log(`✅ AI-powered site generated for "${topic}"`);
   }
 
   // Generate page HTML with AI content

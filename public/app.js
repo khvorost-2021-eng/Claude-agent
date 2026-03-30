@@ -580,32 +580,34 @@ class AgentClient {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message bot';
     
-    const label = isImageSequence ? '🎬 Кадр видео (добавьте API ключ для полноценного видео):' : '🎬 Сгенерировано видео:';
-    const downloadLink = downloadUrl || videoUrl;
+    const label = isImageSequence ? '🎬 Видео (покадровое):' : '🎬 Сгенерировано видео:';
+    const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(videoUrl)}`;
     
-    if (videoUrl.endsWith('.mp4') || videoUrl.includes('video')) {
-      // Real video
-      messageDiv.innerHTML = `
-        <div class="message-content">
-          <p>${label} "${prompt}"</p>
-          <video src="${videoUrl}" controls style="max-width: 100%; border-radius: 8px; margin-top: 8px;"></video>
-          <p style="font-size: 0.9rem; margin-top: 8px;">
-            <a href="${downloadLink}" download style="display: inline-block; padding: 8px 16px; background: var(--accent); color: white; text-decoration: none; border-radius: 6px;">⬇ Скачать видео</a>
-          </p>
+    // Always show video player - it will work for mp4 and show poster for images
+    messageDiv.innerHTML = `
+      <div class="message-content">
+        <p>${label} "${prompt}"</p>
+        <div style="position: relative; max-width: 100%; border-radius: 8px; overflow: hidden; margin-top: 8px; background: #000;">
+          <video 
+            src="${videoUrl.endsWith('.mp4') ? videoUrl : ''}" 
+            poster="${proxyUrl}"
+            controls 
+            preload="metadata"
+            style="width: 100%; max-height: 400px; border-radius: 8px; display: block;"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+          ></video>
+          <img 
+            src="${proxyUrl}" 
+            alt="${prompt}" 
+            style="width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px; display: none;"
+          >
         </div>
-      `;
-    } else {
-      // Image/frame
-      messageDiv.innerHTML = `
-        <div class="message-content">
-          <p>${label} "${prompt}"</p>
-          <img src="${videoUrl}" alt="${prompt}" style="max-width: 100%; border-radius: 8px; margin-top: 8px;">
-          <p style="font-size: 0.9rem; margin-top: 8px;">
-            <a href="${downloadLink}" download style="display: inline-block; padding: 8px 16px; background: var(--accent); color: white; text-decoration: none; border-radius: 6px;">⬇ Скачать</a>
-          </p>
-        </div>
-      `;
-    }
+        <p style="font-size: 0.8rem; color: var(--text2); margin-top: 8px;">${prompt}</p>
+        <p style="font-size: 0.8rem; margin-top: 4px;">
+          <a href="${videoUrl}" download style="display: inline-block; padding: 6px 12px; background: var(--bg3); color: var(--text); text-decoration: none; border-radius: 4px; font-size: 0.75rem;">⬇ Скачать</a>
+        </p>
+      </div>
+    `;
     
     this.chatMessages.appendChild(messageDiv);
     this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
