@@ -1391,8 +1391,8 @@ content
     fs.writeFileSync(path.join(project.path, 'styles.css'), css);
     project.files.push('styles.css');
     
-    // Generate HTML pages with smart content
-    const pages = ['index', 'about', 'contact'];
+    // Generate HTML pages - 5+ pages with unique content
+    const pages = ['index', 'about', 'services', 'blog', 'contact'];
     for (const pageName of pages) {
       const html = this.generateSmartHTML(smartTemplate, pageName, description, intent);
       const filename = pageName === 'index' ? 'index.html' : `${pageName}.html`;
@@ -1412,8 +1412,8 @@ content
       originalDescription: description,
       intent,
       createdAt: new Date().toISOString(),
-      pages: ['index', 'about', 'contact'],
-      version: '3.0-smart'
+      pages: ['index', 'about', 'services', 'blog', 'contact'],
+      version: '4.0-premium'
     };
     fs.writeFileSync(
       path.join(project.path, '.project-metadata.json'),
@@ -1578,38 +1578,81 @@ content
   
   generateSmartCSS(template) {
     const { colors } = template;
-    return `/* SMART Generated CSS v3.0 - ${template.title} */
+    const primary = colors.primary;
+    const secondary = colors.secondary;
+    const accent = colors.accent;
+    const bg = colors.bg;
+    const text = colors.text;
+    
+    return `/* SMART Design System v4.0 - Premium Modern */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 :root {
-  --primary: ${colors.primary};
-  --secondary: ${colors.secondary};
-  --accent: ${colors.accent};
-  --bg: ${colors.bg};
-  --text: ${colors.text};
-  --gradient: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%);
-  --shadow: 0 10px 40px rgba(0,0,0,0.12);
+  --primary: ${primary};
+  --primary-light: ${this.lightenColor(primary, 20)};
+  --primary-dark: ${this.darkenColor(primary, 20)};
+  --secondary: ${secondary};
+  --accent: ${accent};
+  --bg: ${bg};
+  --bg-alt: ${this.darkenColor(bg, 3)};
+  --text: ${text};
+  --text-light: ${this.lightenColor(text, 40)};
+  --text-muted: ${this.lightenColor(text, 60)};
+  
+  /* Glassmorphism */
+  --glass: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+  --shadow: 0 4px 20px rgba(0,0,0,0.12);
+  --shadow-lg: 0 10px 40px rgba(0,0,0,0.15);
+  --shadow-glow: 0 0 30px ${primary}40;
+  
+  /* Radius */
+  --radius-sm: 8px;
   --radius: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-full: 9999px;
+  
+  /* Transitions */
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+html { scroll-behavior: smooth; }
+
 body {
-  font-family: 'Inter', -apple-system, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   line-height: 1.6;
   color: var(--text);
   background: var(--bg);
+  overflow-x: hidden;
 }
 
+/* ===== NAVBAR - Glassmorphism ===== */
 .navbar {
   position: fixed;
   top: 0; left: 0; right: 0;
   z-index: 1000;
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--glass-border);
+  transition: var(--transition);
+}
+
+.navbar.scrolled {
+  box-shadow: var(--shadow);
   background: rgba(255,255,255,0.95);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 2px 20px rgba(0,0,0,0.05);
 }
 
 .nav-container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 1rem 2rem;
   display: flex;
@@ -1618,284 +1661,726 @@ body {
 }
 
 .nav-logo {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 800;
-  background: var(--gradient);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.nav-menu { display: flex; gap: 2rem; list-style: none; }
-.nav-link { color: var(--text); text-decoration: none; font-weight: 500; }
-.nav-link:hover { color: var(--primary); }
+.nav-menu { 
+  display: flex; 
+  gap: 0.5rem; 
+  list-style: none; 
+  align-items: center;
+}
 
+.nav-link { 
+  color: var(--text); 
+  text-decoration: none; 
+  font-weight: 500;
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--radius-full);
+  transition: var(--transition);
+  position: relative;
+}
+
+.nav-link:hover { 
+  color: var(--primary);
+  background: ${primary}15;
+}
+
+.nav-link.active {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.nav-cta {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  color: white !important;
+  padding: 0.6rem 1.5rem;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+
+.nav-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+}
+
+/* Mobile menu */
+.mobile-menu-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* ===== HERO - Premium Gradient ===== */
 .hero {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--gradient);
-  padding: 8rem 2rem 4rem;
+  background: linear-gradient(135deg, ${primary} 0%, ${secondary} 50%, ${accent} 100%);
+  padding: 10rem 2rem 6rem;
   text-align: center;
+  position: relative;
+  overflow: hidden;
 }
 
-.hero-content { max-width: 800px; }
-
-.hero h1 {
-  font-size: clamp(2.5rem, 5vw, 4rem);
-  font-weight: 800;
-  color: white;
-  margin-bottom: 1rem;
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0.5;
 }
 
-.hero .subtitle {
-  font-size: 1.5rem;
-  color: rgba(255,255,255,0.9);
-  margin-bottom: 1rem;
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  background: linear-gradient(to top, var(--bg), transparent);
 }
 
-.hero .description {
-  font-size: 1.125rem;
-  color: rgba(255,255,255,0.85);
-  margin-bottom: 2.5rem;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
+.hero-content { 
+  max-width: 900px; 
+  position: relative;
+  z-index: 1;
 }
 
-.hero-emoji { font-size: 4rem; margin-bottom: 1rem; }
-
-.btn {
+.hero-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 1rem 2rem;
-  border-radius: 50px;
+  background: rgba(255,255,255,0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.3);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-full);
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 2rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.hero h1 {
+  font-size: clamp(2.8rem, 6vw, 5rem);
+  font-weight: 900;
+  color: white;
+  margin-bottom: 1.5rem;
+  line-height: 1.1;
+  text-shadow: 0 4px 30px rgba(0,0,0,0.2);
+}
+
+.hero .subtitle {
+  font-size: 1.6rem;
+  color: rgba(255,255,255,0.95);
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
+.hero .description {
+  font-size: 1.2rem;
+  color: rgba(255,255,255,0.85);
+  margin-bottom: 3rem;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.7;
+}
+
+.hero-emoji { 
+  font-size: 5rem; 
+  margin-bottom: 1.5rem;
+  animation: bounce 2s ease-in-out infinite;
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.2));
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-15px) scale(1.1); }
+}
+
+.hero-buttons { 
+  display: flex; 
+  gap: 1rem; 
+  justify-content: center; 
+  flex-wrap: wrap; 
+}
+
+/* ===== BUTTONS - Premium ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem 2.5rem;
+  border-radius: var(--radius-full);
   font-weight: 600;
+  font-size: 1rem;
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: var(--transition-bounce);
   border: none;
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  transition: left 0.5s;
+}
+
+.btn:hover::before {
+  left: 100%;
 }
 
 .btn-primary {
   background: white;
   color: var(--primary);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
 }
 
-.btn-primary:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
+.btn-primary:hover { 
+  transform: translateY(-3px) scale(1.02); 
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+}
 
 .btn-secondary {
-  background: transparent;
+  background: rgba(255,255,255,0.15);
   color: white;
   border: 2px solid rgba(255,255,255,0.5);
+  backdrop-filter: blur(10px);
 }
 
-.btn-secondary:hover { background: rgba(255,255,255,0.1); border-color: white; }
+.btn-secondary:hover { 
+  background: rgba(255,255,255,0.25); 
+  border-color: white;
+  transform: translateY(-3px);
+}
 
-.hero-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+.btn-glass {
+  background: var(--glass);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
+  box-shadow: var(--glass-shadow);
+}
 
-section { padding: 5rem 2rem; }
-.container { max-width: 1200px; margin: 0 auto; }
+.btn-glass:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ===== SECTIONS ===== */
+section { padding: 7rem 2rem; }
+.container { 
+  max-width: 1200px; 
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.section-header {
+  text-align: center;
+  max-width: 700px;
+  margin: 0 auto 4rem;
+}
+
+.section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: ${primary}15;
+  color: var(--primary);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+}
 
 .section-title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  text-align: center;
-  margin-bottom: 3rem;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 800;
+  margin-bottom: 1rem;
+  line-height: 1.2;
 }
 
+.section-title span {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.section-subtitle {
+  font-size: 1.2rem;
+  color: var(--text-light);
+  line-height: 1.7;
+}
+
+/* ===== CARDS - Glassmorphism ===== */
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 2rem;
 }
 
 .feature-card {
-  background: white;
-  padding: 2rem;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  text-align: center;
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  padding: 2.5rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-shadow);
+  transition: var(--transition-bounce);
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  transform: scaleX(0);
   transition: transform 0.3s;
 }
 
-.feature-card:hover { transform: translateY(-5px); }
+.feature-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: var(--shadow-lg);
+}
+
+.feature-card:hover::before {
+  transform: scaleX(1);
+}
 
 .feature-icon {
-  width: 60px;
-  height: 60px;
-  background: var(--gradient);
-  border-radius: 12px;
+  width: 70px;
+  height: 70px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 1rem;
+  margin-bottom: 1.5rem;
   color: white;
-  font-size: 1.5rem;
+  font-size: 1.8rem;
+  box-shadow: var(--shadow-glow);
+  transition: var(--transition);
 }
 
-.feature-card h3 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
-.feature-card p { color: #64748b; line-height: 1.6; }
+.feature-card:hover .feature-icon {
+  transform: scale(1.1) rotate(5deg);
+}
 
-.gallery-grid {
+.feature-card h3 { 
+  font-size: 1.4rem; 
+  font-weight: 700; 
+  margin-bottom: 0.8rem;
+  color: var(--text);
+}
+
+.feature-card p { 
+  color: var(--text-light); 
+  line-height: 1.7;
+  font-size: 1rem;
+}
+
+/* ===== CONTENT CARDS ===== */
+.content-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
 }
 
-.gallery-img {
-  width: 100%;
-  height: 250px;
-  object-fit: cover;
-  border-radius: var(--radius);
-  transition: transform 0.3s;
+.content-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transition: var(--transition);
 }
 
-.gallery-img:hover { transform: scale(1.05); }
+.content-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+}
 
+.content-card-image {
+  height: 200px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+}
+
+.content-card-body {
+  padding: 1.5rem;
+}
+
+.content-card h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.content-card p {
+  color: var(--text-light);
+  line-height: 1.6;
+}
+
+/* ===== PAGE HERO ===== */
 .page-hero {
-  background: var(--gradient);
-  padding: 10rem 2rem 4rem;
+  background: linear-gradient(135deg, ${primary} 0%, ${accent} 100%);
+  padding: 10rem 2rem 5rem;
   text-align: center;
   color: white;
+  position: relative;
 }
 
-.page-hero h1 { font-size: 3rem; font-weight: 800; margin-bottom: 1rem; }
-.page-hero p { font-size: 1.25rem; opacity: 0.9; }
+.page-hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  background: linear-gradient(to top, var(--bg), transparent);
+}
 
+.page-hero h1 { 
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 800; 
+  margin-bottom: 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.page-hero p { 
+  font-size: 1.3rem; 
+  opacity: 0.9;
+  position: relative;
+  z-index: 1;
+}
+
+/* ===== CONTENT SECTIONS ===== */
+.content-section {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.content-section h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 3rem 0 1.5rem;
+  color: var(--text);
+}
+
+.content-section h2:first-child {
+  margin-top: 0;
+}
+
+.content-section p {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: var(--text-light);
+  margin-bottom: 1.5rem;
+}
+
+.content-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 2rem 0;
+}
+
+.content-section li {
+  padding: 1rem 0;
+  padding-left: 2rem;
+  position: relative;
+  border-bottom: 1px solid ${primary}15;
+  font-size: 1.1rem;
+}
+
+.content-section li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* ===== CONTACT FORM ===== */
+.contact-form {
+  max-width: 600px;
+  margin: 0 auto;
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  padding: 3rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-shadow);
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 1rem 1.2rem;
+  border: 2px solid ${primary}20;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-family: inherit;
+  background: white;
+  transition: var(--transition);
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px ${primary}20;
+}
+
+.form-group textarea {
+  min-height: 150px;
+  resize: vertical;
+}
+
+/* ===== STATS ===== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 2rem;
+  margin: 4rem 0;
+}
+
+.stat-card {
+  text-align: center;
+  padding: 2rem;
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow);
+}
+
+.stat-number {
+  font-size: 3rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.stat-label {
+  color: var(--text-light);
+  font-weight: 500;
+}
+
+/* ===== FOOTER - Dark ===== */
 .footer {
   background: var(--text);
   color: white;
-  padding: 3rem 2rem 1rem;
+  padding: 5rem 2rem 2rem;
 }
 
-.footer-content {
+.footer-grid {
   max-width: 1200px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 2fr repeat(3, 1fr);
   gap: 3rem;
+  margin-bottom: 3rem;
 }
 
-@media (max-width: 768px) {
-  .nav-menu { display: none; }
-  .hero h1 { font-size: 2rem; }
-  .hero-buttons { flex-direction: column; }
-  .btn { width: 100%; justify-content: center; }
-  .features-grid { grid-template-columns: 1fr; }
-  .footer-content { grid-template-columns: 1fr; }
-}`;
+.footer-brand h3 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.footer-brand p {
+  color: rgba(255,255,255,0.7);
+  line-height: 1.7;
+  max-width: 300px;
+}
+
+.footer-links h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.footer-links ul {
+  list-style: none;
+}
+
+.footer-links li {
+  margin-bottom: 0.75rem;
+}
+
+.footer-links a {
+  color: rgba(255,255,255,0.7);
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+.footer-links a:hover {
+  color: white;
+}
+
+.footer-bottom {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  text-align: center;
+  color: rgba(255,255,255,0.5);
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
   }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.animate-on-scroll {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.6s ease;
+}
+
+.animate-on-scroll.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .mobile-menu-btn { display: block; }
+  .nav-menu { 
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    flex-direction: column;
+    padding: 1rem;
+    gap: 0.5rem;
+  }
+  .nav-menu.active { display: flex; }
+  .nav-link { width: 100%; text-align: center; }
+  
+  .hero { padding: 8rem 1.5rem 4rem; }
+  .hero h1 { font-size: 2.2rem; }
+  .hero .subtitle { font-size: 1.2rem; }
+  .hero-buttons { flex-direction: column; }
+  .btn { width: 100%; }
+  
+  section { padding: 4rem 1.5rem; }
+  .features-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+  .footer-grid { grid-template-columns: 1fr; gap: 2rem; }
+  .contact-form { padding: 2rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}`, 
   
   generateSmartHTML(template, pageName, description, intent) {
-    const { title, hero, sections, gallery } = template;
+    const { title, hero } = template;
     const isHome = pageName === 'index';
     
-    let content = '';
-    
-    if (isHome) {
-      content = `
-    <section class="hero">
-      <div class="hero-content">
-        <div class="hero-emoji">${hero.emoji}</div>
-        <h1>${hero.title}</h1>
-        <p class="subtitle">${hero.subtitle}</p>
-        <p class="description">${hero.description}</p>
-        <div class="hero-buttons">
-          <a href="about.html" class="btn btn-primary"><i class="fas fa-arrow-right"></i> Узнать больше</a>
-          <a href="contact.html" class="btn btn-secondary"><i class="fas fa-envelope"></i> Связаться</a>
-        </div>
-      </div>
-    </section>
+    // Use new multi-page content generation
+    const content = this.getPageContent(template, pageName, intent);
 
-    <section class="features">
-      <div class="container">
-        <h2 class="section-title">${sections[0].title}</h2>
-        <div class="features-grid">
-          ${sections[0].items.map(item => `
-          <div class="feature-card">
-            <div class="feature-icon"><i class="fas fa-${item.icon}"></i></div>
-            <h3>${item.title}</h3>
-            <p>${item.desc}</p>
-          </div>
-          `).join('')}
-        </div>
-      </div>
-    </section>
-
-    <section class="features" style="background: #f8fafc;">
-      <div class="container">
-        <h2 class="section-title">${sections[1]?.title || 'Почему выбирают нас'}</h2>
-        <div class="features-grid">
-          ${(sections[1]?.items || sections[0].items).map(item => `
-          <div class="feature-card">
-            <div class="feature-icon"><i class="fas fa-${item.icon}"></i></div>
-            <h3>${item.title}</h3>
-            <p>${item.desc}</p>
-          </div>
-          `).join('')}
-        </div>
-      </div>
-    </section>
-
-    <section class="gallery">
-      <div class="container">
-        <h2 class="section-title">Галерея</h2>
-        <div class="gallery-grid">
-          ${gallery.map((img, i) => `<img src="${img.url}" alt="${img.alt}" class="gallery-img" loading="lazy">`).join('')}
-        </div>
-      </div>
-    </section>`;
-    } else if (pageName === 'about') {
-      content = `
-    <section class="page-hero">
-      <h1>О ${hero.title}</h1>
-      <p>Узнайте больше о нашем проекте</p>
-    </section>
-    <section class="content">
-      <div class="container">
-        <h2>Наша миссия</h2>
-        <p>${hero.description}</p>
-        <p>Мы создали этот ресурс, чтобы собрать лучшую информацию в одном месте. Наша цель — помочь каждому найти ответы на вопросы.</p>
-        <h2>Что мы предлагаем</h2>
-        <p>На нашем сайте вы найдёте подробную информацию, качественные материалы и полезные советы.</p>
-      </div>
-    </section>`;
-    } else if (pageName === 'contact') {
-      content = `
-    <section class="page-hero">
-      <h1>Контакты</h1>
-      <p>Свяжитесь с нами</p>
-    </section>
-    <section class="content">
-      <div class="container" style="max-width: 600px;">
-        <form onsubmit="event.preventDefault(); alert('Спасибо! Мы свяжемся с вами.');">
-          <div style="margin-bottom: 1.5rem;">
-            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Имя</label>
-            <input type="text" placeholder="Ваше имя" style="width: 100%; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 8px;" required>
-          </div>
-          <div style="margin-bottom: 1.5rem;">
-            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Email</label>
-            <input type="email" placeholder="email@example.com" style="width: 100%; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 8px;" required>
-          </div>
-          <div style="margin-bottom: 1.5rem;">
-            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Сообщение</label>
-            <textarea rows="4" placeholder="Ваше сообщение..." style="width: 100%; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 8px;" required></textarea>
-          </div>
-          <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="fas fa-paper-plane"></i> Отправить</button>
-        </form>
-      </div>
-    </section>`;
-    }
+    const pageTitles = {
+      index: hero.title,
+      about: 'О нас',
+      services: 'Услуги',
+      blog: 'Блог',
+      contact: 'Контакты'
+    };
 
     return `<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${isHome ? hero.title : pageName === 'about' ? 'О нас' : 'Контакты'} | ${hero.title}</title>
+  <title>${pageTitles[pageName] || pageName} | ${hero.title}</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>${hero.emoji}</text></svg>">
   <link rel="stylesheet" href="styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -1908,27 +2393,38 @@ section { padding: 5rem 2rem; }
       <ul class="nav-menu">
         <li><a href="index.html" class="nav-link ${isHome ? 'active' : ''}">Главная</a></li>
         <li><a href="about.html" class="nav-link ${pageName === 'about' ? 'active' : ''}">О нас</a></li>
+        <li><a href="services.html" class="nav-link ${pageName === 'services' ? 'active' : ''}">Услуги</a></li>
+        <li><a href="blog.html" class="nav-link ${pageName === 'blog' ? 'active' : ''}">Блог</a></li>
         <li><a href="contact.html" class="nav-link ${pageName === 'contact' ? 'active' : ''}">Контакты</a></li>
       </ul>
     </div>
   </nav>
 ${content}
   <footer class="footer">
-    <div class="footer-content">
-      <div>
+    <div class="footer-grid">
+      <div class="footer-brand">
         <h3>${hero.emoji} ${hero.title}</h3>
         <p>${hero.description.substring(0, 100)}...</p>
       </div>
-      <div>
+      <div class="footer-links">
         <h4>Навигация</h4>
-        <ul style="list-style: none; margin-top: 0.5rem;">
-          <li><a href="index.html" style="color: rgba(255,255,255,0.8); text-decoration: none;">Главная</a></li>
-          <li><a href="about.html" style="color: rgba(255,255,255,0.8); text-decoration: none;">О нас</a></li>
-          <li><a href="contact.html" style="color: rgba(255,255,255,0.8); text-decoration: none;">Контакты</a></li>
+        <ul>
+          <li><a href="index.html">Главная</a></li>
+          <li><a href="about.html">О нас</a></li>
+          <li><a href="services.html">Услуги</a></li>
+          <li><a href="blog.html">Блог</a></li>
+          <li><a href="contact.html">Контакты</a></li>
+        </ul>
+      </div>
+      <div class="footer-links">
+        <h4>Контакты</h4>
+        <ul>
+          <li><a href="mailto:hello@example.com">hello@example.com</a></li>
+          <li><a href="tel:+79991234567">+7 (999) 123-45-67</a></li>
         </ul>
       </div>
     </div>
-    <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 2rem; text-align: center; opacity: 0.6;">
+    <div class="footer-bottom">
       <p>&copy; 2024 ${hero.title}. Все права защищены.</p>
     </div>
   </footer>
@@ -6074,6 +6570,200 @@ Format each file with path and content. Use markdown code blocks with file paths
     
     console.log('Total files extracted:', Object.keys(files).length);
     return files;
+  }
+
+  // ===== COLOR UTILITIES =====
+  
+  lightenColor(hex, percent) {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = (num >> 16) + amt;
+    const G = (num >> 8 & 0x00FF) + amt;
+    const B = (num & 0x0000FF) + amt;
+    return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+      (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+      (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+  }
+  
+  darkenColor(hex, percent) {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = (num >> 16) - amt;
+    const G = (num >> 8 & 0x00FF) - amt;
+    const B = (num & 0x0000FF) - amt;
+    return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+      (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+      (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+  }
+
+  // ===== MULTI-PAGE GENERATION v4.0 =====
+  
+  getPageContent(template, pageName, intent) {
+    const pageContents = {
+      index: this.generateHomePage(template, intent),
+      about: this.generateAboutPage(template, intent),
+      contact: this.generateContactPage(template, intent),
+      services: this.generateServicesPage(template, intent),
+      blog: this.generateBlogPage(template, intent),
+      portfolio: this.generatePortfolioPage(template, intent)
+    };
+    return pageContents[pageName] || pageContents.about;
+  }
+  
+  generateHomePage(template, intent) {
+    const { hero, sections } = template;
+    return `
+    <section class="hero">
+      <div class="hero-content">
+        <div class="hero-badge"><i class="fas fa-sparkles"></i> Премиум качество</div>
+        <div class="hero-emoji">${hero.emoji}</div>
+        <h1>${hero.title}</h1>
+        <p class="subtitle">${hero.subtitle}</p>
+        <p class="description">${hero.description}</p>
+        <div class="hero-buttons">
+          <a href="services.html" class="btn btn-primary"><i class="fas fa-rocket"></i> Наши услуги</a>
+          <a href="about.html" class="btn btn-secondary"><i class="fas fa-info-circle"></i> Подробнее</a>
+        </div>
+      </div>
+    </section>
+    <section class="features">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-label">Возможности</span>
+          <h2 class="section-title">Что мы <span>предлагаем</span></h2>
+          <p class="section-subtitle">Профессиональный подход и качественные решения</p>
+        </div>
+        <div class="features-grid">
+          ${sections[0].items.map(item => `
+          <div class="feature-card animate-on-scroll">
+            <div class="feature-icon"><i class="fas fa-${item.icon}"></i></div>
+            <h3>${item.title}</h3>
+            <p>${item.desc}</p>
+          </div>
+          `).join('')}
+        </div>
+      </div>
+    </section>
+    <section class="features" style="background: var(--bg-alt);">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-label">Преимущества</span>
+          <h2 class="section-title">Почему выбирают <span>нас</span></h2>
+        </div>
+        <div class="features-grid">
+          ${(sections[1]?.items || sections[0].items).map(item => `
+          <div class="feature-card animate-on-scroll">
+            <div class="feature-icon"><i class="fas fa-${item.icon}"></i></div>
+            <h3>${item.title}</h3>
+            <p>${item.desc}</p>
+          </div>
+          `).join('')}
+        </div>
+      </div>
+    </section>`;
+  }
+  
+  generateAboutPage(template, intent) {
+    const { hero } = template;
+    return `
+    <section class="page-hero">
+      <h1>О нас</h1>
+      <p>Узнайте больше о ${hero.title}</p>
+    </section>
+    <section class="content">
+      <div class="container">
+        <div class="content-section">
+          <h2>Наша история</h2>
+          <p>${hero.title} — проект, созданный с любовью и профессионализмом.</p>
+          <h2>Наша миссия</h2>
+          <p>${hero.description}</p>
+          <h2>Наши ценности</h2>
+          <ul>
+            <li><strong>Качество</strong> — только проверенная информация</li>
+            <li><strong>Доступность</strong> — простым языком</li>
+            <li><strong>Инновации</strong> — постоянное развитие</li>
+          </ul>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card"><span class="stat-number">5+</span><span class="stat-label">Лет опыта</span></div>
+          <div class="stat-card"><span class="stat-number">10K+</span><span class="stat-label">Клиентов</span></div>
+          <div class="stat-card"><span class="stat-number">50+</span><span class="stat-label">Проектов</span></div>
+        </div>
+      </div>
+    </section>`;
+  }
+  
+  generateContactPage(template, intent) {
+    const { hero } = template;
+    return `
+    <section class="page-hero">
+      <h1>Контакты</h1>
+      <p>Свяжитесь с ${hero.title}</p>
+    </section>
+    <section class="content">
+      <div class="container">
+        <form class="contact-form" onsubmit="event.preventDefault(); alert('Спасибо! Мы свяжемся с вами.');">
+          <div class="form-group"><label>Ваше имя</label><input type="text" placeholder="Иван Иванов" required></div>
+          <div class="form-group"><label>Email</label><input type="email" placeholder="ivan@example.com" required></div>
+          <div class="form-group"><label>Сообщение</label><textarea placeholder="Ваше сообщение..." required></textarea></div>
+          <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="fas fa-paper-plane"></i> Отправить</button>
+        </form>
+      </div>
+    </section>`;
+  }
+  
+  generateServicesPage(template, intent) {
+    const { hero } = template;
+    return `
+    <section class="page-hero">
+      <h1>Услуги</h1>
+      <p>Профессиональные решения от ${hero.title}</p>
+    </section>
+    <section class="content">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-label">Наши услуги</span>
+          <h2 class="section-title">Что мы <span>предлагаем</span></h2>
+        </div>
+        <div class="features-grid">
+          <div class="feature-card"><div class="feature-icon"><i class="fas fa-star"></i></div><h3>Базовый</h3><p>Набор базовых услуг</p></div>
+          <div class="feature-card"><div class="feature-icon"><i class="fas fa-crown"></i></div><h3>Премиум</h3><p>Полный комплекс услуг</p></div>
+          <div class="feature-card"><div class="feature-icon"><i class="fas fa-headset"></i></div><h3>Поддержка</h3><p>Постоянная помощь 24/7</p></div>
+        </div>
+      </div>
+    </section>`;
+  }
+  
+  generateBlogPage(template, intent) {
+    return `
+    <section class="page-hero">
+      <h1>Блог</h1>
+      <p>Полезные статьи и новости</p>
+    </section>
+    <section class="content">
+      <div class="container">
+        <div class="content-grid">
+          <div class="content-card"><div class="content-card-image"><i class="fas fa-book-open"></i></div><div class="content-card-body"><h3>Первые шаги</h3><p>Руководство для новичков</p></div></div>
+          <div class="content-card"><div class="content-card-image"><i class="fas fa-star"></i></div><div class="content-card-body"><h3>Советы экспертов</h3><p>Проверенные методики</p></div></div>
+        </div>
+      </div>
+    </section>`;
+  }
+  
+  generatePortfolioPage(template, intent) {
+    return `
+    <section class="page-hero">
+      <h1>Портфолио</h1>
+      <p>Наши лучшие работы</p>
+    </section>
+    <section class="content">
+      <div class="container">
+        <div class="content-grid">
+          <div class="content-card"><div class="content-card-image"><i class="fas fa-image"></i></div><div class="content-card-body"><h3>Проект 1</h3><p>Описание работы</p></div></div>
+          <div class="content-card"><div class="content-card-image"><i class="fas fa-image"></i></div><div class="content-card-body"><h3>Проект 2</h3><p>Описание работы</p></div></div>
+        </div>
+      </div>
+    </section>`;
   }
 }
 
