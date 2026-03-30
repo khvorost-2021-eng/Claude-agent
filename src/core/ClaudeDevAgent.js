@@ -1062,43 +1062,42 @@ document.addEventListener('DOMContentLoaded', () => {
   async generateCodePollinations(prompt, options = {}) {
     console.log('=== generateCodePollinations (FREE) called ===');
     try {
-      // Pollinations text generation API (completely free)
-      const encodedPrompt = encodeURIComponent(prompt);
+      // Better prompt for code generation
+      const codePrompt = `You are an expert web developer. Create complete HTML/CSS/JS files. ${prompt}\n\nOutput format: filename.ext followed by code in triple backticks.`;
+      const encodedPrompt = encodeURIComponent(codePrompt);
       const seed = Date.now();
       
-      // Use Pollinations text API with a code-optimized prompt
-      const url = `https://text.pollinations.ai/${encodedPrompt}?seed=${seed}&json=false`;
+      // Use Pollinations text API with better parameters
+      const url = `https://text.pollinations.ai/${encodedPrompt}?seed=${seed}&json=false&private=true`;
       
       console.log('Fetching from Pollinations Text API...');
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 90000); // 90 second timeout
+      const timeout = setTimeout(() => controller.abort(), 120000);
       
       const response = await fetch(url, {
         signal: controller.signal,
-        headers: {
-          'Accept': 'text/plain',
-        }
+        headers: { 'Accept': 'text/plain' }
       });
       
       clearTimeout(timeout);
       
-      if (!response.ok) {
-        throw new Error(`Pollinations API error: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`Pollinations API error: ${response.status}`);
       
       const content = await response.text();
       
-      if (content && content.length > 100) {
+      if (content && content.length > 200) {
         console.log('✅ Pollinations content length:', content.length);
-        console.log('Preview:', content.substring(0, 300));
         
-        // Check if response looks like code/files
+        // Check for valid code format
         if (content.includes('```') || content.includes('<!DOCTYPE') || content.includes('<html')) {
+          console.log('✅ Valid code detected');
           return content;
         }
         
-        // If not code format, wrap it
-        return `index.html\n\`\`\`html\n${content}\n\`\`\``;
+        // Wrap plain HTML
+        if (content.includes('<')) {
+          return `index.html\n\`\`\`html\n${content}\n\`\`\``;
+        }
       }
       
       return null;

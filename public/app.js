@@ -155,9 +155,9 @@ class AgentClient {
     // Send button and textarea
     this.sendBtn.addEventListener('click', () => this.sendMessage());
     
-    // Ctrl+Enter to send, auto-resize
+    // Enter to send, Shift+Enter for new line
     this.messageInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && e.ctrlKey) {
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         this.sendMessage();
       }
@@ -501,8 +501,18 @@ class AgentClient {
     messageDiv.innerHTML = `
       <div class="message-content">
         <p>🎨 Сгенерировано изображение:</p>
-        <img src="${imageUrl}" alt="${prompt}" style="max-width: 100%; border-radius: 8px; margin-top: 8px;">
-        <p style="font-size: 0.8rem; color: var(--text2); margin-top: 4px;">${prompt}</p>
+        <div class="image-container" style="position: relative; max-width: 100%; margin-top: 8px;">
+          <img src="${imageUrl}" alt="${prompt}" style="max-width: 100%; max-height: 400px; border-radius: 8px; display: block;" 
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+          <div style="display: none; padding: 20px; background: var(--bg2); border-radius: 8px; text-align: center; color: var(--text2);">
+            ⚠️ Изображение недоступно<br>
+            <a href="${imageUrl}" target="_blank" style="color: var(--accent);">Открыть в новой вкладке</a>
+          </div>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text2); margin-top: 8px;">${prompt}</p>
+        <p style="font-size: 0.8rem; margin-top: 4px;">
+          <a href="${imageUrl}" download style="display: inline-block; padding: 6px 12px; background: var(--accent); color: white; text-decoration: none; border-radius: 4px; font-size: 0.75rem;">⬇ Скачать</a>
+        </p>
       </div>
     `;
     
