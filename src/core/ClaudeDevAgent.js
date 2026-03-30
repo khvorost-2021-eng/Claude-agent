@@ -979,29 +979,512 @@ content
     await this.generateFlutterProject(project, description);
   }
 
+  // ===== INTERNET SEARCH SERVICE =====
+  
+  async searchInternet(query, numResults = 5) {
+    console.log('=== searchInternet called ===');
+    console.log('Query:', query);
+    
+    try {
+      // Using DuckDuckGo HTML version (no API key required)
+      const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
+      
+      const response = await fetch(searchUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      });
+      
+      if (!response.ok) {
+        console.error('Search failed:', response.status);
+        return null;
+      }
+      
+      const html = await response.text();
+      
+      // Parse results from HTML
+      const results = this.parseSearchResults(html, numResults);
+      console.log('Found', results.length, 'results');
+      
+      return results;
+    } catch (error) {
+      console.error('Internet search error:', error.message);
+      return null;
+    }
+  }
+  
+  parseSearchResults(html, limit) {
+    const results = [];
+    
+    // Simple regex-based parsing for DuckDuckGo results
+    const resultRegex = /<a[^>]*class="result__a"[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/gi;
+    const snippetRegex = /<a[^>]*class="result__snippet"[^>]*>(.*?)<\/a>/gi;
+    
+    let match;
+    const links = [];
+    const titles = [];
+    
+    while ((match = resultRegex.exec(html)) !== null && links.length < limit) {
+      const href = match[1];
+      const title = match[2].replace(/<[^>]*>/g, ''); // Strip HTML tags
+      
+      // DuckDuckGo uses redirect URLs
+      if (href.includes('duckduckgo.com/l/')) {
+        // Extract actual URL from the redirect
+        const urlMatch = href.match(/uddg=([^&]*)/);
+        if (urlMatch) {
+          const actualUrl = decodeURIComponent(urlMatch[1]);
+          links.push(actualUrl);
+          titles.push(title);
+        }
+      } else {
+        links.push(href);
+        titles.push(title);
+      }
+    }
+    
+    // Get snippets
+    const snippets = [];
+    while ((match = snippetRegex.exec(html)) !== null && snippets.length < limit) {
+      const snippet = match[1].replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+      snippets.push(snippet);
+    }
+    
+    // Combine results
+    for (let i = 0; i < Math.min(links.length, limit); i++) {
+      results.push({
+        title: titles[i] || 'No title',
+        url: links[i],
+        snippet: snippets[i] || ''
+      });
+    }
+    
+    return results;
+  }
+  
+  async fetchWebpageContent(url, maxLength = 3000) {
+    console.log('=== fetchWebpageContent called ===');
+    console.log('URL:', url);
+    
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        timeout: 10000
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to fetch:', response.status);
+        return null;
+      }
+      
+      const html = await response.text();
+      
+      // Extract text content (basic HTML stripping)
+      let text = html
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
+        .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
+        .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      // Truncate to maxLength
+      if (text.length > maxLength) {
+        text = text.substring(0, maxLength) + '...';
+      }
+      
+      console.log('Extracted', text.length, 'characters');
+      return text;
+    } catch (error) {
+      console.error('Fetch webpage error:', error.message);
+      return null;
+    }
+  }
+  
+  async researchTopic(topic, depth = 'basic') {
+    console.log('=== researchTopic called ===');
+    console.log('Topic:', topic);
+    console.log('Depth:', depth);
+    
+    // Search for information
+    const searchResults = await this.searchInternet(topic, depth === 'deep' ? 8 : 5);
+    
+    if (!searchResults || searchResults.length === 0) {
+      console.log('No search results found');
+      return null;
+    }
+    
+    // Fetch content from top results
+    const researchData = {
+      topic,
+      searchResults: [],
+      combinedContent: ''
+    };
+    
+    const maxPages = depth === 'deep' ? 5 : 3;
+    let contentLength = 0;
+    const maxTotalLength = 8000;
+    
+    for (let i = 0; i < Math.min(searchResults.length, maxPages); i++) {
+      const result = searchResults[i];
+      
+      // Skip certain domains that block scrapers
+      if (result.url.includes('facebook.com') || 
+          result.url.includes('twitter.com') ||
+          result.url.includes('linkedin.com')) {
+        continue;
+      }
+      
+      const content = await this.fetchWebpageContent(result.url, 2500);
+      
+      if (content) {
+        researchData.searchResults.push({
+          title: result.title,
+          url: result.url,
+          snippet: result.snippet,
+          content: content
+        });
+        
+        contentLength += content.length;
+        if (contentLength >= maxTotalLength) break;
+      }
+    }
+    
+    // Combine all content for AI processing
+    researchData.combinedContent = researchData.searchResults
+      .map(r => `Source: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`)
+      .join('\n\n---\n\n');
+    
+    console.log('Research complete. Sources:', researchData.searchResults.length);
+    console.log('Total content length:', researchData.combinedContent.length);
+    
+    return researchData;
+  }
+
+  // ===== ADVANCED WEBSITE GENERATION (Template-Free) =====
+  
   async generateWebProject(project, description) {
     console.log('=== generateWebProject called ===');
     console.log('API Key exists:', !!this.apiKey);
-    console.log('API Key prefix:', this.apiKey ? this.apiKey.substring(0, 10) + '...' : 'none');
     console.log('Provider:', this.provider);
     
-    // Try AI-powered generation first
+    // Always use AI-powered generation with internet research
     if (this.apiKey) {
       try {
-        console.log('Using AI to generate custom website...');
-        await this.generateWebProjectAI(project, description);
+        console.log('Using AI with internet research to generate custom website...');
+        await this.generateWebProjectAdvanced(project, description);
         return;
       } catch (error) {
-        console.error('AI generation failed, falling back to templates:', error.message);
-        console.error('Full error:', error);
+        console.error('Advanced generation failed:', error.message);
+        // Last resort fallback - simplified generation
+        console.log('Using emergency fallback');
+        await this.generateMinimalSite(project, description);
       }
     } else {
-      console.log('No API key found, skipping AI generation');
+      console.log('No API key, using minimal generation');
+      await this.generateMinimalSite(project, description);
+    }
+  }
+  
+  async generateWebProjectAdvanced(project, description) {
+    console.log('=== generateWebProjectAdvanced called ===');
+    
+    // Step 1: Research the topic if it's content-heavy
+    let researchContext = '';
+    const needsResearch = this.shouldResearchTopic(description);
+    
+    if (needsResearch) {
+      console.log('Researching topic...');
+      const research = await this.researchTopic(description, 'basic');
+      if (research) {
+        researchContext = `\n\nRESEARCH DATA:\n${research.combinedContent.substring(0, 4000)}\n\nUse this research to create accurate, up-to-date content.`;
+      }
     }
     
-    // Fallback to template generation
-    console.log('Using template mode for website generation');
-    await this.generateWebProjectTemplate(project, description);
+    // Step 2: Generate flexible website structure
+    const structurePrompt = `You are creating a website based on this request: "${description}"
+
+${researchContext}
+
+ANALYZE the request and determine:
+1. What TYPE of website is needed (portfolio, blog, business, landing page, dashboard, etc.)
+2. What PAGES are necessary (don't create unnecessary pages)
+3. What FEATURES are needed (forms, animations, galleries, etc.)
+
+Respond with a JSON structure like this:
+{
+  "type": "portfolio|business|blog|landing|dashboard|other",
+  "pages": ["index", "about", "contact"],
+  "features": ["responsive", "animations", "forms"],
+  "style": "modern|minimal|colorful|professional",
+  "theme": "brief description of color scheme and vibe"
+}
+
+Only respond with valid JSON, no other text.`;
+
+    const structureResponse = await this.generateCode(structurePrompt, { type: 'web' });
+    let structure;
+    
+    try {
+      // Extract JSON from response
+      const jsonMatch = structureResponse.match(/\{[\s\S]*\}/);
+      structure = jsonMatch ? JSON.parse(jsonMatch[0]) : this.getDefaultStructure(description);
+    } catch (e) {
+      console.log('Failed to parse structure, using default');
+      structure = this.getDefaultStructure(description);
+    }
+    
+    console.log('Website structure:', structure);
+    
+    // Step 3: Generate each page with flexible structure
+    const files = {};
+    
+    // Generate CSS first (shared styles)
+    const cssPrompt = `Create modern CSS for a ${structure.type} website.
+Theme: ${structure.theme || 'modern professional'}
+Features needed: ${structure.features?.join(', ') || 'responsive, clean design'}
+
+Requirements:
+- Use CSS custom properties (variables) for colors
+- Mobile-first responsive design
+- Modern layout techniques (flexbox, grid)
+- Smooth animations and transitions
+- Professional typography
+
+Output ONLY the CSS content, no markdown formatting.`;
+
+    const cssResponse = await this.generateCode(cssPrompt, { type: 'web' });
+    files['styles.css'] = this.extractCodeBlock(cssResponse) || cssResponse;
+    
+    // Generate each page
+    for (const pageName of structure.pages || ['index']) {
+      const isHome = pageName === 'index' || pageName === 'home';
+      
+      const pagePrompt = `Create ${isHome ? 'homepage' : pageName + ' page'} for: "${description}"
+
+Website type: ${structure.type}
+Theme: ${structure.theme || 'modern'}
+Features: ${structure.features?.join(', ') || 'responsive design'}
+
+${researchContext.substring(0, 2000)}
+
+Requirements:
+- Link to styles.css: <link rel="stylesheet" href="styles.css">
+- Include navigation linking to: ${structure.pages?.map(p => p + '.html').join(', ')}
+- Use semantic HTML5
+- Include favicon
+- ${isHome ? 'Make it impressive with hero section, clear value proposition' : 'Focus on the specific purpose of this page'}
+- Use FontAwesome icons via CDN
+- Modern, clean design
+- Responsive layout
+
+Output format:
+${pageName}.html
+\`\`\`html
+[complete HTML code]
+\`\`\``;
+
+      const pageResponse = await this.generateCode(pagePrompt, { type: 'web' });
+      const parsedFiles = this.parseFilesFromResponse(pageResponse);
+      
+      // Use parsed file or extract code block
+      const htmlContent = parsedFiles[`${pageName}.html`] || this.extractCodeBlock(pageResponse) || pageResponse;
+      files[`${pageName}.html`] = htmlContent;
+    }
+    
+    // Generate JavaScript if needed
+    if (structure.features?.some(f => f.includes('animation') || f.includes('interactive') || f.includes('form'))) {
+      const jsPrompt = `Create JavaScript for a ${structure.type} website with these features: ${structure.features.join(', ')}
+
+Requirements:
+- Mobile menu toggle
+- Smooth scroll behavior
+- Form handling (if forms exist)
+- Any interactive features mentioned
+- Clean, modern ES6+
+
+Output ONLY the JavaScript content.`;
+
+      const jsResponse = await this.generateCode(jsPrompt, { type: 'web' });
+      files['main.js'] = this.extractCodeBlock(jsResponse) || jsResponse;
+      
+      // Add script tag to all HTML files
+      for (const [filename, content] of Object.entries(files)) {
+        if (filename.endsWith('.html') && !content.includes('<script src="main.js">')) {
+          files[filename] = content.replace('</body>', '<script src="main.js"></script>\n</body>');
+        }
+      }
+    }
+    
+    // Step 4: Save all files
+    for (const [filename, content] of Object.entries(files)) {
+      if (content && content.trim().length > 0) {
+        const filepath = path.join(project.path, filename);
+        fs.writeFileSync(filepath, content);
+        project.files.push(filename);
+        console.log('Created file:', filename);
+      }
+    }
+    
+    console.log(`Generated ${Object.keys(files).length} files via AI without templates`);
+  }
+  
+  shouldResearchTopic(description) {
+    // Check if the description indicates need for factual/research content
+    const researchKeywords = [
+      'о ', 'про ', 'информация', 'факты', 'новости', 'тренды', 
+      'about', 'information', 'facts', 'news', 'trends',
+      'компания', 'услуги', 'продукт', 'company', 'services', 'product'
+    ];
+    
+    const desc = description.toLowerCase();
+    return researchKeywords.some(kw => desc.includes(kw.toLowerCase()));
+  }
+  
+  getDefaultStructure(description) {
+    // Analyze description to suggest appropriate structure
+    const desc = description.toLowerCase();
+    
+    if (desc.includes('portfolio') || desc.includes('портфолио')) {
+      return {
+        type: 'portfolio',
+        pages: ['index', 'about', 'projects', 'contact'],
+        features: ['responsive', 'animations', 'gallery'],
+        style: 'modern',
+        theme: 'Clean portfolio with accent colors'
+      };
+    }
+    
+    if (desc.includes('business') || desc.includes('компания') || desc.includes('услуги')) {
+      return {
+        type: 'business',
+        pages: ['index', 'services', 'about', 'contact'],
+        features: ['responsive', 'forms', 'professional'],
+        style: 'professional',
+        theme: 'Corporate blue and white'
+      };
+    }
+    
+    if (desc.includes('blog') || desc.includes('блог')) {
+      return {
+        type: 'blog',
+        pages: ['index', 'about', 'contact'],
+        features: ['responsive', 'clean'],
+        style: 'minimal',
+        theme: 'Clean reading-focused design'
+      };
+    }
+    
+    if (desc.includes('landing') || desc.includes('лендинг')) {
+      return {
+        type: 'landing',
+        pages: ['index'],
+        features: ['responsive', 'animations', 'forms'],
+        style: 'colorful',
+        theme: 'Vibrant conversion-focused design'
+      };
+    }
+    
+    // Default
+    return {
+      type: 'website',
+      pages: ['index', 'about', 'contact'],
+      features: ['responsive', 'clean'],
+      style: 'modern',
+      theme: 'Modern professional design'
+    };
+  }
+  
+  extractCodeBlock(content) {
+    if (!content) return null;
+    
+    // Try to extract from markdown code block
+    const blockMatch = content.match(/```(?:\w+)?\n?([\s\S]*?)```/);
+    if (blockMatch) {
+      return blockMatch[1].trim();
+    }
+    
+    return null;
+  }
+  
+  async generateMinimalSite(project, description) {
+    // Emergency fallback - create minimal working site
+    console.log('Creating minimal site as fallback');
+    
+    const title = description.split(' ').slice(0, 5).join(' ') || 'Website';
+    
+    const html = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title}</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌐</text></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6; 
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 { 
+            font-size: 2.5rem; 
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        p { font-size: 1.2rem; margin-bottom: 1.5rem; }
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 30px;
+            font-weight: bold;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>${title}</h1>
+        <p>${description}</p>
+        <p>Это базовая версия сайта. Для полной версии требуется API ключ.</p>
+        <a href="#" class="btn">Узнать больше</a>
+    </div>
+</body>
+</html>`;
+    
+    const filepath = path.join(project.path, 'index.html');
+    fs.writeFileSync(filepath, html);
+    project.files.push('index.html');
+    
+    console.log('Created minimal fallback site');
   }
 
   async generateWebProjectAI(project, description) {
