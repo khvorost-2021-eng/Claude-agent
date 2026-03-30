@@ -258,21 +258,42 @@ async function handleCreateWebsite(intent, agent) {
   };
 }
 
-async function handleChat(intent, agent) {
-  // Use AI to generate a conversational response
-  const response = await agent.generateResponse(intent.description);
+// Store chat history for each WebSocket connection
+const chatHistories = new Map();
+
+// Helper to get or create chat history for a connection
+function getChatHistory(ws) {
+  if (!chatHistories.has(ws)) {
+    chatHistories.set(ws, []);
+  }
+  return chatHistories.get(ws);
+}
+
+// Helper to add message to history
+function addToHistory(ws, role, content) {
+  const history = getChatHistory(ws);
+  history.push({ role, content, timestamp: new Date().toISOString() });
+  // Keep only last 20 messages to prevent memory issues
+  if (history.length > 20) {
+    history.shift();
+  }
+}
+
+async function handleChat(intent, agent, history = []) {
+  // Use AI to generate a conversational response with history context
+  const response = await agent.generateResponse(intent.description, history);
   return {
     type: 'chat_response',
     content: response || 'Я вас понял! Чем ещё могу помочь?'
   };
 }
 
-async function handleFeedback(intent, agent) {
+async function handleFeedback(intent, agent, history = []) {
   // Log the feedback for analysis
   console.log('User feedback/issue:', intent.description);
   
-  // Generate a helpful response
-  const response = await agent.generateResponse(`Пользователь сообщает о проблеме: ${intent.description}. Предложи решение.`);
+  // Generate a helpful response with context
+  const response = await agent.generateResponse(`Пользователь сообщает о проблеме: ${intent.description}. Предложи решение.`, history);
   
   return {
     type: 'feedback_received',
@@ -405,11 +426,17 @@ app.get('/api/settings', (req, res) => {
 wss.on('connection', (ws) => {
   console.log('Client connected');
   
+  // Initialize chat history for this connection
+  chatHistories.set(ws, []);
+  
   ws.on('message', async (data) => {
     const msg = JSON.parse(data);
     
     if (msg.type === 'chat') {
       const intent = parseIntent(msg.content);
+      
+      // Add user message to history
+      addToHistory(ws, 'user', msg.content);
       
       ws.send(JSON.stringify({
         type: 'thinking',
@@ -417,6 +444,9 @@ wss.on('connection', (ws) => {
       }));
       
       try {
+        // Get current chat history
+        const history = getChatHistory(ws);
+        
         // Broadcast progress updates
         switch (intent.type) {
           case 'create_app':
@@ -444,8 +474,13 @@ wss.on('connection', (ws) => {
           case 'chat':
             try {
               console.log('Processing chat intent:', intent.description);
-              const chatResponse = await handleChat(intent, agent);
+              console.log('History length:', history.length);
+              const chatResponse = await handleChat(intent, agent, history);
               console.log('Chat response:', chatResponse);
+              
+              // Add bot response to history
+              addToHistory(ws, 'assistant', chatResponse.content);
+              
               ws.send(JSON.stringify({ 
                 type: 'chat', 
                 content: chatResponse.content 
@@ -462,7 +497,12 @@ wss.on('connection', (ws) => {
           case 'feedback':
             try {
               console.log('Processing feedback intent:', intent.description);
-              const feedbackResponse = await handleFeedback(intent, agent);
+              console.log('History length:', history.length);
+              const feedbackResponse = await handleFeedback(intent, agent, history);
+              
+              // Add bot response to history
+              addToHistory(ws, 'assistant', feedbackResponse.content);
+              
               ws.send(JSON.stringify({ 
                 type: 'chat', 
                 content: feedbackResponse.content 
@@ -507,7 +547,11 @@ wss.on('connection', (ws) => {
             
           default:
             // Treat anything else as a chat message
-            const defaultResponse = await handleChat(intent, agent);
+            const defaultResponse = await handleChat(intent, agent, history);
+            
+            // Add bot response to history
+            addToHistory(ws, 'assistant', defaultResponse.content);
+            
             ws.send(JSON.stringify({ 
               type: 'chat', 
               content: defaultResponse.content 
@@ -525,6 +569,8 @@ wss.on('connection', (ws) => {
   
   ws.on('close', () => {
     console.log('Client disconnected');
+    // Clean up chat history for this connection
+    chatHistories.delete(ws);
   });
 });
 

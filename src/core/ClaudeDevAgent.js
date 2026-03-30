@@ -475,27 +475,43 @@ When responding to users:
 You can also create web projects, Android apps, and Flutter apps when users request them.`;
   }
 
-  async generateResponse(message) {
+  async generateResponse(message, history = []) {
     console.log('=== generateResponse called ===');
     console.log('Message:', message);
+    console.log('History length:', history.length);
     console.log('API Key exists:', !!this.apiKey);
     console.log('Provider:', this.provider);
     
     if (this.apiKey) {
-      const chatPrompt = `User message: "${message}"
-
-Respond naturally as ClaudeDev assistant. Be helpful, friendly, and conversational.`;
+      // Build messages array with history
+      const messages = [
+        { role: 'system', content: this.getChatSystemPrompt() }
+      ];
+      
+      // Add history (last 10 messages to keep context manageable)
+      const recentHistory = history.slice(-10);
+      for (const msg of recentHistory) {
+        messages.push({
+          role: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        });
+      }
+      
+      // Add current message
+      messages.push({ role: 'user', content: message });
+      
       let result;
       console.log('Calling chat provider:', this.provider);
+      console.log('Total messages in context:', messages.length);
       
       if (this.provider === 'groq') {
-        result = await this.generateChatGroq(chatPrompt);
+        result = await this.generateChatWithMessagesGroq(messages);
       } else if (this.provider === 'openai') {
-        result = await this.generateChatOpenAI(chatPrompt);
+        result = await this.generateChatWithMessagesOpenAI(messages);
       } else if (this.provider === 'openrouter') {
-        result = await this.generateChatOpenRouter(chatPrompt);
+        result = await this.generateChatWithMessagesOpenRouter(messages);
       } else {
-        result = await this.generateChatAnthropic(chatPrompt);
+        result = await this.generateChatWithMessagesAnthropic(messages);
       }
       
       console.log('Chat result received:', !!result);
@@ -646,6 +662,124 @@ Respond naturally as ClaudeDev assistant. Be helpful, friendly, and conversation
           max_tokens: 500,
           system: this.getChatSystemPrompt(),
           messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      if (data.content && data.content[0]) return data.content[0].text;
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // New methods for chat with message history
+  async generateChatWithMessagesGroq(messages) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-8b-instant',
+          messages: messages,
+          temperature: 0.8,
+          max_tokens: 500
+        })
+      });
+      
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        return data.choices[0].message.content;
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async generateChatWithMessagesOpenAI(messages) {
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: messages,
+          temperature: 0.8,
+          max_tokens: 500
+        })
+      });
+      
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        return data.choices[0].message.content;
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async generateChatWithMessagesOpenRouter(messages) {
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`,
+          'HTTP-Referer': 'https://claudedev.example.com',
+          'X-Title': 'ClaudeDev Agent'
+        },
+        body: JSON.stringify({
+          model: 'anthropic/claude-3-haiku',
+          messages: messages,
+          temperature: 0.8,
+          max_tokens: 500
+        })
+      });
+      
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        return data.choices[0].message.content;
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async generateChatWithMessagesAnthropic(messages) {
+    try {
+      // Extract system message and user/assistant messages
+      const systemMsg = messages.find(m => m.role === 'system');
+      const otherMsgs = messages.filter(m => m.role !== 'system');
+      
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-haiku-20240307',
+          max_tokens: 500,
+          system: systemMsg ? systemMsg.content : this.getChatSystemPrompt(),
+          messages: otherMsgs
         })
       });
       
