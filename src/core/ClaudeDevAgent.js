@@ -422,53 +422,48 @@ Output ONLY valid JSON, no markdown, no comments.`;
 
   // Generate AI-powered full HTML page
   async generateAIPage(pageName, content, topic, intent, heroImage) {
-    const pagePrompt = `Create complete HTML code for a ${pageName} page about "${topic}".
-    
-Use this content:
-- Title: ${content.title}
-- Headline: ${content.headline}
-- Subtitle: ${content.subtitle}
-- Description: ${content.description}
-- Features: ${JSON.stringify(content.features)}
-- About Title: ${content.aboutTitle}
-- About Text: ${content.aboutText}
+    const pagePrompt = `Create a complete, valid HTML page for "${topic}" - ${pageName} page.
 
-Generate a modern, beautiful, responsive HTML page with inline CSS. Include:
-- Modern CSS with glassmorphism effects
-- Gradient backgrounds
-- Smooth animations
-- Professional typography
-- Responsive design
-- Navigation menu
-- Hero section with image placeholder
-- Content sections
-- Footer
+PAGE DETAILS:
+- Topic: ${topic}
+- Page: ${pageName}
+- Title: ${content.title || topic}
 
-Output ONLY the HTML code, no markdown, no explanations. The HTML must be complete and valid.`;
+REQUIREMENTS:
+1. Output ONLY valid HTML5 code
+2. Include modern CSS styling inline in <style> tag
+3. Make it visually stunning with gradients and modern design
+4. Include navigation, hero section, content, footer
+5. Use this color theme: ${content.heroGradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}
+6. Responsive design
+7. NO markdown, NO explanations - ONLY HTML code
+
+Start with <!DOCTYPE html> and end with </html>.`;
 
     try {
+      console.log(`🤖 AI generating ${pageName} page for ${topic}...`);
       const encoded = encodeURIComponent(pagePrompt);
       const url = `https://text.pollinations.ai/${encoded}?seed=${Date.now()}`;
       
-      const response = await fetch(url);
+      const response = await fetch(url, { 
+        headers: { 'Accept': 'text/plain' },
+        timeout: 30000 
+      });
       let html = await response.text();
       
       // Clean up the response
-      html = html.replace(/```html\n?/g, '').replace(/```\n?/g, '').trim();
+      html = html.replace(/```html\n?/gi, '').replace(/```\n?/g, '').trim();
       
-      // Ensure it has proper HTML structure
-      if (!html.includes('<!DOCTYPE')) {
-        html = `<!DOCTYPE html>\n${html}`;
-      }
-      if (!html.includes('<html')) {
-        html = html.replace('<!DOCTYPE html>', '<!DOCTYPE html>\n<html lang="ru">');
-        html += '\n</html>';
+      // Validate HTML
+      if (!html.includes('<!DOCTYPE') || !html.includes('<html') || html.length < 1000) {
+        console.log(`⚠️ AI returned invalid/short HTML for ${pageName}, length: ${html.length}`);
+        return null;
       }
       
-      console.log(`✅ AI generated ${pageName} page`);
+      console.log(`✅ AI generated ${pageName} page successfully (${html.length} chars)`);
       return html;
     } catch (e) {
-      console.error(`AI page generation error for ${pageName}:`, e.message);
+      console.error(`❌ AI page generation error for ${pageName}:`, e.message);
       return null;
     }
   }
@@ -502,22 +497,42 @@ Output ONLY the HTML code, no markdown, no explanations. The HTML must be comple
     
     // Generate pages with FULL AI HTML generation
     const pages = ['index', 'about', 'services', 'contact'];
+    let aiSuccessCount = 0;
+    let templateFallbackCount = 0;
+    
     for (const pageName of pages) {
       console.log(`🤖 Generating ${pageName} page with AI...`);
       
-      // Try AI generation first
-      let html = await this.generateAIPage(pageName, content, topic, intent, heroImage);
+      // Try AI generation first with retry
+      let html = null;
+      let attempts = 0;
+      const maxAttempts = 2;
       
-      // Fallback to template if AI fails
-      if (!html || html.length < 500) {
-        console.log(`⚠️ AI failed for ${pageName}, using smart template fallback`);
+      while (!html && attempts < maxAttempts) {
+        attempts++;
+        html = await this.generateAIPage(pageName, content, topic, intent, heroImage);
+        if (!html && attempts < maxAttempts) {
+          console.log(`🔄 Retrying ${pageName} page generation (attempt ${attempts + 1})...`);
+          await new Promise(r => setTimeout(r, 1000)); // Wait 1 second before retry
+        }
+      }
+      
+      // Fallback to template only if AI completely failed
+      if (!html || html.length < 1000) {
+        console.log(`⚠️ AI failed for ${pageName} after ${attempts} attempts, using template fallback`);
         html = this.generatePageWithContent(pageName, content, topic, intent, heroImage);
+        templateFallbackCount++;
+      } else {
+        aiSuccessCount++;
+        console.log(`✅ AI successfully generated ${pageName} page (${html.length} chars)`);
       }
       
       const filename = pageName === 'index' ? 'index.html' : `${pageName}.html`;
       fs.writeFileSync(path.join(project.path, filename), html);
       project.files.push(filename);
     }
+    
+    console.log(`📊 AI generation: ${aiSuccessCount}/${pages.length} pages, Template fallback: ${templateFallbackCount} pages`);
     
     // Generate CSS with AI styling
     const css = this.generateSmartCSS({ 

@@ -679,11 +679,11 @@ async function handleGenerateImage(intent, agent) {
       };
     }
     
-    // ULTRA FAST: Use small size (384x384) for instant generation
+    // ULTRA FAST: Use small size (384x384) for instant generation, NO LOGO
     const prompt = encodeURIComponent(`${subject}`);
     const seed = Date.now();
-    // 384x384 for maximum speed, no nologo for faster processing
-    const imageUrl = `https://image.pollinations.ai/prompt/${prompt}?width=384&height=384&seed=${seed}`;
+    // 384x384 for maximum speed, nologo to remove watermark
+    const imageUrl = `https://image.pollinations.ai/prompt/${prompt}?width=384&height=384&nologo=true&seed=${seed}`;
     
     console.log('Generated FAST image URL:', imageUrl);
     

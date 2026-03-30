@@ -580,34 +580,49 @@ class AgentClient {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message bot';
     
-    const label = isImageSequence ? '🎬 Видео (покадровое):' : '🎬 Сгенерировано видео:';
+    const isRealVideo = videoUrl.endsWith('.mp4') || videoUrl.includes('.mp4');
+    const label = isRealVideo ? '🎬 Сгенерировано видео:' : '🖼️ Кадр (для видео нужен API ключ):';
     const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(videoUrl)}`;
     
-    // Always show video player - it will work for mp4 and show poster for images
-    messageDiv.innerHTML = `
-      <div class="message-content">
-        <p>${label} "${prompt}"</p>
-        <div style="position: relative; max-width: 100%; border-radius: 8px; overflow: hidden; margin-top: 8px; background: #000;">
+    if (isRealVideo) {
+      // Real MP4 video
+      messageDiv.innerHTML = `
+        <div class="message-content">
+          <p>${label} "${prompt}"</p>
           <video 
-            src="${videoUrl.endsWith('.mp4') ? videoUrl : ''}" 
-            poster="${proxyUrl}"
+            src="${videoUrl}" 
             controls 
             preload="metadata"
-            style="width: 100%; max-height: 400px; border-radius: 8px; display: block;"
-            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+            style="width: 100%; max-height: 400px; border-radius: 8px; margin-top: 8px;"
           ></video>
-          <img 
-            src="${proxyUrl}" 
-            alt="${prompt}" 
-            style="width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px; display: none;"
-          >
+          <p style="font-size: 0.8rem; color: var(--text2); margin-top: 8px;">${prompt}</p>
+          <p style="font-size: 0.8rem; margin-top: 4px;">
+            <a href="${videoUrl}" download style="display: inline-block; padding: 6px 12px; background: var(--bg3); color: var(--text); text-decoration: none; border-radius: 4px; font-size: 0.75rem;">⬇ Скачать</a>
+          </p>
         </div>
-        <p style="font-size: 0.8rem; color: var(--text2); margin-top: 8px;">${prompt}</p>
-        <p style="font-size: 0.8rem; margin-top: 4px;">
-          <a href="${videoUrl}" download style="display: inline-block; padding: 6px 12px; background: var(--bg3); color: var(--text); text-decoration: none; border-radius: 4px; font-size: 0.75rem;">⬇ Скачать</a>
-        </p>
-      </div>
-    `;
+      `;
+    } else {
+      // Static image (no API keys available)
+      messageDiv.innerHTML = `
+        <div class="message-content">
+          <p>${label} "${prompt}"</p>
+          <div style="position: relative; max-width: 100%; border-radius: 8px; overflow: hidden; margin-top: 8px; background: var(--bg2);">
+            <img 
+              src="${proxyUrl}" 
+              alt="${prompt}" 
+              style="width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px; display: block;"
+            >
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text2); margin-top: 8px;">${prompt}</p>
+          <p style="font-size: 0.75rem; color: var(--text2); margin-top: 8px; padding: 8px; background: var(--bg3); border-radius: 4px;">
+            💡 Для генерации реального видео добавьте API ключ: RUNWAY_API_KEY, REPLICATE_API_KEY или LUMA_API_KEY в файл .env
+          </p>
+          <p style="font-size: 0.8rem; margin-top: 4px;">
+            <a href="${videoUrl}" download style="display: inline-block; padding: 6px 12px; background: var(--bg3); color: var(--text); text-decoration: none; border-radius: 4px; font-size: 0.75rem;">⬇ Скачать кадр</a>
+          </p>
+        </div>
+      `;
+    }
     
     this.chatMessages.appendChild(messageDiv);
     this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
