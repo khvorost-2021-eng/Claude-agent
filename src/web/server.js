@@ -714,10 +714,16 @@ async function handleCreateApp(intent, agent) {
 }
 
 async function handleCreateWebsite(intent, agent) {
+  console.log('🏗️ Creating website with AI generation...');
   const project = await agent.createProject('GeneratedWebsite', intent.description, 'web');
+  
+  // Generate AI-powered site
+  console.log('🤖 Starting AI site generation...');
+  await agent.generateSiteWithAI(project, intent.description);
+  
   return {
     type: 'project_created',
-    content: `Создан новый веб-проект: ${project.name}`,
+    content: `✅ Создан новый веб-проект с AI: ${project.name}\n📄 Страницы: index.html, about.html, services.html, contact.html`,
     projectId: project.id,
     actions: ['download', 'deploy']
   };

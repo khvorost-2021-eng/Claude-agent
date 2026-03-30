@@ -352,29 +352,37 @@ class ClaudeDevAgent {
   }
   
   async generateSiteWithAI(project, description) {
-    console.log('=== AI SITE GENERATION (HYBRID) ===');
+    console.log('=== AI SITE GENERATION START ===');
+    console.log('Description:', description);
     
     const { analyzeIntent } = require('./websiteTemplates.js');
     const intent = analyzeIntent ? analyzeIntent(description) : { category: 'general', siteType: 'general' };
     const topic = this.extractTopic(description);
     
-    console.log(`🎯 Topic: ${topic}`);
+    console.log(`🎯 Topic extracted: "${topic}"`);
     console.log(`📂 Category: ${intent.category}, Site Type: ${intent.siteType}`);
     
     // STEP 1: Try Pollinations AI for content
     let aiContent = null;
     try {
-      console.log('🤖 Trying Pollinations AI for content...');
+      console.log('🤖 STEP 1: Getting AI content from Pollinations...');
       aiContent = await this.generateSiteContentWithAI(topic, intent);
+      if (aiContent) {
+        console.log('✅ AI content received:', JSON.stringify(aiContent, null, 2));
+      } else {
+        console.log('⚠️ AI content is null, using defaults');
+      }
     } catch (e) {
-      console.log('⚠️ AI content failed:', e.message);
+      console.log('❌ AI content failed:', e.message);
+      console.error(e);
     }
     
-    // STEP 2: Generate site with smart template + AI content
-    console.log('📄 Generating site with template + AI content...');
+    // STEP 2: Generate site with AI HTML generation
+    console.log('📄 STEP 2: Generating site with AI HTML...');
     await this.generateHybridSite(project, description, topic, intent, aiContent);
     
-    console.log(`✅ Hybrid site generated for "${topic}"`);
+    console.log(`✅ Site generation complete for "${topic}"`);
+    console.log('=== AI SITE GENERATION END ===');
   }
 
   // Generate content via Pollinations AI - FULL HTML
@@ -443,20 +451,32 @@ Start with <!DOCTYPE html> and end with </html>.`;
     try {
       console.log(`🤖 AI generating ${pageName} page for ${topic}...`);
       const encoded = encodeURIComponent(pagePrompt);
-      const url = `https://text.pollinations.ai/${encoded}?seed=${Date.now()}`;
+      const url = `https://text.pollinations.ai/${encoded}?seed=${Date.now()}&model=openai`;
+      
+      console.log(`🌐 Fetching from: ${url.substring(0, 100)}...`);
       
       const response = await fetch(url, { 
-        headers: { 'Accept': 'text/plain' },
-        timeout: 30000 
+        headers: { 
+          'Accept': 'text/plain, text/html, */*',
+          'User-Agent': 'Mozilla/5.0'
+        }
       });
+      
+      if (!response.ok) {
+        console.error(`❌ HTTP error: ${response.status}`);
+        return null;
+      }
+      
       let html = await response.text();
+      console.log(`📥 Received ${html.length} characters`);
       
       // Clean up the response
       html = html.replace(/```html\n?/gi, '').replace(/```\n?/g, '').trim();
       
-      // Validate HTML
-      if (!html.includes('<!DOCTYPE') || !html.includes('<html') || html.length < 1000) {
+      // Validate HTML - lowered to 500 chars
+      if (!html.includes('<!DOCTYPE') || !html.includes('<html') || html.length < 500) {
         console.log(`⚠️ AI returned invalid/short HTML for ${pageName}, length: ${html.length}`);
+        console.log(`📝 Preview: ${html.substring(0, 200)}`);
         return null;
       }
       
