@@ -408,7 +408,7 @@ Output ONLY valid JSON, no markdown, no comments.`;
     try {
       console.log('🤖 Fetching AI content from Pollinations...');
       const encoded = encodeURIComponent(contentPrompt);
-      const url = `https://text.pollinations.ai/${encoded}?json=true&seed=${Date.now()}`;
+      const url = `https://text.pollinations.ai/${encoded}?json=true&seed=${Date.now() % 4294967295}`;
       console.log('🌐 URL:', url.substring(0, 80) + '...');
       
       const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
@@ -462,7 +462,7 @@ Start with <!DOCTYPE html> and end with </html>.`;
     try {
       console.log(`🤖 AI generating ${pageName} page for ${topic}...`);
       const encoded = encodeURIComponent(pagePrompt);
-      const url = `https://text.pollinations.ai/${encoded}?seed=${Date.now()}`;
+      const url = `https://text.pollinations.ai/${encoded}?seed=${Date.now() % 4294967295}`;
       
       console.log(`🌐 Fetching from: ${url.substring(0, 100)}...`);
       
@@ -525,7 +525,7 @@ Start with <!DOCTYPE html> and end with </html>.`;
     };
 
     // Generate hero image via Pollinations
-    const heroImage = `https://image.pollinations.ai/prompt/${encodeURIComponent(`modern ${topic} website hero, professional, clean design`)}?width=1200&height=600&nologo=true&seed=${Date.now()}`;
+    const heroImage = `https://image.pollinations.ai/prompt/${encodeURIComponent(`modern ${topic} website hero, professional, clean design`)}?width=1200&height=600&nologo=true&seed=${Date.now() % 4294967295}`;
     
     // Generate pages with FULL AI HTML generation
     const pages = ['index', 'about', 'services', 'contact'];

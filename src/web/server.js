@@ -193,6 +193,59 @@ app.post('/api/chat-history/:sessionId', (req, res) => {
   }
 });
 
+// Deploy website endpoint
+app.post('/api/projects/:id/deploy', async (req, res) => {
+  try {
+    const project = agent.getProject(req.params.id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    
+    // Create a zip of the project files
+    const zipPath = path.join(project.path, '..', `${project.id}-deploy.zip`);
+    const archiver = await import('archiver');
+    const archive = archiver.default('zip', { zlib: { level: 9 } });
+    const output = fs.createWriteStream(zipPath);
+    
+    await new Promise((resolve, reject) => {
+      output.on('close', resolve);
+      archive.on('error', reject);
+      archive.pipe(output);
+      archive.directory(project.path, false);
+      archive.finalize();
+    });
+    
+    res.json({ 
+      success: true, 
+      message: 'Website ready for deployment',
+      downloadUrl: `/api/projects/${project.id}/download`,
+      deployPath: project.path,
+      files: project.files
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Download project zip endpoint
+app.get('/api/projects/:id/download', async (req, res) => {
+  try {
+    const project = agent.getProject(req.params.id);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
+    
+    const zipPath = path.join(project.path, '..', `${project.id}-deploy.zip`);
+    if (!fs.existsSync(zipPath)) {
+      return res.status(404).json({ error: 'Zip file not found. Deploy the project first.' });
+    }
+    
+    res.download(zipPath, `${project.name}-website.zip`);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Chat endpoint for agent interaction
 app.post('/api/chat', async (req, res) => {
   try {
@@ -240,7 +293,8 @@ function parseIntent(message) {
     'добавь', 'внеси изменения', 'модифицируй', 'расширь', 'редактируй',
     'сделай лучше', 'сделай красивее', 'сделай более',
     'который ты уже создал', 'существующий проект', 'в текущий проект',
-    'в существующий', 'в уже созданный'
+    'в существующий', 'в уже созданный',
+    'выполняй', 'вставь', 'вставляй', 'примени', 'сохрани', 'apply', 'execute', 'implement'
   ];
   
   // If strong modification words detected, prioritize modification
