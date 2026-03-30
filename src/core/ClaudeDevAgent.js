@@ -13,7 +13,10 @@ class ClaudeDevAgent {
     this.templatesDir = config.templatesDir || './templates';
     this.memory = new Map();
     this.activeProjects = new Map();
+    this.chatHistory = [];
+    this.maxHistoryLength = 50;
     this.ensureDirectories();
+    this.loadChatHistory();
   }
 
   // ===== INTERNET ACCESS METHODS =====
@@ -669,19 +672,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ===== CHAT HISTORY & MEMORY =====
-
-  constructor(config = {}) {
-    this.apiKey = config.apiKey || this.getApiKey();
-    this.provider = config.provider || this.detectProvider();
-    this.projectsDir = config.projectsDir || './projects';
-    this.templatesDir = config.templatesDir || './templates';
-    this.memory = new Map();
-    this.activeProjects = new Map();
-    this.chatHistory = []; // Store chat history
-    this.maxHistoryLength = 50; // Maximum messages to remember
-    this.ensureDirectories();
-    this.loadChatHistory(); // Load previous history on startup
-  }
 
   // Chat History Methods
   addToChatHistory(role, content, metadata = {}) {
