@@ -348,6 +348,89 @@ body {
   margin-top: 4px;
 }
 
+/* Chat list styles for multiple chats */
+.chats-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.chat-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  background: var(--bg3);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.chat-item:hover {
+  background: var(--bg2);
+  border-color: var(--accent);
+}
+
+.chat-item.active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.chat-item.active .chat-title,
+.chat-item.active .chat-preview {
+  color: white;
+}
+
+.chat-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.chat-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.chat-date {
+  font-size: 0.75rem;
+  color: var(--text2);
+}
+
+.chat-preview {
+  font-size: 0.8rem;
+  color: var(--text2);
+}
+
+.current-badge {
+  position: absolute;
+  top: 8px;
+  right: 30px;
+  font-size: 0.7rem;
+  background: var(--success);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.delete-chat-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text2);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.delete-chat-btn:hover {
+  color: var(--error);
+}
+
 /* Workspace */
 .workspace {
   display: flex;

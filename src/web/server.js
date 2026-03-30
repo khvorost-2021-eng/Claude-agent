@@ -230,31 +230,13 @@ function parseIntent(message) {
     return { type: 'publish', description: message };
   }
   
-  // Build patterns
-  if (lower.includes('собери') || lower.includes('build') || lower.includes('скомпилируй') || lower.includes('сборка') || lower.includes('скомпилировать')) {
-    return { type: 'build', description: message };
-  }
-  
-  // Status patterns
-  if (lower.includes('статус') || lower.includes('проекты') || lower.includes('status') || lower.includes('список')) {
-    return { type: 'status' };
-  }
-  
-  // Feedback / Issue patterns
-  const feedbackPatterns = [
-    'не работает', 'баг', 'ошибка', 'проблема', 'исправь', 'почини', 
-    'не запускается', 'не открывается', 'сломалось', 'bug', 'error', 'fix',
-    'кнопка', 'не нажимается', 'не отвечает', 'зависло'
+  // Video generation patterns
+  const videoPatterns = [
+    'видео', 'сгенерируй видео', 'создай видео', 'сделай видео', 'нарисуй видео',
+    'video', 'generate video', 'create video', 'make video'
   ];
-  
-  // Check for feedback/issue intent
-  if (feedbackPatterns.some(pattern => lower.includes(pattern))) {
-    return { type: 'feedback', description: message };
-  }
-  
-  // Help patterns
-  if (lower.includes('помощь') || lower.includes('help') || lower.includes('?') || lower.includes('как') || lower.includes('что делать')) {
-    return { type: 'help', description: message };
+  if (videoPatterns.some(pattern => lower.includes(pattern))) {
+    return { type: 'generate_video', description: message };
   }
   
   // Image generation patterns - CHECK BEFORE CHAT
@@ -273,11 +255,43 @@ function parseIntent(message) {
   return { type: 'unknown' };
 }
 
+// Video generation using free APIs
+async function generateVideo(prompt) {
+  console.log('🎬 Generating video for:', prompt);
+  
+  try {
+    // Using Luma AI or similar free video generation
+    const encodedPrompt = encodeURIComponent(prompt);
+    
+    // Fallback to Pollinations video (if available) or placeholder
+    // For now, return a placeholder with instructions
+    return {
+      type: 'video_placeholder',
+      content: `🎬 Видео генерация пока в разработке\n\nЗапрос: "${prompt}"`,
+      videoUrl: null,
+      prompt: prompt
+    };
+  } catch (error) {
+    return {
+      type: 'error',
+      content: `❌ Ошибка генерации видео: ${error.message}`
+    };
+  }
+}
+
+// Handle video generation intent
+async function handleGenerateVideo(intent, agent) {
+  const subject = intent.description
+    .replace(/сгенерируй видео|создай видео|видео|video|generate video|create video/gi, '')
+    .trim();
+  
+  return await generateVideo(subject || 'beautiful scene');
+}
+
 async function handleGenerateImage(intent, agent) {
   console.log('🎨 Generating image for:', intent.description);
   
   try {
-    // Extract the subject from the description
     const subject = intent.description
       .replace(/сгенерируй|создай|нарисуй|картинку|изображение|фото|generate|create|draw|image|of/gi, '')
       .trim();
@@ -285,27 +299,24 @@ async function handleGenerateImage(intent, agent) {
     if (!subject) {
       return {
         type: 'error',
-        content: 'Пожалуйста, опишите что нарисовать. Например: "сгенерируй картинку космоса"'
+        content: 'Пожалуйста, опишите что нарисовать'
       };
     }
     
-    // Direct Pollinations URL - always works without API key
-    const prompt = encodeURIComponent(`High quality artistic image of ${subject}, detailed, beautiful, professional photography style`);
-    const imageUrl = `https://image.pollinations.ai/prompt/${prompt}?width=1024&height=1024&nologo=true&seed=${Date.now()}`;
-    
-    console.log('✅ Generated Pollinations URL:', imageUrl);
+    // Use smaller size for faster loading (512x512 instead of 1024x1024)
+    const prompt = encodeURIComponent(`High quality ${subject}, detailed, beautiful`);
+    const imageUrl = `https://image.pollinations.ai/prompt/${prompt}?width=512&height=512&nologo=true&seed=${Date.now()}`;
     
     return {
       type: 'image_generated',
-      content: `✅ Изображение сгенерировано: "${subject}"`,
+      content: `✅ Изображение: "${subject}"`,
       imageUrl: imageUrl,
       prompt: subject
     };
   } catch (error) {
-    console.error('Image generation error:', error);
     return {
       type: 'error',
-      content: `❌ Ошибка генерации: ${error.message}`
+      content: `❌ Ошибка: ${error.message}`
     };
   }
 }
@@ -820,6 +831,35 @@ wss.on('connection', (ws) => {
               ws.send(JSON.stringify({ 
                 type: 'error', 
                 content: '❌ Ошибка при генерации изображения. Попробуйте ещё раз.' 
+              }));
+            }
+            break;
+            
+          case 'generate_video':
+            try {
+              console.log('Processing video generation:', intent.description);
+              ws.send(JSON.stringify({ 
+                type: 'progress', 
+                step: 'generating_video', 
+                content: '🎬 Генерирую видео...' 
+              }));
+              
+              const videoResponse = await handleGenerateVideo(intent, agent);
+              
+              // Add bot response to history
+              addToHistory(ws, 'assistant', videoResponse.content, ws.sessionId);
+              
+              ws.send(JSON.stringify({ 
+                type: 'video_generated', 
+                content: videoResponse.content,
+                videoUrl: videoResponse.videoUrl,
+                prompt: videoResponse.prompt
+              }));
+            } catch (videoError) {
+              console.error('Video generation handler error:', videoError);
+              ws.send(JSON.stringify({ 
+                type: 'error', 
+                content: '❌ Ошибка при генерации видео. Попробуйте ещё раз.' 
               }));
             }
             break;

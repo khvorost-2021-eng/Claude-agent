@@ -2312,30 +2312,30 @@ content
   // ===== TEMPLATE-BASED WEBSITE GENERATION (Primary Method) =====
   
   async generateWebProject(project, description) {
-    console.log('=== generateWebProject (TEMPLATE-FIRST) ===');
+    console.log('=== generateWebProject (AI-FIRST) ===');
     
-    // STEP 1: Always try template-based generation first (guaranteed quality)
+    // STEP 1: Try AI generation first for custom content
+    if (this.apiKey) {
+      try {
+        console.log('Using AI to generate custom website...');
+        await this.generateSiteWithAI(project, description);
+        return;
+      } catch (aiError) {
+        console.log('AI generation failed:', aiError.message);
+        // Continue to template fallback
+      }
+    }
+    
+    // STEP 2: Use template as fallback (guaranteed quality)
     try {
-      console.log('Using professional template...');
+      console.log('Using professional template as fallback...');
       await this.generateFromTemplate(project, description);
       return;
     } catch (templateError) {
       console.log('Template generation failed:', templateError.message);
-      // Continue to fallback
     }
     
-    // STEP 2: If no template matches, use AI with strict quality control
-    if (this.apiKey) {
-      try {
-        console.log('No template found, using AI with quality control...');
-        await this.generateWebProjectAdvanced(project, description);
-        return;
-      } catch (error) {
-        console.error('AI generation failed:', error.message);
-      }
-    }
-    
-    // STEP 3: Emergency fallback (guaranteed to work)
+    // STEP 3: Emergency fallback
     console.log('Using emergency fallback');
     await this.generateMinimalSite(project, description);
   }

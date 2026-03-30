@@ -4,48 +4,126 @@ class AgentClient {
     this.connected = false;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
-    this.sessionId = localStorage.getItem('agent_session_id'); // Load saved session
+    this.sessionId = localStorage.getItem('agent_session_id');
+    
+    // Chat management - multiple chats
+    this.chats = this.loadAllChats();
+    this.currentChatId = localStorage.getItem('agent_current_chat_id') || this.createNewChat();
     
     this.initElements();
     this.initEventListeners();
     this.connectWebSocket();
     this.loadProjects();
-    
-    // Load chat history from localStorage if exists
-    this.loadLocalHistory();
+    this.loadCurrentChat();
   }
 
-  // Load history from localStorage as fallback
-  loadLocalHistory() {
-    const savedHistory = localStorage.getItem('agent_chat_history');
-    if (savedHistory) {
+  // ===== CHAT MANAGEMENT =====
+  
+  loadAllChats() {
+    const saved = localStorage.getItem('agent_all_chats');
+    if (saved) {
       try {
-        const history = JSON.parse(savedHistory);
-        if (Array.isArray(history) && history.length > 0) {
-          // Clear default welcome message
-          this.chatMessages.innerHTML = '';
-          // Render saved messages
-          history.forEach(msg => {
-            this.addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot', false, false);
-          });
-        }
+        return JSON.parse(saved);
       } catch (e) {
-        console.log('Failed to parse saved history');
+        console.error('Failed to load chats');
+      }
+    }
+    return {};
+  }
+  
+  saveAllChats() {
+    localStorage.setItem('agent_all_chats', JSON.stringify(this.chats));
+    localStorage.setItem('agent_current_chat_id', this.currentChatId);
+  }
+  
+  createNewChat(title = 'Новый чат') {
+    const chatId = 'chat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    this.chats[chatId] = {
+      id: chatId,
+      title: title,
+      messages: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.currentChatId = chatId;
+    this.saveAllChats();
+    return chatId;
+  }
+  
+  switchToChat(chatId) {
+    if (this.chats[chatId]) {
+      this.currentChatId = chatId;
+      this.saveAllChats();
+      this.loadCurrentChat();
+      this.showToast(`Переключено на: ${this.chats[chatId].title}`);
+    }
+  }
+  
+  deleteChat(chatId) {
+    if (this.chats[chatId]) {
+      delete this.chats[chatId];
+      this.saveAllChats();
+      if (this.currentChatId === chatId) {
+        const remainingChats = Object.keys(this.chats);
+        if (remainingChats.length > 0) {
+          this.switchToChat(remainingChats[0]);
+        } else {
+          this.createNewChat();
+          this.loadCurrentChat();
+        }
       }
     }
   }
-
-  // Save history to localStorage
-  saveLocalHistory() {
-    const messages = [];
-    this.chatMessages.querySelectorAll('.message').forEach(msg => {
-      const role = msg.classList.contains('user') ? 'user' : 'assistant';
-      const content = msg.querySelector('.message-content')?.innerHTML || '';
-      if (content && !msg.classList.contains('thinking')) {
-        messages.push({ role, content: content.replace(/<br>/g, '\n') });
-      }
+  
+  addMessageToCurrentChat(content, role, metadata = {}) {
+    if (!this.chats[this.currentChatId]) {
+      this.createNewChat();
+    }
+    
+    const chat = this.chats[this.currentChatId];
+    chat.messages.push({
+      role,
+      content,
+      timestamp: new Date().toISOString(),
+      ...metadata
     });
-    localStorage.setItem('agent_chat_history', JSON.stringify(messages.slice(-20)));
+    chat.updatedAt = new Date().toISOString();
+    
+    // Update title based on first user message
+    if (role === 'user' && chat.messages.filter(m => m.role === 'user').length === 1) {
+      chat.title = content.substring(0, 30) + (content.length > 30 ? '...' : '');
+    }
+    
+    this.saveAllChats();
+  }
+  
+  loadCurrentChat() {
+    const chat = this.chats[this.currentChatId];
+    if (!chat) return;
+    
+    // Clear and render messages
+    this.chatMessages.innerHTML = '';
+    
+    // Add welcome message if empty
+    if (chat.messages.length === 0) {
+      this.addMessage('Привет! Я Claude Dev Agent. Чем могу помочь?', 'bot', false, false);
+    } else {
+      chat.messages.forEach(msg => {
+        if (msg.type === 'image') {
+          this.addImageMessage(msg.imageUrl, msg.prompt, false);
+        } else if (msg.type === 'media') {
+          this.addMediaMessage(msg.files, false);
+        } else {
+          this.addMessage(msg.content, msg.role === 'user' ? 'user' : 'bot', false, false);
+        }
+      });
+    }
+  }
+  
+  getAllChatsList() {
+    return Object.values(this.chats).sort((a, b) => 
+      new Date(b.updatedAt) - new Date(a.updatedAt)
+    );
   }
 
   // Initialize all DOM elements
@@ -313,18 +391,18 @@ class AgentClient {
         this.hideTypingIndicator();
         this.addMessage(data.content, 'bot');
         if (data.imageUrl) {
-          this.displayMedia([{
-            url: data.imageUrl,
-            filename: data.prompt || 'generated-image.png',
-            type: 'image'
-          }], 'bot');
+          this.addImageMessage(data.imageUrl, data.prompt);
+        } else {
+          this.addMessage(data.content, 'bot');
         }
-        this.saveLocalHistory();
+        break;
+      case 'video_generated':
+        this.hideTypingIndicator();
+        this.addMessage(data.content, 'bot');
         break;
       case 'chat':
         this.hideTypingIndicator();
         this.addMessage(data.content, 'bot');
-        this.saveLocalHistory(); // Save after receiving response
         break;
       case 'deployed':
         this.hideTypingIndicator();
@@ -333,7 +411,6 @@ class AgentClient {
       case 'error':
         this.hideTypingIndicator();
         this.addMessage(`❌ ${data.content}`, 'bot');
-        this.saveLocalHistory();
         break;
       default:
         // Handle any other message types
@@ -400,10 +477,10 @@ class AgentClient {
     this.chatMessages.appendChild(messageDiv);
     this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
     
-    // Save to localStorage (debounced)
+    // Save to current chat
     if (save && !thinking) {
-      clearTimeout(this.saveTimeout);
-      this.saveTimeout = setTimeout(() => this.saveLocalHistory(), 500);
+      const role = sender === 'user' ? 'user' : 'assistant';
+      this.addMessageToCurrentChat(content, role);
     }
     
     if (thinking) {
@@ -412,6 +489,50 @@ class AgentClient {
           messageDiv.remove();
         }
       }, 3000);
+    }
+  }
+  
+  addImageMessage(imageUrl, prompt = '', save = true) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message bot';
+    messageDiv.innerHTML = `
+      <div class="message-content">
+        <p>🎨 Сгенерировано изображение:</p>
+        <img src="${imageUrl}" alt="${prompt}" style="max-width: 100%; border-radius: 8px; margin-top: 8px;">
+        <p style="font-size: 0.8rem; color: var(--text2); margin-top: 4px;">${prompt}</p>
+      </div>
+    `;
+    
+    this.chatMessages.appendChild(messageDiv);
+    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    
+    if (save) {
+      this.addMessageToCurrentChat(prompt, 'assistant', { type: 'image', imageUrl, prompt });
+    }
+  }
+  
+  addMediaMessage(files, save = true) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message user';
+    
+    let mediaHtml = '<div class="message-media-container">';
+    files.forEach(file => {
+      if (file.type === 'image') {
+        mediaHtml += `<div class="message-media"><img src="${file.url}" alt="${file.filename}" onclick="window.open('${file.url}', '_blank')"></div>`;
+      } else if (file.type === 'video') {
+        mediaHtml += `<div class="message-media"><video src="${file.url}" controls></video></div>`;
+      } else {
+        mediaHtml += `<div class="message-file">📎 <a href="${file.url}" target="_blank" download>${file.filename}</a></div>`;
+      }
+    });
+    mediaHtml += '</div>';
+    
+    messageDiv.innerHTML = mediaHtml;
+    this.chatMessages.appendChild(messageDiv);
+    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    
+    if (save) {
+      this.addMessageToCurrentChat('Media files', 'user', { type: 'media', files });
     }
   }
 
@@ -815,46 +936,60 @@ class AgentClient {
     this.saveLocalHistory();
   }
 
-  // Show chat history modal
+  // Show chat history - now shows list of all chats
   showChatHistory() {
     const modal = document.getElementById('chatHistoryModal');
     const body = document.getElementById('chatHistoryBody');
     
-    // Get messages from current chat
-    const messages = [];
-    this.chatMessages.querySelectorAll('.message').forEach((msg, index) => {
-      const role = msg.classList.contains('user') ? 'user' : 'assistant';
-      const contentEl = msg.querySelector('.message-content');
-      const content = contentEl ? contentEl.innerText : '';
-      
-      if (content && !msg.classList.contains('thinking')) {
-        messages.push({ role, content, index: index + 1, element: msg });
-      }
-    });
+    const chats = this.getAllChatsList();
     
-    if (messages.length === 0) {
-      body.innerHTML = '<p>История чатов пуста</p>';
+    if (chats.length === 0) {
+      body.innerHTML = '<p>Нет сохраненных чатов</p>';
     } else {
-      body.innerHTML = messages.map((msg, idx) => `
-        <div class="chat-history-item ${msg.role}" data-index="${idx}">
-          <div class="chat-history-role">${msg.role === 'user' ? '👤 Вы' : '🤖 Агент'} #${msg.index}</div>
-          <div class="chat-history-content">${msg.content.substring(0, 200)}${msg.content.length > 200 ? '...' : ''}</div>
+      body.innerHTML = `
+        <div class="chats-list">
+          ${chats.map(chat => `
+            <div class="chat-item ${chat.id === this.currentChatId ? 'active' : ''}" data-chat-id="${chat.id}">
+              <div class="chat-item-header">
+                <span class="chat-title">${chat.title}</span>
+                <span class="chat-date">${new Date(chat.updatedAt).toLocaleDateString()}</span>
+              </div>
+              <div class="chat-preview">${chat.messages.length} сообщений</div>
+              ${chat.id === this.currentChatId ? '<span class="current-badge">Текущий</span>' : ''}
+              <button class="delete-chat-btn" data-chat-id="${chat.id}" title="Удалить чат">×</button>
+            </div>
+          `).join('')}
         </div>
-      `).join('');
+        <button id="newChatBtn" class="btn-primary" style="margin-top: 15px; width: 100%;">+ Новый чат</button>
+      `;
       
-      // Add click handlers to scroll to message
-      body.querySelectorAll('.chat-history-item').forEach((item, idx) => {
-        item.addEventListener('click', () => {
-          const msgElement = messages[idx]?.element;
-          if (msgElement) {
-            msgElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            msgElement.style.backgroundColor = 'var(--accent)';
-            setTimeout(() => {
-              msgElement.style.backgroundColor = '';
-            }, 1000);
+      // Click to switch chat
+      body.querySelectorAll('.chat-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          if (!e.target.classList.contains('delete-chat-btn')) {
+            this.switchToChat(item.dataset.chatId);
+            modal.classList.remove('active');
           }
-          modal.classList.remove('active');
         });
+      });
+      
+      // Delete chat button
+      body.querySelectorAll('.delete-chat-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (confirm('Удалить этот чат?')) {
+            this.deleteChat(btn.dataset.chatId);
+            this.showChatHistory(); // Refresh
+          }
+        });
+      });
+      
+      // New chat button
+      document.getElementById('newChatBtn')?.addEventListener('click', () => {
+        this.createNewChat();
+        this.loadCurrentChat();
+        modal.classList.remove('active');
+        this.showToast('Создан новый чат');
       });
     }
     
