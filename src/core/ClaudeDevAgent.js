@@ -352,10 +352,8 @@ class ClaudeDevAgent {
   }
   
   async generateSiteWithAI(project, description) {
-    console.log('=== AI SITE GENERATION ===');
-    console.log('Generating custom multi-page website based on user request...');
+    console.log('=== AI SITE GENERATION (HYBRID) ===');
     
-    // Extract topic and intent
     const { analyzeIntent } = require('./websiteTemplates.js');
     const intent = analyzeIntent ? analyzeIntent(description) : { category: 'general', siteType: 'general' };
     const topic = this.extractTopic(description);
@@ -363,159 +361,267 @@ class ClaudeDevAgent {
     console.log(`🎯 Topic: ${topic}`);
     console.log(`📂 Category: ${intent.category}, Site Type: ${intent.siteType}`);
     
-    // Search for real data about the topic
-    console.log('🔍 Searching internet for relevant information...');
-    const webResults = await this.searchWeb(`${topic} основная информация факты`);
-    const realInfo = webResults.slice(0, 3).map(r => r.snippet).join(' ').substring(0, 500);
-    
-    // Generate hero image
-    console.log('🎨 Generating hero image...');
-    const heroImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(`Modern professional hero banner for ${topic} website, stunning design, high quality`)}?width=1200&height=600&nologo=true&seed=${Date.now()}`;
-    
-    // Create AI prompt for complete multi-page site
-    const sitePrompt = `Создай ПОЛНОЦЕННЫЙ МНОГОСТРАНИЧНЫЙ веб-сайт на тему "${topic}".
-
-⚠️ ВАЖНО: Это заказ пользователя. НЕ используй шаблоны. Создай УНИКАЛЬНЫЙ сайт с конкретным контентом по теме.
-
-ТИП САЙТА: ${intent.siteType}
-КАТЕГОРИЯ: ${intent.category}
-
-КОНТЕНТ (используй реальные факты):
-${realInfo}
-
-СОЗДАЙ 5 ФАЙЛОВ:
-
-1. index.html - Главная страница:
-   - Hero блок с заголовком по теме "${topic}"
-   - Приветственный текст с фактами из контента выше
-   - 3 карточки с преимуществами
-   - CTA кнопка
-   - Навигация на другие страницы
-
-2. about.html - О нас/О теме:
-   - История/информация по теме "${topic}"
-   - 2-3 секции с фактами
-   - Изображения
-   - Ссылки на главную и контакты
-
-3. services.html - Услуги/Разделы:
-   - 3-4 карточки услуг по теме
-   - Описания каждой услуги
-   - Цены или детали
-
-4. blog.html - Статьи/Новости:
-   - Список из 2-3 статей по теме
-   - Заголовки, краткое описание, дата
-   - Кликабельные карточки
-
-5. contact.html - Контакты:
-   - Форма обратной связи (имя, email, сообщение)
-   - Контактная информация
-   - Карта (placeholder)
-
-Также создай:
-6. styles.css - Единый стиль для всех страниц:
-   - CSS variables для цветов
-   - Градиенты, тени, анимации
-   - Адаптивный дизайн
-   - Красивые кнопки (border-radius: 50px)
-
-7. main.js - Интерактивность:
-   - Мобильное меню
-   - Smooth scroll
-   - Валидация форм
-   - Анимации при скролле
-
-ТРЕБОВАНИЯ:
-- Каждая страница должна иметь уникальный контент по теме (не lorem ipsum)
-- Используй навигацию между страницами
-- Дизайн должен быть современным
-- Все ссылки между страницами должны работать
-- Контент на РУССКОМ языке
-- Используй изображение: ${heroImageUrl}
-
-ОТВЕТЬ строго в формате:
-
-index.html
-\`\`\`html
-<!DOCTYPE html>...
-\`\`\`
-
-about.html
-\`\`\`html
-...
-\`\`\`
-
-services.html
-\`\`\`html
-...
-\`\`\`
-
-blog.html
-\`\`\`html
-...
-\`\`\`
-
-contact.html
-\`\`\`html
-...
-\`\`\`
-
-styles.css
-\`\`\`css
-...
-\`\`\`
-
-main.js
-\`\`\`javascript
-...
-\`\`\``;
-
-    // Generate complete site with AI
-    let siteContent;
-    console.log('🤖 Sending request to AI...');
-    console.log('API Key available:', !!this.apiKey);
-    
-    // Always try AI generation first, fallback to templates if needed
-    siteContent = await this.generateCode(sitePrompt, { type: 'web' });
-    
-    // If AI generation failed (returned template with Error), use fallback templates
-    if (!siteContent || siteContent.startsWith('Error:') || siteContent.includes('Falling back to template')) {
-      console.log('⚠️ AI generation failed, using smart template fallback...');
-      return this.generateFromTemplate(project, description);
+    // STEP 1: Try Pollinations AI for content
+    let aiContent = null;
+    try {
+      console.log('🤖 Trying Pollinations AI for content...');
+      aiContent = await this.generateSiteContentWithAI(topic, intent);
+    } catch (e) {
+      console.log('⚠️ AI content failed:', e.message);
     }
     
-    // Parse and save generated files
-    console.log('💾 Parsing and saving generated files...');
-    const files = this.parseGeneratedContent(siteContent);
+    // STEP 2: Generate site with smart template + AI content
+    console.log('📄 Generating site with template + AI content...');
+    await this.generateHybridSite(project, description, topic, intent, aiContent);
     
-    for (const [filename, content] of Object.entries(files)) {
-      const filePath = path.join(project.path, filename);
-      fs.writeFileSync(filePath, content);
-      project.files.push(filename);
-      console.log(`✅ Saved: ${filename}`);
+    console.log(`✅ Hybrid site generated for "${topic}"`);
+  }
+
+  // Generate content via Pollinations AI
+  async generateSiteContentWithAI(topic, intent) {
+    const contentPrompt = `Create website content about "${topic}". 
+Write a JSON object with these fields:
+- title: catchy 2-3 word title
+- headline: compelling hero headline (max 6 words)  
+- subtitle: engaging subtitle (max 12 words)
+- description: 2 sentences about ${topic}
+- features: array of 3 feature objects with title and description
+- aboutTitle: title for about page
+- aboutText: 3 sentences about ${topic}
+
+Output ONLY valid JSON, no markdown, no comments.`;
+
+    try {
+      const encoded = encodeURIComponent(contentPrompt);
+      const url = `https://text.pollinations.ai/${encoded}?json=true&seed=${Date.now()}`;
+      
+      const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      const text = await response.text();
+      
+      // Try to parse JSON from response
+      try {
+        const data = JSON.parse(text);
+        console.log('✅ AI content generated:', data.title);
+        return data;
+      } catch (e) {
+        // Extract JSON from markdown code block if present
+        const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/) || text.match(/{[\s\S]*}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[1] || jsonMatch[0]);
+        }
+      }
+    } catch (e) {
+      console.error('AI content error:', e.message);
     }
-    
-    // Ensure all required files exist
-    this.ensureRequiredFiles(project, files, topic, intent);
-    
-    // Save metadata
-    const metadata = {
-      generationMethod: 'AI_GENERATED',
-      topic,
-      intent,
-      hasAIImages: !!heroImage,
-      webResultsCount: webResults.length,
-      createdAt: new Date().toISOString(),
-      version: '5.0-ai-generated'
+    return null;
+  }
+
+  // Generate hybrid site: template structure + AI content
+  async generateHybridSite(project, description, topic, intent, aiContent) {
+    // Default content if AI fails
+    const content = aiContent || {
+      title: topic,
+      headline: `Откройте мир ${topic}`,
+      subtitle: 'Узнайте всё, что нужно знать, в одном месте',
+      description: `${topic} — это увлекательная тема, которая открывает множество возможностей для изучения и развития.`,
+      features: [
+        { title: 'Экспертные знания', description: 'Погрузитесь в тему с профессиональным контентом' },
+        { title: 'Практические советы', description: 'Применяйте знания на практике каждый день' },
+        { title: 'Современный подход', description: 'Актуальная информация и последние тренды' }
+      ],
+      aboutTitle: `О ${topic}`,
+      aboutText: `${topic} занимает важное место в современном мире. Эта тема охватывает множество аспектов и предлагает глубокое понимание предмета. Изучение ${topic} открывает новые возможности и перспективы.`
     };
+
+    // Generate hero image via Pollinations
+    const heroImage = `https://image.pollinations.ai/prompt/${encodeURIComponent(`modern ${topic} website hero, professional, clean design`)}?width=1200&height=600&nologo=true&seed=${Date.now()}`;
+    
+    // Generate CSS
+    const css = this.generateSmartCSS({ title: content.title, category: intent.category });
+    fs.writeFileSync(path.join(project.path, 'styles.css'), css);
+    project.files.push('styles.css');
+    
+    // Generate pages with AI content injected
+    const pages = ['index', 'about', 'services', 'blog', 'contact'];
+    for (const pageName of pages) {
+      const html = this.generatePageWithContent(pageName, content, topic, intent, heroImage);
+      const filename = pageName === 'index' ? 'index.html' : `${pageName}.html`;
+      fs.writeFileSync(path.join(project.path, filename), html);
+      project.files.push(filename);
+    }
+    
+    // Generate JS
+    const js = this.generateSmartJS({ title: content.title });
+    fs.writeFileSync(path.join(project.path, 'main.js'), js);
+    project.files.push('main.js');
+    
+    // Metadata
     fs.writeFileSync(
       path.join(project.path, '.project-metadata.json'),
-      JSON.stringify(metadata, null, 2)
+      JSON.stringify({ method: 'HYBRID_AI', topic, intent, aiContent: !!aiContent, createdAt: new Date().toISOString() }, null, 2)
     );
     project.files.push('.project-metadata.json');
+  }
+
+  // Generate page HTML with AI content
+  generatePageWithContent(pageName, content, topic, intent, heroImage) {
+    const nav = `
+    <nav class="navbar">
+      <div class="container nav-container">
+        <a href="index.html" class="logo">${content.title}</a>
+        <ul class="nav-links">
+          <li><a href="index.html">Главная</a></li>
+          <li><a href="about.html">О нас</a></li>
+          <li><a href="services.html">Услуги</a></li>
+          <li><a href="blog.html">Блог</a></li>
+          <li><a href="contact.html">Контакты</a></li>
+        </ul>
+      </div>
+    </nav>`;
+
+    let mainContent = '';
     
-    console.log(`✅ AI Generated ${project.files.length} files for "${topic}"`);
+    switch(pageName) {
+      case 'index':
+        mainContent = `
+    <section class="hero" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 6rem 0; text-align: center; color: white;">
+      <div class="container">
+        <h1 style="font-size: 3rem; margin-bottom: 1rem;">${content.headline}</h1>
+        <p style="font-size: 1.25rem; margin-bottom: 2rem; opacity: 0.9;">${content.subtitle}</p>
+        <a href="services.html" class="btn" style="background: white; color: #667eea; padding: 1rem 2rem; border-radius: 50px; text-decoration: none; font-weight: bold;">Начать</a>
+      </div>
+    </section>
+    
+    <section class="features" style="padding: 4rem 0;">
+      <div class="container">
+        <div class="features-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+          ${content.features.map(f => `
+          <div class="feature-card" style="background: var(--card-bg); padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="color: #667eea; margin-bottom: 0.5rem;">${f.title}</h3>
+            <p>${f.description}</p>
+          </div>
+          `).join('')}
+        </div>
+      </div>
+    </section>`;
+        break;
+        
+      case 'about':
+        mainContent = `
+    <section style="padding: 4rem 0;">
+      <div class="container">
+        <h1 style="margin-bottom: 2rem;">${content.aboutTitle}</h1>
+        <p style="font-size: 1.1rem; line-height: 1.8; margin-bottom: 2rem;">${content.aboutText}</p>
+        <img src="${heroImage}" alt="${topic}" style="width: 100%; border-radius: 12px; margin: 2rem 0;">
+      </div>
+    </section>`;
+        break;
+        
+      case 'services':
+        mainContent = `
+    <section style="padding: 4rem 0;">
+      <div class="container">
+        <h1 style="margin-bottom: 2rem;">Наши услуги</h1>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+          ${content.features.map((f, i) => `
+          <div style="background: var(--card-bg); padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="background: #667eea; color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">${i + 1}</div>
+            <h3>${f.title}</h3>
+            <p>${f.description}</p>
+          </div>
+          `).join('')}
+        </div>
+      </div>
+    </section>`;
+        break;
+        
+      case 'blog':
+        mainContent = `
+    <section style="padding: 4rem 0;">
+      <div class="container">
+        <h1 style="margin-bottom: 2rem;">Статьи</h1>
+        <div style="display: grid; gap: 2rem;">
+          ${content.features.map((f, i) => `
+          <article style="background: var(--card-bg); padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="color: #667eea;">${f.title}</h3>
+            <p style="color: var(--text-secondary);">${f.description}</p>
+            <a href="#" style="color: #667eea; text-decoration: none;">Читать →</a>
+          </article>
+          `).join('')}
+        </div>
+      </div>
+    </section>`;
+        break;
+        
+      case 'contact':
+        mainContent = `
+    <section style="padding: 4rem 0;">
+      <div class="container">
+        <h1 style="margin-bottom: 2rem;">Свяжитесь с нами</h1>
+        <form style="max-width: 600px;" onsubmit="event.preventDefault(); alert('Сообщение отправлено!');">
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem;">Имя</label>
+            <input type="text" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px;">
+          </div>
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem;">Email</label>
+            <input type="email" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px;">
+          </div>
+          <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem;">Сообщение</label>
+            <textarea rows="5" style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px;"></textarea>
+          </div>
+          <button type="submit" style="background: #667eea; color: white; padding: 1rem 2rem; border: none; border-radius: 8px; cursor: pointer;">Отправить</button>
+        </form>
+      </div>
+    </section>`;
+        break;
+    }
+
+    return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${content.title}${pageName !== 'index' ? ' - ' + pageName.charAt(0).toUpperCase() + pageName.slice(1) : ''}</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  ${nav}
+  ${mainContent}
+  <footer style="background: var(--bg2); padding: 2rem 0; text-align: center; margin-top: 4rem;">
+    <div class="container">
+      <p>&copy; 2024 ${content.title}. Все права защищены.</p>
+    </div>
+  </footer>
+  <script src="main.js"></script>
+</body>
+</html>`;
+}
+
+// ===== CHAT HISTORY & MEMORY =====
+
+  // Chat History Methods
+  addToChatHistory(role, content, metadata = {}) {
+    const message = {
+      id: Date.now() + Math.random().toString(36).substr(2, 9),
+      role, // 'user' or 'assistant'
+      content,
+      timestamp: new Date().toISOString(),
+      metadata
+    };
+    
+    this.chatHistory.push(message);
+    
+    // Keep only last N messages
+    if (this.chatHistory.length > this.maxHistoryLength) {
+      this.chatHistory = this.chatHistory.slice(-this.maxHistoryLength);
+    }
+    
+    // Save to file
+    this.saveChatHistory();
+    
+    return message;
   }
   
   parseGeneratedContent(content) {

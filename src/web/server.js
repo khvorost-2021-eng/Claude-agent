@@ -156,6 +156,43 @@ app.get('/api/proxy-image', async (req, res) => {
   }
 });
 
+// Chat history persistence API
+const chatHistoriesDir = './chat_histories';
+if (!fs.existsSync(chatHistoriesDir)) {
+  fs.mkdirSync(chatHistoriesDir, { recursive: true });
+}
+
+app.get('/api/chat-history/:sessionId', (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const historyPath = path.join(chatHistoriesDir, `${sessionId}.json`);
+    
+    if (fs.existsSync(historyPath)) {
+      const history = fs.readFileSync(historyPath, 'utf8');
+      res.json({ success: true, history: JSON.parse(history) });
+    } else {
+      res.json({ success: true, history: [] });
+    }
+  } catch (error) {
+    console.error('Chat history load error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/chat-history/:sessionId', (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { history } = req.body;
+    const historyPath = path.join(chatHistoriesDir, `${sessionId}.json`);
+    
+    fs.writeFileSync(historyPath, JSON.stringify(history, null, 2));
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Chat history save error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Chat endpoint for agent interaction
 app.post('/api/chat', async (req, res) => {
   try {
@@ -334,8 +371,8 @@ async function generateVideo(prompt) {
     }
   }
   
-  // Final fallback: Animated GIF via Pollinations
-  return await generateVideoPollinationsAnimated(prompt);
+  // Final fallback: Pollinations image (free, no API key needed)
+  return await generateVideoPollinations(prompt);
 }
 
 // Replicate Video Generation (free tier available)
@@ -642,11 +679,11 @@ async function handleGenerateImage(intent, agent) {
       };
     }
     
-    // Use Pollinations AI with better parameters
-    const prompt = encodeURIComponent(`professional high quality ${subject}, detailed, beautiful, 4k`);
+    // FAST: Use smaller size (512x512) for quick generation
+    const prompt = encodeURIComponent(`beautiful ${subject}, high quality, detailed`);
     const seed = Date.now();
-    // Use direct image URL with proper parameters
-    const imageUrl = `https://image.pollinations.ai/prompt/${prompt}?width=1024&height=1024&nologo=true&seed=${seed}&enhance=true`;
+    // 512x512 for speed, no enhance for faster generation
+    const imageUrl = `https://image.pollinations.ai/prompt/${prompt}?width=512&height=512&nologo=true&seed=${seed}`;
     
     console.log('Generated image URL:', imageUrl);
     

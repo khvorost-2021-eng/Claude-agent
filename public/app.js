@@ -4,22 +4,47 @@ class AgentClient {
     this.connected = false;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
-    this.sessionId = localStorage.getItem('agent_session_id');
+    this.sessionId = localStorage.getItem('agent_session_id') || 'session_' + Date.now();
+    localStorage.setItem('agent_session_id', this.sessionId);
     
     // Chat management - multiple chats
-    this.chats = this.loadAllChats();
-    this.currentChatId = localStorage.getItem('agent_current_chat_id') || this.createNewChat();
+    this.chats = {};
+    this.currentChatId = null;
     
     this.initElements();
     this.initEventListeners();
     this.connectWebSocket();
     this.loadProjects();
+    this.initChats();
+  }
+  
+  async initChats() {
+    this.chats = await this.loadAllChats();
+    this.currentChatId = localStorage.getItem('agent_current_chat_id') || this.createNewChat();
     this.loadCurrentChat();
   }
 
   // ===== CHAT MANAGEMENT =====
   
-  loadAllChats() {
+  async loadAllChats() {
+    // Try loading from server first (persistent)
+    try {
+      const response = await fetch(`/api/chat-history/${this.sessionId}`);
+      const data = await response.json();
+      if (data.success && data.history && data.history.length > 0) {
+        console.log('Loaded chats from server:', data.history.length);
+        // Convert array to object format
+        const chats = {};
+        data.history.forEach(chat => {
+          chats[chat.id] = chat;
+        });
+        return chats;
+      }
+    } catch (e) {
+      console.log('Server load failed, using localStorage');
+    }
+    
+    // Fallback to localStorage
     const saved = localStorage.getItem('agent_all_chats');
     if (saved) {
       try {
@@ -31,12 +56,25 @@ class AgentClient {
     return {};
   }
   
-  saveAllChats() {
+  async saveAllChats() {
+    // Save to localStorage (immediate)
     localStorage.setItem('agent_all_chats', JSON.stringify(this.chats));
     localStorage.setItem('agent_current_chat_id', this.currentChatId);
+    
+    // Save to server (persistent across sessions)
+    try {
+      const chatsArray = Object.values(this.chats);
+      await fetch(`/api/chat-history/${this.sessionId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ history: chatsArray })
+      });
+    } catch (e) {
+      console.log('Server save failed (will retry later)');
+    }
   }
   
-  createNewChat(title = 'Новый чат') {
+  async createNewChat(title = 'Новый чат') {
     const chatId = 'chat_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     this.chats[chatId] = {
       id: chatId,
@@ -46,38 +84,38 @@ class AgentClient {
       updatedAt: new Date().toISOString()
     };
     this.currentChatId = chatId;
-    this.saveAllChats();
+    await this.saveAllChats();
     return chatId;
   }
   
-  switchToChat(chatId) {
+  async switchToChat(chatId) {
     if (this.chats[chatId]) {
       this.currentChatId = chatId;
-      this.saveAllChats();
+      await this.saveAllChats();
       this.loadCurrentChat();
       this.showToast(`Переключено на: ${this.chats[chatId].title}`);
     }
   }
   
-  deleteChat(chatId) {
+  async deleteChat(chatId) {
     if (this.chats[chatId]) {
       delete this.chats[chatId];
-      this.saveAllChats();
+      await this.saveAllChats();
       if (this.currentChatId === chatId) {
         const remainingChats = Object.keys(this.chats);
         if (remainingChats.length > 0) {
-          this.switchToChat(remainingChats[0]);
+          await this.switchToChat(remainingChats[0]);
         } else {
-          this.createNewChat();
+          await this.createNewChat();
           this.loadCurrentChat();
         }
       }
     }
   }
   
-  addMessageToCurrentChat(content, role, metadata = {}) {
+  async addMessageToCurrentChat(content, role, metadata = {}) {
     if (!this.chats[this.currentChatId]) {
-      this.createNewChat();
+      await this.createNewChat();
     }
     
     const chat = this.chats[this.currentChatId];
@@ -94,7 +132,7 @@ class AgentClient {
       chat.title = content.substring(0, 30) + (content.length > 30 ? '...' : '');
     }
     
-    this.saveAllChats();
+    await this.saveAllChats();
   }
   
   loadCurrentChat() {
@@ -286,9 +324,9 @@ class AgentClient {
       }));
     };
 
-    this.ws.onmessage = (event) => {
+    this.ws.onmessage = async (event) => {
       const data = JSON.parse(event.data);
-      this.handleWebSocketMessage(data);
+      await this.handleWebSocketMessage(data);
     };
 
     this.ws.onclose = () => {
@@ -341,7 +379,7 @@ class AgentClient {
     this.statusEl.className = `status ${status}`;
   }
 
-  handleWebSocketMessage(data) {
+  async handleWebSocketMessage(data) {
     switch (data.type) {
       case 'session_init':
         // Save session ID from server
@@ -409,11 +447,11 @@ class AgentClient {
         break;
       case 'deployed':
         this.hideTypingIndicator();
-        this.addMessage(data.content, 'bot');
+        await this.addMessage(data.content, 'bot');
         break;
       case 'error':
         this.hideTypingIndicator();
-        this.addMessage(`❌ ${data.content}`, 'bot');
+        await this.addMessage(`❌ ${data.content}`, 'bot');
         break;
       default:
         // Handle any other message types
@@ -425,8 +463,8 @@ class AgentClient {
     const content = this.messageInput.value.trim();
     if (!content) return;
 
-    this.addMessage(content, 'user');
-    this.saveLocalHistory(); // Save after adding user message
+    await this.addMessage(content, 'user');
+    await this.saveLocalHistory(); // Save after adding user message
     this.messageInput.value = '';
 
     if (this.connected) {
@@ -442,37 +480,37 @@ class AgentClient {
         
         const data = await response.json();
         this.handleResponse(data.response);
-        this.saveLocalHistory();
+        await this.saveLocalHistory();
       } catch (error) {
-        this.addMessage('Ошибка соединения. Попробуйте позже.', 'bot');
+        await this.addMessage('Ошибка соединения. Попробуйте позже.', 'bot');
       }
     }
   }
 
-  handleResponse(response) {
+  async handleResponse(response) {
     switch (response.type) {
       case 'project_created':
-        this.addMessage(`${response.content}\n\nID проекта: ${response.projectId}`, 'bot');
+        await this.addMessage(`${response.content}\n\nID проекта: ${response.projectId}`, 'bot');
         this.loadProjects();
         break;
       case 'build_complete':
-        this.addMessage(response.content, 'bot');
+        await this.addMessage(response.content, 'bot');
         break;
       case 'published':
-        this.addMessage(`✅ ${response.content}\nPackage: ${response.packageName}`, 'bot');
+        await this.addMessage(`✅ ${response.content}\nPackage: ${response.packageName}`, 'bot');
         break;
       case 'error':
-        this.addMessage(`❌ ${response.content}`, 'bot');
+        await this.addMessage(`❌ ${response.content}`, 'bot');
         break;
       case 'status':
-        this.addMessage(`${response.content}\n\n${response.projects.map(p => `- ${p.name} (${p.type}): ${p.status}`).join('\n')}`, 'bot');
+        await this.addMessage(`${response.content}\n\n${response.projects.map(p => `- ${p.name} (${p.type}): ${p.status}`).join('\n')}`, 'bot');
         break;
       default:
-        this.addMessage(response.content, 'bot');
+        await this.addMessage(response.content, 'bot');
     }
   }
 
-  addMessage(content, sender, thinking = false, save = true) {
+  async addMessage(content, sender, thinking = false, save = true) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${sender} ${thinking ? 'thinking' : ''}`;
     messageDiv.innerHTML = `<div class="message-content">${this.formatMessage(content)}</div>`;
@@ -483,7 +521,7 @@ class AgentClient {
     // Save to current chat
     if (save && !thinking) {
       const role = sender === 'user' ? 'user' : 'assistant';
-      this.addMessageToCurrentChat(content, role);
+      await this.addMessageToCurrentChat(content, role);
     }
     
     if (thinking) {
@@ -495,38 +533,34 @@ class AgentClient {
     }
   }
   
-  addImageMessage(imageUrl, prompt = '', save = true) {
+  async addImageMessage(imageUrl, prompt = '', save = true) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message bot';
     
-    // Create unique ID for this image
     const imgId = 'img_' + Date.now();
-    
-    // Use proxy URL for display to avoid CORS issues
     const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
     
     messageDiv.innerHTML = `
       <div class="message-content">
         <p>🎨 Сгенерировано изображение:</p>
-        <div class="image-wrapper" style="margin-top: 8px; border-radius: 8px; overflow: hidden; background: var(--bg2); min-height: 200px;">
+        <div class="image-wrapper" style="margin-top: 8px; border-radius: 8px; overflow: hidden; background: var(--bg2); min-height: 200px; cursor: zoom-in;" onclick="window.openImageModal('${proxyUrl}', '${prompt.replace(/'/g, "\\'")}')">
           <img id="${imgId}" src="${proxyUrl}" alt="${prompt}" 
                style="width: 100%; max-height: 400px; object-fit: contain; display: block;"
                onload="document.getElementById('loading_${imgId}').style.display='none';"
-               onerror="document.getElementById('loading_${imgId}').innerHTML='⚠️ Ошибка загрузки<br><a href=\'${imageUrl}\' target=\'_blank\' style=\'color: var(--accent)\'>Открыть оригинал</a>';">
+               onerror="document.getElementById('loading_${imgId}').innerHTML='⚠️ Ошибка загрузки';">
           <div id="loading_${imgId}" style="padding: 40px; text-align: center; color: var(--text2);">
             <div style="width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px;"></div>
-            Генерация изображения...
+            Генерация...
           </div>
         </div>
         <p style="font-size: 0.8rem; color: var(--text2); margin-top: 8px;">${prompt}</p>
         <p style="font-size: 0.8rem; margin-top: 4px;">
-          <a href="${imageUrl}" download target="_blank" style="display: inline-block; padding: 6px 12px; background: var(--accent); color: white; text-decoration: none; border-radius: 4px; font-size: 0.75rem;">⬇ Скачать</a>
-          <a href="${imageUrl}" target="_blank" style="display: inline-block; padding: 6px 12px; background: var(--bg3); color: var(--text); text-decoration: none; border-radius: 4px; font-size: 0.75rem; margin-left: 8px;">↗ Открыть</a>
+          <a href="${imageUrl}" download style="display: inline-block; padding: 6px 12px; background: var(--accent); color: white; text-decoration: none; border-radius: 4px; font-size: 0.75rem; cursor: pointer;">⬇ Скачать</a>
+          <button onclick="window.openImageModal('${proxyUrl}', '${prompt.replace(/'/g, "\\'")}')" style="display: inline-block; padding: 6px 12px; background: var(--bg3); color: var(--text); border: none; border-radius: 4px; font-size: 0.75rem; margin-left: 8px; cursor: pointer;">🔍 Увеличить</button>
         </p>
       </div>
     `;
     
-    // Add spin animation if not present
     if (!document.getElementById('spin-style')) {
       const style = document.createElement('style');
       style.id = 'spin-style';
@@ -538,11 +572,11 @@ class AgentClient {
     this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
     
     if (save) {
-      this.addMessageToCurrentChat(prompt, 'assistant', { type: 'image', imageUrl, prompt });
+      await this.addMessageToCurrentChat(prompt, 'assistant', { type: 'image', imageUrl, prompt });
     }
   }
   
-  addVideoMessage(videoUrl, prompt = '', isImageSequence = false, downloadUrl = null, save = true) {
+  async addVideoMessage(videoUrl, prompt = '', isImageSequence = false, downloadUrl = null, save = true) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message bot';
     
@@ -580,11 +614,11 @@ class AgentClient {
     this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
     
     if (save) {
-      this.addMessageToCurrentChat(prompt, 'assistant', { type: 'video', videoUrl, prompt, isImageSequence, downloadUrl });
+      await this.addMessageToCurrentChat(prompt, 'assistant', { type: 'video', videoUrl, prompt, isImageSequence, downloadUrl });
     }
   }
   
-  addMediaMessage(files, save = true) {
+  async addMediaMessage(files, save = true) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message user';
     
@@ -605,7 +639,7 @@ class AgentClient {
     this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
     
     if (save) {
-      this.addMessageToCurrentChat('Media files', 'user', { type: 'media', files });
+      await this.addMessageToCurrentChat('Media files', 'user', { type: 'media', files });
     }
   }
 
@@ -1169,5 +1203,31 @@ class AgentClient {
     }
   }
 }
+
+// Global function for image modal
+window.openImageModal = function(imageUrl, prompt) {
+  // Create modal if doesn't exist
+  let modal = document.getElementById('imageModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'imageModal';
+    modal.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9); z-index: 10000; display: flex;
+      flex-direction: column; align-items: center; justify-content: center;
+      cursor: zoom-out;
+    `;
+    modal.onclick = () => modal.style.display = 'none';
+    document.body.appendChild(modal);
+  }
+  
+  modal.innerHTML = `
+    <div style="position: relative; max-width: 95%; max-height: 90%;">
+      <img src="${imageUrl}" style="max-width: 100%; max-height: 85vh; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+      <p style="color: white; text-align: center; margin-top: 15px; font-size: 1rem; max-width: 800px;">${prompt || ''}</p>
+    </div>
+  `;
+  modal.style.display = 'flex';
+};
 
 const client = new AgentClient();
