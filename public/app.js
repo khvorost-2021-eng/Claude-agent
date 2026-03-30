@@ -150,6 +150,24 @@ class AgentClient {
       this.addMessage('Начните новый проект! Опишите что хотите создать.', 'bot');
     });
 
+    // New chat button - clear chat and start fresh
+    document.getElementById('newChatBtn')?.addEventListener('click', () => {
+      this.chatMessages.innerHTML = '';
+      this.addMessage('Привет! Я Claude Dev Agent. Я могу:\n<ul><li>Создавать веб-сайты</li><li>Создавать Android приложения</li><li>Показывать код и превью в реальном времени</li></ul>Что хотите создать?', 'bot');
+      this.saveLocalHistory();
+      this.showToast('Новый чат создан');
+    });
+
+    // Delete chat button - clear all messages
+    document.getElementById('deleteChatBtn')?.addEventListener('click', () => {
+      if (confirm('Очистить весь чат?')) {
+        this.chatMessages.innerHTML = '';
+        localStorage.removeItem('agent_chat_history');
+        this.addMessage('Чат очищен. Чем могу помочь?', 'bot');
+        this.showToast('Чат очищен');
+      }
+    });
+
     // Tab buttons
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
@@ -408,7 +426,14 @@ class AgentClient {
     `).join('');
 
     this.projectsList.querySelectorAll('.project-item').forEach(item => {
-      item.addEventListener('click', () => this.showProjectDetails(item.dataset.id));
+      item.addEventListener('click', () => {
+        const projectId = item.dataset.id;
+        // Load project into preview on click
+        this.loadProjectIntoPreview(projectId);
+        // Also update active state
+        this.projectsList.querySelectorAll('.project-item').forEach(p => p.classList.remove('active'));
+        item.classList.add('active');
+      });
     });
   }
 
@@ -656,20 +681,20 @@ class AgentClient {
     this.showToast('Проект успешно доработан!');
   }
 
-  // Handle project creation - update preview
   async handleProjectCreated(project, previewUrl) {
     this.currentProject = project;
     this.addMessage(`✅ Проект создан: ${project.name}`, 'bot');
     
-    // Update preview
+    // Update preview - ALWAYS hide placeholder and show iframe
     if (this.previewPlaceholder) {
-      this.previewPlaceholder.classList.add('hidden');
+      this.previewPlaceholder.style.display = 'none';
     }
     if (this.previewFrame) {
-      this.previewFrame.src = previewUrl;
+      this.previewFrame.style.display = 'block';
+      this.previewFrame.src = previewUrl || `/preview/${project.id}`;
     }
     if (this.previewUrl) {
-      this.previewUrl.textContent = previewUrl;
+      this.previewUrl.textContent = previewUrl || `/preview/${project.id}`;
     }
     
     // Load files
@@ -680,6 +705,48 @@ class AgentClient {
     
     // Update projects list
     this.loadProjects();
+    
+    this.showToast('Проект создан и загружен в превью!');
+  }
+
+  // Manual load project into preview (for when auto-load fails)
+  async loadProjectIntoPreview(projectId) {
+    try {
+      const response = await fetch(`/api/projects/${projectId}`);
+      const data = await response.json();
+      const project = data.project;
+      
+      if (!project) {
+        this.showToast('Проект не найден');
+        return;
+      }
+      
+      this.currentProject = project;
+      const previewUrl = `/preview/${project.id}`;
+      
+      // Show preview
+      if (this.previewPlaceholder) {
+        this.previewPlaceholder.style.display = 'none';
+      }
+      if (this.previewFrame) {
+        this.previewFrame.style.display = 'block';
+        this.previewFrame.src = previewUrl + '?t=' + Date.now();
+      }
+      if (this.previewUrl) {
+        this.previewUrl.textContent = previewUrl;
+      }
+      
+      // Load files
+      await this.loadProjectFiles(project.id);
+      
+      // Switch to preview
+      this.switchTab('preview');
+      
+      this.showToast(`Проект "${project.name}" загружен`);
+    } catch (error) {
+      console.error('Failed to load project:', error);
+      this.showToast('Ошибка загрузки проекта');
+    }
   }
 
   // Update status badge
