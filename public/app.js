@@ -498,23 +498,41 @@ class AgentClient {
   addImageMessage(imageUrl, prompt = '', save = true) {
     const messageDiv = document.createElement('div');
     messageDiv.className = 'message bot';
+    
+    // Create unique ID for this image
+    const imgId = 'img_' + Date.now();
+    
+    // Use proxy URL for display to avoid CORS issues
+    const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`;
+    
     messageDiv.innerHTML = `
       <div class="message-content">
         <p>🎨 Сгенерировано изображение:</p>
-        <div class="image-container" style="position: relative; max-width: 100%; margin-top: 8px;">
-          <img src="${imageUrl}" alt="${prompt}" style="max-width: 100%; max-height: 400px; border-radius: 8px; display: block;" 
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-          <div style="display: none; padding: 20px; background: var(--bg2); border-radius: 8px; text-align: center; color: var(--text2);">
-            ⚠️ Изображение недоступно<br>
-            <a href="${imageUrl}" target="_blank" style="color: var(--accent);">Открыть в новой вкладке</a>
+        <div class="image-wrapper" style="margin-top: 8px; border-radius: 8px; overflow: hidden; background: var(--bg2); min-height: 200px;">
+          <img id="${imgId}" src="${proxyUrl}" alt="${prompt}" 
+               style="width: 100%; max-height: 400px; object-fit: contain; display: block;"
+               onload="document.getElementById('loading_${imgId}').style.display='none';"
+               onerror="document.getElementById('loading_${imgId}').innerHTML='⚠️ Ошибка загрузки<br><a href=\'${imageUrl}\' target=\'_blank\' style=\'color: var(--accent)\'>Открыть оригинал</a>';">
+          <div id="loading_${imgId}" style="padding: 40px; text-align: center; color: var(--text2);">
+            <div style="width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px;"></div>
+            Генерация изображения...
           </div>
         </div>
         <p style="font-size: 0.8rem; color: var(--text2); margin-top: 8px;">${prompt}</p>
         <p style="font-size: 0.8rem; margin-top: 4px;">
-          <a href="${imageUrl}" download style="display: inline-block; padding: 6px 12px; background: var(--accent); color: white; text-decoration: none; border-radius: 4px; font-size: 0.75rem;">⬇ Скачать</a>
+          <a href="${imageUrl}" download target="_blank" style="display: inline-block; padding: 6px 12px; background: var(--accent); color: white; text-decoration: none; border-radius: 4px; font-size: 0.75rem;">⬇ Скачать</a>
+          <a href="${imageUrl}" target="_blank" style="display: inline-block; padding: 6px 12px; background: var(--bg3); color: var(--text); text-decoration: none; border-radius: 4px; font-size: 0.75rem; margin-left: 8px;">↗ Открыть</a>
         </p>
       </div>
     `;
+    
+    // Add spin animation if not present
+    if (!document.getElementById('spin-style')) {
+      const style = document.createElement('style');
+      style.id = 'spin-style';
+      style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+      document.head.appendChild(style);
+    }
     
     this.chatMessages.appendChild(messageDiv);
     this.chatMessages.scrollTop = this.chatMessages.scrollHeight;

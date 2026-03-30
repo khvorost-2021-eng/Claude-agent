@@ -131,6 +131,31 @@ app.get('/api/projects/:id/preview', (req, res) => {
   res.json({ previewUrl, type: project.type });
 });
 
+// Proxy endpoint for images (fixes CORS issues)
+app.get('/api/proxy-image', async (req, res) => {
+  try {
+    const imageUrl = req.query.url;
+    if (!imageUrl) {
+      return res.status(400).json({ error: 'URL required' });
+    }
+    
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      return res.status(response.status).json({ error: 'Failed to fetch image' });
+    }
+    
+    const contentType = response.headers.get('content-type');
+    res.setHeader('Content-Type', contentType || 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    
+    const buffer = await response.arrayBuffer();
+    res.send(Buffer.from(buffer));
+  } catch (error) {
+    console.error('Image proxy error:', error);
+    res.status(500).json({ error: 'Failed to proxy image' });
+  }
+});
+
 // Chat endpoint for agent interaction
 app.post('/api/chat', async (req, res) => {
   try {
@@ -617,17 +642,23 @@ async function handleGenerateImage(intent, agent) {
       };
     }
     
-    // Use smaller size for faster loading (512x512 instead of 1024x1024)
-    const prompt = encodeURIComponent(`High quality ${subject}, detailed, beautiful`);
-    const imageUrl = `https://image.pollinations.ai/prompt/${prompt}?width=512&height=512&nologo=true&seed=${Date.now()}`;
+    // Use Pollinations AI with better parameters
+    const prompt = encodeURIComponent(`professional high quality ${subject}, detailed, beautiful, 4k`);
+    const seed = Date.now();
+    // Use direct image URL with proper parameters
+    const imageUrl = `https://image.pollinations.ai/prompt/${prompt}?width=1024&height=1024&nologo=true&seed=${seed}&enhance=true`;
+    
+    console.log('Generated image URL:', imageUrl);
     
     return {
       type: 'image_generated',
-      content: `✅ Изображение: "${subject}"`,
+      content: `🎨 Изображение: "${subject}"`,
       imageUrl: imageUrl,
-      prompt: subject
+      prompt: subject,
+      directUrl: imageUrl
     };
   } catch (error) {
+    console.error('Image generation error:', error);
     return {
       type: 'error',
       content: `❌ Ошибка: ${error.message}`

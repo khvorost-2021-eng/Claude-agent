@@ -2373,16 +2373,16 @@ content
   async generateWebProject(project, description) {
     console.log('=== generateWebProject (AI-FIRST) ===');
     
-    // STEP 1: Try AI generation first for custom content
-    if (this.apiKey) {
-      try {
-        console.log('Using AI to generate custom website...');
-        await this.generateSiteWithAI(project, description);
-        return;
-      } catch (aiError) {
-        console.log('AI generation failed:', aiError.message);
-        // Continue to template fallback
-      }
+    // STEP 1: Always try AI generation first (FREE via Pollinations if no API key)
+    try {
+      console.log('Using AI to generate custom website...');
+      console.log('API Key available:', !!this.apiKey);
+      await this.generateSiteWithAI(project, description);
+      console.log('✅ AI site generation successful');
+      return;
+    } catch (aiError) {
+      console.log('⚠️ AI generation failed:', aiError.message);
+      // Continue to template fallback
     }
     
     // STEP 2: Use template as fallback (guaranteed quality)
