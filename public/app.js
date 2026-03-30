@@ -66,6 +66,7 @@ class AgentClient {
     this.pendingFiles = [];
     this.codeDisplay = document.getElementById('codeDisplay');
     this.filesTree = document.getElementById('filesTree');
+    this.fileSelect = document.getElementById('fileSelect');
     this.typingIndicator = null;
     this.currentProject = null;
     this.projectFiles = [];
@@ -827,19 +828,34 @@ class AgentClient {
       const content = contentEl ? contentEl.innerText : '';
       
       if (content && !msg.classList.contains('thinking')) {
-        messages.push({ role, content, index: index + 1 });
+        messages.push({ role, content, index: index + 1, element: msg });
       }
     });
     
     if (messages.length === 0) {
       body.innerHTML = '<p>История чатов пуста</p>';
     } else {
-      body.innerHTML = messages.map(msg => `
-        <div class="chat-history-item ${msg.role}">
+      body.innerHTML = messages.map((msg, idx) => `
+        <div class="chat-history-item ${msg.role}" data-index="${idx}">
           <div class="chat-history-role">${msg.role === 'user' ? '👤 Вы' : '🤖 Агент'} #${msg.index}</div>
           <div class="chat-history-content">${msg.content.substring(0, 200)}${msg.content.length > 200 ? '...' : ''}</div>
         </div>
       `).join('');
+      
+      // Add click handlers to scroll to message
+      body.querySelectorAll('.chat-history-item').forEach((item, idx) => {
+        item.addEventListener('click', () => {
+          const msgElement = messages[idx]?.element;
+          if (msgElement) {
+            msgElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            msgElement.style.backgroundColor = 'var(--accent)';
+            setTimeout(() => {
+              msgElement.style.backgroundColor = '';
+            }, 1000);
+          }
+          modal.classList.remove('active');
+        });
+      });
     }
     
     modal?.classList.add('active');

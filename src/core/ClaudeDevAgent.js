@@ -420,13 +420,14 @@ main.js
 
     // Generate complete site with AI
     let siteContent;
-    if (this.apiKey) {
-      console.log('🤖 Sending request to AI...');
-      siteContent = await this.generateCode(sitePrompt, { type: 'web' });
-    }
+    console.log('🤖 Sending request to AI...');
+    console.log('API Key available:', !!this.apiKey);
     
-    // If AI generation failed or no API key, use smart template fallback
-    if (!siteContent || siteContent.startsWith('Error:')) {
+    // Always try AI generation first, fallback to templates if needed
+    siteContent = await this.generateCode(sitePrompt, { type: 'web' });
+    
+    // If AI generation failed (returned template with Error), use fallback templates
+    if (!siteContent || siteContent.startsWith('Error:') || siteContent.includes('Falling back to template')) {
       console.log('⚠️ AI generation failed, using smart template fallback...');
       return this.generateFromTemplate(project, description);
     }

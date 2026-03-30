@@ -314,6 +314,12 @@ body {
   background: var(--bg3);
   border-radius: 8px;
   border-left: 3px solid var(--accent);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.chat-history-item:hover {
+  background: var(--bg2);
 }
 
 .chat-history-item.user {

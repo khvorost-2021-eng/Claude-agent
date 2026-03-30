@@ -253,14 +253,10 @@ function parseIntent(message) {
     return { type: 'help', description: message };
   }
   
-  // Image generation patterns
-  const imagePatterns = [
-    'сгенерируй картинку', 'создай картинку', 'сгенерируй изображение', 'создай изображение',
-    'нарисуй', 'сделай картинку', 'сделай изображение', 'generate image', 'create image',
-    'draw', 'картинка', 'изображение', 'фото', 'picture', 'image of'
-  ];
-  
-  if (imagePatterns.some(pattern => lower.includes(pattern))) {
+  // Image generation patterns - CHECK BEFORE CHAT
+  if (lower.includes('картинк') || lower.includes('изображен') || lower.includes('фото') || 
+      lower.includes('нарисуй') || lower.includes('сгенерируй') || lower.includes('picture') || 
+      lower.includes('image') || lower.includes('draw')) {
     return { type: 'generate_image', description: message };
   }
   
