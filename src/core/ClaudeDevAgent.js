@@ -341,6 +341,10 @@ class HomePage extends StatelessWidget {
   async generateCodeGroq(prompt, options = {}) {
     console.log('=== generateCodeGroq called ===');
     try {
+      // Add timeout controller
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+      
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -355,8 +359,11 @@ class HomePage extends StatelessWidget {
           ],
           temperature: 0.7,
           max_tokens: 4000
-        })
+        }),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeout);
       
       console.log('Groq Response status:', response.status);
       
@@ -989,12 +996,19 @@ content
       // Using DuckDuckGo HTML version (no API key required)
       const searchUrl = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
       
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+      
       const response = await fetch(searchUrl, {
         method: 'GET',
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
+        },
+        signal: controller.signal
       });
+      
+      clearTimeout(timeout);
       
       if (!response.ok) {
         console.error('Search failed:', response.status);
@@ -1195,15 +1209,28 @@ content
   async generateWebProjectAdvanced(project, description) {
     console.log('=== generateWebProjectAdvanced called ===');
     
-    // Step 1: Research the topic if it's content-heavy
+    // Step 1: Research the topic if it's content-heavy (with timeout protection)
     let researchContext = '';
     const needsResearch = this.shouldResearchTopic(description);
     
     if (needsResearch) {
       console.log('Researching topic...');
-      const research = await this.researchTopic(description, 'basic');
-      if (research) {
-        researchContext = `\n\nRESEARCH DATA:\n${research.combinedContent.substring(0, 4000)}\n\nUse this research to create accurate, up-to-date content.`;
+      try {
+        // Add timeout wrapper for research
+        const researchPromise = this.researchTopic(description, 'basic');
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Research timeout')), 30000)
+        );
+        const research = await Promise.race([researchPromise, timeoutPromise]).catch(err => {
+          console.log('Research failed or timed out:', err.message);
+          return null;
+        });
+        
+        if (research) {
+          researchContext = `\n\nRESEARCH DATA:\n${research.combinedContent.substring(0, 4000)}\n\nUse this research to create accurate, up-to-date content.`;
+        }
+      } catch (researchError) {
+        console.log('Research error (continuing without):', researchError.message);
       }
     }
     
