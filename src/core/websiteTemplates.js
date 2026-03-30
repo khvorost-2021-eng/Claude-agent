@@ -764,9 +764,32 @@ const templateKeywords = {
 };
 
 // Helper to detect template
-function detectTemplate(description) {
+function detectTemplate(description, intent = null) {
   const desc = description.toLowerCase();
   
+  // Use intent if available for smarter detection
+  if (intent && intent.category) {
+    const categoryMap = {
+      'animals': ['cats', 'dogs', 'pets'],
+      'food': ['cooking', 'baking', 'coffee'],
+      'travel': ['travel'],
+      'tech': ['tech'],
+      'business': ['business', 'portfolio'],
+      'lifestyle': ['fashion'],
+      'education': ['education'],
+      'entertainment': ['movies', 'gaming'],
+      'health': ['health', 'fitness'],
+      'creative': ['photography']
+    };
+    
+    const possibleTemplates = categoryMap[intent.category];
+    if (possibleTemplates && possibleTemplates.length > 0) {
+      // Return first matching template from category
+      return possibleTemplates[0];
+    }
+  }
+  
+  // Fallback to keyword matching
   for (const [templateId, keywords] of Object.entries(templateKeywords)) {
     if (keywords.some(kw => desc.includes(kw))) {
       return templateId;
@@ -776,4 +799,97 @@ function detectTemplate(description) {
   return 'default';
 }
 
-module.exports = { templates: websiteTemplates, detectTemplate, templateKeywords };
+// AI-powered intent analysis - makes the agent SMARTER
+function analyzeIntent(description) {
+  const desc = description.toLowerCase();
+  
+  // Extract primary topic (what the site is about)
+  const stopWords = ['создай', 'сделай', 'сайт', 'про', 'веб', 'с', 'о', 'для', 'по', 'на', 'как', 'make', 'create', 'website', 'about', 'with', 'for'];
+  let words = desc.split(/\s+/).filter(w => w.length > 2 && !stopWords.includes(w));
+  
+  const primaryKeyword = words[0] || 'проект';
+  const secondaryKeywords = words.slice(1, 4);
+  
+  // Detect category with confidence scoring
+  let bestCategory = 'general';
+  let maxScore = 0;
+  
+  const categoryPatterns = {
+    'animals': {
+      keywords: ['кот', 'кошк', 'собак', 'пес', 'питомец', 'животн', 'cat', 'dog', 'pet', 'animal'],
+      weight: 1.0
+    },
+    'food': {
+      keywords: ['рецепт', 'готовить', 'кухн', 'еда', 'кулинар', 'выпечк', 'кофе', 'cake', 'recipe', 'food', 'cook', 'coffee'],
+      weight: 1.0
+    },
+    'travel': {
+      keywords: ['путешеств', 'туризм', 'отдых', 'отпуск', 'поездк', 'travel', 'trip', 'vacation'],
+      weight: 1.0
+    },
+    'tech': {
+      keywords: ['технолог', 'программирование', 'код', 'компьютер', 'софт', 'tech', 'code', 'software'],
+      weight: 1.0
+    },
+    'business': {
+      keywords: ['бизнес', 'компания', 'услуг', 'консалтинг', 'business', 'company', 'service'],
+      weight: 1.0
+    },
+    'fitness': {
+      keywords: ['спорт', 'фитнес', 'тренировк', 'зал', 'workout', 'gym', 'fitness'],
+      weight: 1.0
+    },
+    'education': {
+      keywords: ['обучен', 'курс', 'школа', 'учёба', 'education', 'course', 'school'],
+      weight: 1.0
+    },
+    'entertainment': {
+      keywords: ['кино', 'фильм', 'игр', 'movie', 'game', 'cinema'],
+      weight: 1.0
+    },
+    'health': {
+      keywords: ['здоровье', 'медицин', 'врач', 'health', 'medical'],
+      weight: 1.0
+    }
+  };
+  
+  for (const [category, data] of Object.entries(categoryPatterns)) {
+    let score = 0;
+    for (const kw of data.keywords) {
+      if (desc.includes(kw)) {
+        score += data.weight;
+      }
+    }
+    if (score > maxScore) {
+      maxScore = score;
+      bestCategory = category;
+    }
+  }
+  
+  // Detect sentiment/tone
+  const tonePatterns = {
+    'professional': ['бизнес', 'компания', 'услуг', 'professional', 'business', 'company'],
+    'casual': ['хобби', 'увлечение', 'personal', 'hobby'],
+    'educational': ['обучение', 'курс', 'учеба', 'learn', 'course'],
+    'entertainment': ['развлечение', 'fun', 'game', 'play']
+  };
+  
+  let tone = 'neutral';
+  for (const [t, patterns] of Object.entries(tonePatterns)) {
+    if (patterns.some(p => desc.includes(p))) {
+      tone = t;
+      break;
+    }
+  }
+  
+  return {
+    primaryKeyword,
+    secondaryKeywords,
+    category: bestCategory,
+    confidence: maxScore,
+    tone,
+    complexity: words.length > 5 ? 'detailed' : 'simple'
+  };
+}
+
+module.exports = { templates: websiteTemplates, detectTemplate, analyzeIntent, templateKeywords };

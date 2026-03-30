@@ -1367,44 +1367,53 @@ content
   }
   
   async generateFromTemplate(project, description) {
-    console.log('=== generateFromTemplate ===');
+    console.log('=== SMART TEMPLATE GENERATION v3.0 ===');
     
-    // Import templates with extended detection
-    const { templates, detectTemplate } = require('./websiteTemplates.js');
+    // Import templates with AI-enhanced detection
+    const { templates, detectTemplate, analyzeIntent } = require('./websiteTemplates.js');
     
-    // Detect template using extended keyword matching
-    const templateKey = detectTemplate(description);
-    const template = templates[templateKey] || templates.default;
+    // AI-powered intent analysis
+    const intent = analyzeIntent ? analyzeIntent(description) : { category: 'general', keywords: [] };
+    console.log('Detected intent:', intent);
     
-    console.log(`Using template: ${templateKey} (${template.title}) [${template.category}]`);
+    // Detect template with context
+    const templateKey = detectTemplate(description, intent);
+    const baseTemplate = templates[templateKey] || templates.default;
     
-    // Generate CSS
-    const css = this.generateTemplateCSS(template);
+    // SMART CONTENT GENERATION - Create unique content based on user request
+    const smartTemplate = this.generateSmartContent(baseTemplate, description, intent);
+    
+    console.log(`Using SMART template: ${templateKey} (${smartTemplate.title})`);
+    console.log(`Generated unique title: "${smartTemplate.hero.title}"`);
+    
+    // Generate CSS with smart colors
+    const css = this.generateSmartCSS(smartTemplate);
     fs.writeFileSync(path.join(project.path, 'styles.css'), css);
     project.files.push('styles.css');
     
-    // Generate HTML pages
+    // Generate HTML pages with smart content
     const pages = ['index', 'about', 'contact'];
     for (const pageName of pages) {
-      const html = this.generateTemplateHTML(template, pageName);
+      const html = this.generateSmartHTML(smartTemplate, pageName, description, intent);
       const filename = pageName === 'index' ? 'index.html' : `${pageName}.html`;
       fs.writeFileSync(path.join(project.path, filename), html);
       project.files.push(filename);
     }
     
     // Generate JS
-    const js = this.generateTemplateJS();
+    const js = this.generateSmartJS(smartTemplate);
     fs.writeFileSync(path.join(project.path, 'main.js'), js);
     project.files.push('main.js');
     
-    // Save project metadata for future modifications
+    // Save project metadata
     const metadata = {
       templateKey,
-      template,
+      title: smartTemplate.title,
       originalDescription: description,
+      intent,
       createdAt: new Date().toISOString(),
       pages: ['index', 'about', 'contact'],
-      version: '2.0'
+      version: '3.0-smart'
     };
     fs.writeFileSync(
       path.join(project.path, '.project-metadata.json'),
@@ -1412,42 +1421,189 @@ content
     );
     project.files.push('.project-metadata.json');
     
-    console.log(`Generated ${project.files.length} files from template`);
+    console.log(`✅ SMART generated ${project.files.length} files with unique content`);
   }
   
-  generateTemplateCSS(template) {
+  // SMART CONTENT GENERATION - Creates unique content from user request
+  generateSmartContent(baseTemplate, description, intent) {
+    // Extract the actual topic from description
+    const topic = this.extractTopic(description);
+    
+    // Generate smart title (NOT using raw description)
+    const smartTitle = this.generateSmartTitle(topic, baseTemplate.category);
+    
+    // Generate smart hero content
+    const smartHero = {
+      title: smartTitle,
+      subtitle: this.generateSmartSubtitle(topic, baseTemplate.category),
+      description: this.generateSmartDescription(topic, baseTemplate.category, intent),
+      emoji: baseTemplate.hero.emoji
+    };
+    
+    // Generate smart sections based on topic
+    const smartSections = this.generateSmartSections(topic, baseTemplate.category);
+    
+    // Generate smart gallery with relevant images
+    const smartGallery = this.generateSmartGallery(topic);
+    
+    return {
+      ...baseTemplate,
+      title: smartTitle,
+      hero: smartHero,
+      sections: smartSections,
+      gallery: smartGallery
+    };
+  }
+  
+  extractTopic(description) {
+    // Remove command words and extract the actual topic
+    const commandWords = ['создай', 'сделай', 'сайт', 'про', 'с', 'о', 'для', 'веб', 'make', 'create', 'website', 'about', 'with'];
+    let topic = description.toLowerCase();
+    
+    commandWords.forEach(word => {
+      topic = topic.replace(new RegExp(word, 'gi'), '');
+    });
+    
+    // Clean up
+    topic = topic.trim()
+      .replace(/[.,!?;:]/g, '')
+      .replace(/\s+/g, ' ');
+    
+    // Capitalize first letter of each word
+    topic = topic.split(' ')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+    
+    return topic || 'Уникальный проект';
+  }
+  
+  generateSmartTitle(topic, category) {
+    // NEVER use raw description as title
+    const titlePatterns = {
+      'animals': ['Мир ${topic}', '${topic} — лучшие друзья', 'Планета ${topic}'],
+      'food': ['${topic} — вкус жизни', 'Искусство ${topic}', '${topic} Studio'],
+      'business': ['${topic}', '${topic} Pro', '${topic} Solutions'],
+      'travel': ['${topic} Travel', 'Мир ${topic}', '${topic} Journey'],
+      'tech': ['${topic} Hub', '${topic} Tech', '${topic} Lab'],
+      'fitness': ['${topic} Fit', '${topic} Power', '${topic} Zone'],
+      'education': ['${topic} Academy', '${topic} School', '${topic} Learning'],
+      'creative': ['${topic} Studio', '${topic} Art', '${topic} Creative'],
+      'default': ['${topic}', '${topic} Space', '${topic} Hub']
+    };
+    
+    const patterns = titlePatterns[category] || titlePatterns['default'];
+    const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+    return pattern.replace('${topic}', topic.split(' ').slice(0, 2).join(' '));
+  }
+  
+  generateSmartSubtitle(topic, category) {
+    const subtitles = {
+      'animals': [`Всё о ${topic.toLowerCase()} в одном месте`, `Откройте мир ${topic.toLowerCase()}`, 'Забота и любовь каждый день'],
+      'food': [`Искусство приготовления ${topic.toLowerCase()}`, `Лучшие рецепты ${topic.toLowerCase()}`, 'Вкус, который вдохновляет'],
+      'business': ['Профессиональные решения', 'Ваш надежный партнер', 'Качество без компромиссов'],
+      'travel': ['Незабываемые приключения', 'Исследуйте мир с нами', 'Путешествия мечты'],
+      'tech': ['Инновации для жизни', 'Технологии будущего', 'Цифровые решения'],
+      'fitness': ['Сила в каждом движении', 'Ваш путь к здоровью', 'Трансформируй тело'],
+      'education': ['Знания, которые меняют жизнь', 'Обучение без границ', 'Развивайся с нами'],
+      'default': [`Всё о ${topic.toLowerCase()}`, 'Качество и профессионализм', 'Откройте для себя больше']
+    };
+    
+    const subs = subtitles[category] || subtitles['default'];
+    return subs[Math.floor(Math.random() * subs.length)];
+  }
+  
+  generateSmartDescription(topic, category, intent) {
+    const baseDesc = intent?.primaryKeyword || topic;
+    const descriptions = {
+      'animals': `Узнайте всё о ${baseDesc.toLowerCase()}: уход, советы, породы и многое другое. Ваш гид в мир питомцев.`,
+      'food': `Откройте секреты ${baseDesc.toLowerCase()}: рецепты, техники, советы шеф-поваров. Гастрономическое путешествие начинается здесь.`,
+      'business': `Профессиональные услуги в сфере ${baseDesc.toLowerCase()}. Индивидуальный подход, гарантия качества, многолетний опыт.`,
+      'travel': `Лучшие направления и маршруты для ${baseDesc.toLowerCase()}. Планируйте путешествие мечты с экспертами.`,
+      'tech': `Современные решения в области ${baseDesc.toLowerCase()}. Инновации, технологии, профессиональный подход.`,
+      'fitness': `Комплексные программы для ${baseDesc.toLowerCase()}. Тренировки, питание, мотивация — всё для вашего результата.`,
+      'education': `Профессиональное обучение ${baseDesc.toLowerCase()}. Практические навыки, экспертные преподаватели, карьерный рост.`,
+      'default': `Всё о ${baseDesc.toLowerCase()}: профессиональный подход, качественный контент, полезная информация.`
+    };
+    
+    return descriptions[category] || descriptions['default'];
+  }
+  
+  generateSmartSections(topic, category) {
+    // Generate unique feature cards based on topic
+    const key = topic.toLowerCase().split(' ')[0];
+    
+    const sectionTemplates = {
+      'animals': [
+        { title: 'Породы и виды', items: [
+          { title: 'Популярные породы', desc: 'Обзор лучших пород с описанием характера', icon: 'paw' },
+          { title: 'Уход и здоровье', desc: 'Профессиональные советы ветеринаров', icon: 'heart' },
+          { title: 'Питание', desc: 'Сбалансированное питание для здоровья', icon: 'bowl-food' },
+          { title: 'Дрессировка', desc: 'Эффективные методы обучения', icon: 'graduation-cap' }
+        ]},
+        { title: 'Советы экспертов', items: [
+          { title: 'Первые шаги', desc: 'Как подготовиться к появлению питомца', icon: 'house' },
+          { title: 'Здоровье', desc: 'Профилактика и уход', icon: 'stethoscope' },
+          { title: 'Аксессуары', desc: 'Всё необходимое для комфорта', icon: 'bag-shopping' },
+          { title: 'Сообщество', desc: 'Общайтесь с единомышленниками', icon: 'users' }
+        ]}
+      ],
+      'default': [
+        { title: 'Возможности', items: [
+          { title: 'Профессионально', desc: `Экспертный подход к ${topic.toLowerCase()}`, icon: 'star' },
+          { title: 'Качественно', desc: 'Только проверенная информация', icon: 'check-circle' },
+          { title: 'Доступно', desc: 'Понятно объясняем сложное', icon: 'lightbulb' },
+          { title: 'Актуально', desc: 'Свежие тренды и новости', icon: 'newspaper' }
+        ]},
+        { title: 'Преимущества', items: [
+          { title: 'Опыт', desc: 'Более 10 лет в сфере', icon: 'award' },
+          { title: 'Поддержка', desc: 'Помощь на каждом этапе', icon: 'headset' },
+          { title: 'Результат', desc: 'Гарантия качества', icon: 'trophy' },
+          { title: 'Сообщество', desc: 'Тысячи довольных клиентов', icon: 'users' }
+        ]}
+      ]
+    };
+    
+    return sectionTemplates[category] || sectionTemplates['default'];
+  }
+  
+  generateSmartGallery(topic) {
+    const keywords = topic.toLowerCase().split(' ').slice(0, 2).join(',');
+    return [
+      { url: `https://source.unsplash.com/800x600/?${keywords},professional`, alt: topic },
+      { url: `https://source.unsplash.com/800x600/?${keywords},beautiful`, alt: topic },
+      { url: `https://picsum.photos/400/300?random=1`, alt: 'Gallery 1' },
+      { url: `https://picsum.photos/400/300?random=2`, alt: 'Gallery 2' }
+    ];
+  }
+  
+  generateSmartCSS(template) {
     const { colors } = template;
-    return `/* Professional Template CSS */
+    return `/* SMART Generated CSS v3.0 - ${template.title} */
 :root {
   --primary: ${colors.primary};
   --secondary: ${colors.secondary};
   --accent: ${colors.accent};
   --bg: ${colors.bg};
   --text: ${colors.text};
-  --text-light: #64748b;
   --gradient: linear-gradient(135deg, ${colors.primary} 0%, ${colors.accent} 100%);
-  --shadow: 0 10px 30px rgba(0,0,0,0.1);
-  --shadow-lg: 0 20px 40px rgba(0,0,0,0.15);
+  --shadow: 0 10px 40px rgba(0,0,0,0.12);
   --radius: 16px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', -apple-system, sans-serif;
   line-height: 1.6;
   color: var(--text);
   background: var(--bg);
 }
 
-/* Navigation */
 .navbar {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: 0; left: 0; right: 0;
   z-index: 1000;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255,255,255,0.95);
   backdrop-filter: blur(10px);
   box-shadow: 0 2px 20px rgba(0,0,0,0.05);
 }
@@ -1467,25 +1623,12 @@ body {
   background: var(--gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-decoration: none;
 }
 
-.nav-menu {
-  display: flex;
-  gap: 2rem;
-  list-style: none;
-}
-
-.nav-link {
-  color: var(--text);
-  text-decoration: none;
-  font-weight: 500;
-  transition: color 0.3s;
-}
-
+.nav-menu { display: flex; gap: 2rem; list-style: none; }
+.nav-link { color: var(--text); text-decoration: none; font-weight: 500; }
 .nav-link:hover { color: var(--primary); }
 
-/* Hero */
 .hero {
   min-height: 100vh;
   display: flex;
@@ -1494,28 +1637,21 @@ body {
   background: var(--gradient);
   padding: 8rem 2rem 4rem;
   text-align: center;
-  position: relative;
 }
 
-.hero-content {
-  position: relative;
-  z-index: 1;
-  max-width: 800px;
-}
+.hero-content { max-width: 800px; }
 
 .hero h1 {
   font-size: clamp(2.5rem, 5vw, 4rem);
   font-weight: 800;
   color: white;
   margin-bottom: 1rem;
-  text-shadow: 0 4px 20px rgba(0,0,0,0.2);
 }
 
 .hero .subtitle {
   font-size: 1.5rem;
   color: rgba(255,255,255,0.9);
   margin-bottom: 1rem;
-  font-weight: 500;
 }
 
 .hero .description {
@@ -1527,12 +1663,8 @@ body {
   margin-right: auto;
 }
 
-.hero-emoji {
-  font-size: 4rem;
-  margin-bottom: 1rem;
-}
+.hero-emoji { font-size: 4rem; margin-bottom: 1rem; }
 
-/* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -1544,7 +1676,6 @@ body {
   transition: all 0.3s ease;
   border: none;
   cursor: pointer;
-  font-size: 1rem;
 }
 
 .btn-primary {
@@ -1553,10 +1684,7 @@ body {
   box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
-.btn-primary:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-}
+.btn-primary:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.3); }
 
 .btn-secondary {
   background: transparent;
@@ -1564,40 +1692,23 @@ body {
   border: 2px solid rgba(255,255,255,0.5);
 }
 
-.btn-secondary:hover {
-  background: rgba(255,255,255,0.1);
-  border-color: white;
-}
+.btn-secondary:hover { background: rgba(255,255,255,0.1); border-color: white; }
 
-.hero-buttons {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  flex-wrap: wrap;
-}
+.hero-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
 
-/* Sections */
-section {
-  padding: 5rem 2rem;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-}
+section { padding: 5rem 2rem; }
+.container { max-width: 1200px; margin: 0 auto; }
 
 .section-title {
   font-size: 2.5rem;
   font-weight: 700;
   text-align: center;
   margin-bottom: 3rem;
-  color: var(--text);
 }
 
-/* Features Grid */
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2rem;
 }
 
@@ -1606,14 +1717,11 @@ section {
   padding: 2rem;
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  transition: all 0.3s ease;
   text-align: center;
+  transition: transform 0.3s;
 }
 
-.feature-card:hover {
-  transform: translateY(-5px);
-  box-shadow: var(--shadow-lg);
-}
+.feature-card:hover { transform: translateY(-5px); }
 
 .feature-icon {
   width: 60px;
@@ -1628,21 +1736,8 @@ section {
   font-size: 1.5rem;
 }
 
-.feature-card h3 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-.feature-card p {
-  color: var(--text-light);
-  line-height: 1.6;
-}
-
-/* Gallery */
-.gallery {
-  background: white;
-}
+.feature-card h3 { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
+.feature-card p { color: #64748b; line-height: 1.6; }
 
 .gallery-grid {
   display: grid;
@@ -1655,15 +1750,11 @@ section {
   height: 250px;
   object-fit: cover;
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
   transition: transform 0.3s;
 }
 
-.gallery-img:hover {
-  transform: scale(1.05);
-}
+.gallery-img:hover { transform: scale(1.05); }
 
-/* Page Hero */
 .page-hero {
   background: var(--gradient);
   padding: 10rem 2rem 4rem;
@@ -1671,91 +1762,9 @@ section {
   color: white;
 }
 
-.page-hero h1 {
-  font-size: 3rem;
-  font-weight: 800;
-  margin-bottom: 1rem;
-}
+.page-hero h1 { font-size: 3rem; font-weight: 800; margin-bottom: 1rem; }
+.page-hero p { font-size: 1.25rem; opacity: 0.9; }
 
-.page-hero p {
-  font-size: 1.25rem;
-  opacity: 0.9;
-}
-
-/* Content */
-.content {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 3rem 2rem;
-}
-
-.content h2 {
-  font-size: 2rem;
-  font-weight: 700;
-  margin: 2rem 0 1rem;
-  color: var(--text);
-}
-
-.content p {
-  color: var(--text-light);
-  line-height: 1.8;
-  margin-bottom: 1rem;
-}
-
-/* Contact */
-.contact-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 3rem;
-  max-width: 900px;
-  margin: 0 auto;
-}
-
-.contact-info h2 {
-  font-size: 2rem;
-  margin-bottom: 1rem;
-}
-
-.contact-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin: 1rem 0;
-  color: var(--text-light);
-}
-
-.contact-item i {
-  color: var(--primary);
-  font-size: 1.25rem;
-}
-
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-}
-
-.form-group input,
-.form-group textarea {
-  width: 100%;
-  padding: 1rem;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: border-color 0.3s;
-}
-
-.form-group input:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: var(--primary);
-}
-
-/* Footer */
 .footer {
   background: var(--text);
   color: white;
@@ -1768,60 +1777,19 @@ section {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 3rem;
-  margin-bottom: 2rem;
 }
 
-.footer h3 {
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
-}
-
-.footer p {
-  opacity: 0.8;
-  line-height: 1.6;
-}
-
-.footer-links ul {
-  list-style: none;
-}
-
-.footer-links li {
-  margin: 0.5rem 0;
-}
-
-.footer-links a {
-  color: rgba(255,255,255,0.8);
-  text-decoration: none;
-  transition: color 0.3s;
-}
-
-.footer-links a:hover {
-  color: white;
-}
-
-.footer-bottom {
-  border-top: 1px solid rgba(255,255,255,0.1);
-  padding-top: 2rem;
-  text-align: center;
-  opacity: 0.6;
-}
-
-/* Responsive */
 @media (max-width: 768px) {
   .nav-menu { display: none; }
   .hero h1 { font-size: 2rem; }
-  .hero .subtitle { font-size: 1.25rem; }
   .hero-buttons { flex-direction: column; }
   .btn { width: 100%; justify-content: center; }
   .features-grid { grid-template-columns: 1fr; }
-  .gallery-grid { grid-template-columns: 1fr; }
-  .contact-grid { grid-template-columns: 1fr; }
   .footer-content { grid-template-columns: 1fr; }
-  .page-hero h1 { font-size: 2rem; }
 }`;
   }
   
-  generateTemplateHTML(template, pageName) {
+  generateSmartHTML(template, pageName, description, intent) {
     const { title, hero, sections, gallery } = template;
     const isHome = pageName === 'index';
     
@@ -1829,7 +1797,6 @@ section {
     
     if (isHome) {
       content = `
-    <!-- Hero -->
     <section class="hero">
       <div class="hero-content">
         <div class="hero-emoji">${hero.emoji}</div>
@@ -1837,28 +1804,19 @@ section {
         <p class="subtitle">${hero.subtitle}</p>
         <p class="description">${hero.description}</p>
         <div class="hero-buttons">
-          <a href="about.html" class="btn btn-primary">
-            <i class="fas fa-arrow-right"></i>
-            Узнать больше
-          </a>
-          <a href="contact.html" class="btn btn-secondary">
-            <i class="fas fa-envelope"></i>
-            Связаться
-          </a>
+          <a href="about.html" class="btn btn-primary"><i class="fas fa-arrow-right"></i> Узнать больше</a>
+          <a href="contact.html" class="btn btn-secondary"><i class="fas fa-envelope"></i> Связаться</a>
         </div>
       </div>
     </section>
 
-    <!-- Features -->
     <section class="features">
       <div class="container">
         <h2 class="section-title">${sections[0].title}</h2>
         <div class="features-grid">
           ${sections[0].items.map(item => `
           <div class="feature-card">
-            <div class="feature-icon">
-              <i class="fas fa-${item.icon}"></i>
-            </div>
+            <div class="feature-icon"><i class="fas fa-${item.icon}"></i></div>
             <h3>${item.title}</h3>
             <p>${item.desc}</p>
           </div>
@@ -1867,16 +1825,13 @@ section {
       </div>
     </section>
 
-    <!-- More Features -->
-    <section class="features" style="background: white;">
+    <section class="features" style="background: #f8fafc;">
       <div class="container">
-        <h2 class="section-title">${sections[1]?.title || 'Возможности'}</h2>
+        <h2 class="section-title">${sections[1]?.title || 'Почему выбирают нас'}</h2>
         <div class="features-grid">
-          ${(sections[1]?.items || sections[0].items.slice(0, 3)).map(item => `
+          ${(sections[1]?.items || sections[0].items).map(item => `
           <div class="feature-card">
-            <div class="feature-icon">
-              <i class="fas fa-${item.icon}"></i>
-            </div>
+            <div class="feature-icon"><i class="fas fa-${item.icon}"></i></div>
             <h3>${item.title}</h3>
             <p>${item.desc}</p>
           </div>
@@ -1885,83 +1840,51 @@ section {
       </div>
     </section>
 
-    <!-- Gallery -->
     <section class="gallery">
       <div class="container">
         <h2 class="section-title">Галерея</h2>
         <div class="gallery-grid">
-          ${gallery.map((img, i) => `
-          <img src="${img.url}" alt="${img.alt}" class="gallery-img">
-          `).join('')}
+          ${gallery.map((img, i) => `<img src="${img.url}" alt="${img.alt}" class="gallery-img" loading="lazy">`).join('')}
         </div>
       </div>
     </section>`;
     } else if (pageName === 'about') {
       content = `
-    <!-- Page Hero -->
     <section class="page-hero">
-      <h1>О нас</h1>
+      <h1>О ${hero.title}</h1>
       <p>Узнайте больше о нашем проекте</p>
     </section>
-
-    <!-- Content -->
     <section class="content">
-      <h2>Наша миссия</h2>
-      <p>${hero.description}</p>
-      <p>Мы создали этот ресурс, чтобы собрать лучшую информацию в одном месте. Наша цель — помочь каждому посетителю найти ответы на свои вопросы и вдохновиться новыми идеями.</p>
-      
-      <h2>Что мы предлагаем</h2>
-      <p>На нашем сайте вы найдёте подробную информацию, качественные материалы и полезные советы. Мы постоянно обновляем контент, чтобы он оставался актуальным и интересным.</p>
-      
-      <h2>Почему выбирают нас</h2>
-      <p>Качество, надёжность и внимание к деталям — наши главные принципы. Мы тщательно отбираем материалы и проверяем каждую публикацию.</p>
+      <div class="container">
+        <h2>Наша миссия</h2>
+        <p>${hero.description}</p>
+        <p>Мы создали этот ресурс, чтобы собрать лучшую информацию в одном месте. Наша цель — помочь каждому найти ответы на вопросы.</p>
+        <h2>Что мы предлагаем</h2>
+        <p>На нашем сайте вы найдёте подробную информацию, качественные материалы и полезные советы.</p>
+      </div>
     </section>`;
     } else if (pageName === 'contact') {
       content = `
-    <!-- Page Hero -->
     <section class="page-hero">
       <h1>Контакты</h1>
       <p>Свяжитесь с нами</p>
     </section>
-
-    <!-- Contact -->
     <section class="content">
-      <div class="contact-grid">
-        <div class="contact-info">
-          <h2>Напишите нам</h2>
-          <p>Мы всегда рады общению и готовы ответить на ваши вопросы.</p>
-          
-          <div class="contact-item">
-            <i class="fas fa-envelope"></i>
-            <span>hello@${title.toLowerCase().replace(/\s+/g, '')}.ru</span>
+      <div class="container" style="max-width: 600px;">
+        <form onsubmit="event.preventDefault(); alert('Спасибо! Мы свяжемся с вами.');">
+          <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Имя</label>
+            <input type="text" placeholder="Ваше имя" style="width: 100%; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 8px;" required>
           </div>
-          <div class="contact-item">
-            <i class="fas fa-phone"></i>
-            <span>+7 (999) 123-45-67</span>
+          <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Email</label>
+            <input type="email" placeholder="email@example.com" style="width: 100%; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 8px;" required>
           </div>
-          <div class="contact-item">
-            <i class="fas fa-map-marker-alt"></i>
-            <span>Москва, Россия</span>
+          <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Сообщение</label>
+            <textarea rows="4" placeholder="Ваше сообщение..." style="width: 100%; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 8px;" required></textarea>
           </div>
-        </div>
-        
-        <form class="contact-form" onsubmit="event.preventDefault(); alert('Спасибо за сообщение!');">
-          <div class="form-group">
-            <label>Ваше имя</label>
-            <input type="text" placeholder="Иван Иванов" required>
-          </div>
-          <div class="form-group">
-            <label>Email</label>
-            <input type="email" placeholder="ivan@example.com" required>
-          </div>
-          <div class="form-group">
-            <label>Сообщение</label>
-            <textarea rows="4" placeholder="Ваше сообщение..." required></textarea>
-          </div>
-          <button type="submit" class="btn btn-primary">
-            <i class="fas fa-paper-plane"></i>
-            Отправить
-          </button>
+          <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="fas fa-paper-plane"></i> Отправить</button>
         </form>
       </div>
     </section>`;
@@ -1972,17 +1895,16 @@ section {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${isHome ? title : pageName === 'about' ? 'О нас' : 'Контакты'} | ${title}</title>
+  <title>${isHome ? hero.title : pageName === 'about' ? 'О нас' : 'Контакты'} | ${hero.title}</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>${hero.emoji}</text></svg>">
   <link rel="stylesheet" href="styles.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-  <!-- Navigation -->
   <nav class="navbar">
     <div class="nav-container">
-      <a href="index.html" class="nav-logo">${hero.emoji} ${title}</a>
+      <a href="index.html" class="nav-logo">${hero.emoji} ${hero.title}</a>
       <ul class="nav-menu">
         <li><a href="index.html" class="nav-link ${isHome ? 'active' : ''}">Главная</a></li>
         <li><a href="about.html" class="nav-link ${pageName === 'about' ? 'active' : ''}">О нас</a></li>
@@ -1990,86 +1912,69 @@ section {
       </ul>
     </div>
   </nav>
-
 ${content}
-
-  <!-- Footer -->
   <footer class="footer">
     <div class="footer-content">
       <div>
-        <h3>${hero.emoji} ${title}</h3>
+        <h3>${hero.emoji} ${hero.title}</h3>
         <p>${hero.description.substring(0, 100)}...</p>
       </div>
-      <div class="footer-links">
+      <div>
         <h4>Навигация</h4>
-        <ul>
-          <li><a href="index.html">Главная</a></li>
-          <li><a href="about.html">О нас</a></li>
-          <li><a href="contact.html">Контакты</a></li>
+        <ul style="list-style: none; margin-top: 0.5rem;">
+          <li><a href="index.html" style="color: rgba(255,255,255,0.8); text-decoration: none;">Главная</a></li>
+          <li><a href="about.html" style="color: rgba(255,255,255,0.8); text-decoration: none;">О нас</a></li>
+          <li><a href="contact.html" style="color: rgba(255,255,255,0.8); text-decoration: none;">Контакты</a></li>
         </ul>
       </div>
     </div>
-    <div class="footer-bottom">
-      <p>&copy; 2024 ${title}. Все права защищены.</p>
+    <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 2rem; text-align: center; opacity: 0.6;">
+      <p>&copy; 2024 ${hero.title}. Все права защищены.</p>
     </div>
   </footer>
-
   <script src="main.js"></script>
 </body>
 </html>`;
   }
   
-  generateTemplateJS() {
-    return `// Mobile Navigation
-document.addEventListener('DOMContentLoaded', () => {
-  // Smooth scroll for anchor links
-  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-      e.preventDefault();
-      const target = document.querySelector(this.getAttribute('href'));
-      if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    });
-  });
+  generateSmartJS(template) {
+    return `// SMART Site JavaScript
+console.log('🚀 ${template.title} loaded successfully!');
 
-  // Scroll animations
-  const observerOptions = {
-    root: null,
-    rootMargin: '0px',
-    threshold: 0.1
-  };
-
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.style.opacity = '1';
-        entry.target.style.transform = 'translateY(0)';
-      }
-    });
-  }, observerOptions);
-
-  // Animate feature cards
-  document.querySelectorAll('.feature-card').forEach((el, i) => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(30px)';
-    el.style.transition = 'all 0.6s ease';
-    el.style.transitionDelay = (i * 0.1) + 's';
-    observer.observe(el);
-  });
-
-  // Navbar shadow on scroll
-  const navbar = document.querySelector('.navbar');
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 50) {
-      navbar.style.boxShadow = '0 4px 30px rgba(0,0,0,0.1)';
-    } else {
-      navbar.style.boxShadow = '0 2px 20px rgba(0,0,0,0.05)';
-    }
+// Smooth scroll
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function (e) {
+    e.preventDefault();
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
   });
 });
 
-console.log('Сайт загружен успешно! 🚀');`;
+// Scroll animations
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.style.opacity = '1';
+      entry.target.style.transform = 'translateY(0)';
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.feature-card').forEach((el, i) => {
+  el.style.opacity = '0';
+  el.style.transform = 'translateY(30px)';
+  el.style.transition = 'all 0.6s ease';
+  el.style.transitionDelay = (i * 0.1) + 's';
+  observer.observe(el);
+});
+
+// Navbar shadow
+const navbar = document.querySelector('.navbar');
+window.addEventListener('scroll', () => {
+  navbar.style.boxShadow = window.scrollY > 50 
+    ? '0 4px 30px rgba(0,0,0,0.1)' 
+    : '0 2px 20px rgba(0,0,0,0.05)';
+});`;
   }
 
   // ===== WEBSITE MODIFICATION SYSTEM (Better than base44) =====
