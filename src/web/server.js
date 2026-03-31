@@ -1208,10 +1208,10 @@ wss.on('connection', (ws) => {
           case 'create_website':
             ws.send(JSON.stringify({ type: 'progress', step: 'generating', content: 'Генерирую веб-сайт...' }));
             try {
-              // Add 2 minute timeout for project creation
+              // Add 5 minute timeout for project creation (AI generation can be slow)
               const createPromise = agent.createProject('Website', msg.content, 'web');
               const timeoutPromise = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Создание сайта заняло слишком много времени')), 120000)
+                setTimeout(() => reject(new Error('Создание сайта заняло слишком много времени')), 300000)
               );
               const webProject = await Promise.race([createPromise, timeoutPromise]);
               
@@ -1229,7 +1229,7 @@ wss.on('connection', (ws) => {
               console.error('Website creation error:', createError);
               ws.send(JSON.stringify({ 
                 type: 'error', 
-                content: `Ошибка при создании сайта: ${createError.message}. Попробуйте ещё раз или проверьте настройки API.` 
+                content: `⏱️ ${createError.message}. AI-генерация занимает больше времени из-за создания нескольких страниц. Попробуйте ещё раз или используйте шаблон без AI (быстрее).` 
               }));
             }
             break;
