@@ -394,7 +394,7 @@ function parseIntent(message) {
   return { type: 'unknown' };
 }
 
-// Video generation using AI APIs (Pollinations first, then DeepAI, Runway, Replicate, Luma)
+// Video generation using AI APIs (DeepAI first for real video, then Pollinations fallback)
 async function generateVideo(prompt) {
   console.log('🎬 Generating video for:', prompt);
   
@@ -403,119 +403,68 @@ async function generateVideo(prompt) {
   const lumaKey = process.env.LUMA_API_KEY;
   const deepaiKey = process.env.DEEPAI_API_KEY;
   
-  // Log API key status (without exposing keys)
+  // Log API key status
   console.log('🔑 API Keys status:');
-  console.log('  RUNWAY_API_KEY:', runwayKey ? `✅ Present (${runwayKey.substring(0, 10)}...)` : '❌ Missing');
-  console.log('  REPLICATE_API_KEY:', replicateKey ? `✅ Present (${replicateKey.substring(0, 10)}...)` : '❌ Missing');
-  console.log('  LUMA_API_KEY:', lumaKey ? `✅ Present (${lumaKey.substring(0, 10)}...)` : '❌ Missing');
-  console.log('  DEEPAI_API_KEY:', deepaiKey ? `✅ Present (${deepaiKey.substring(0, 10)}...)` : '❌ Using demo key');
+  console.log('  DEEPAI_API_KEY:', deepaiKey ? `✅ Present` : '⚠️ Using demo');
+  console.log('  RUNWAY_API_KEY:', runwayKey ? `✅ Present` : '❌ Missing');
+  console.log('  REPLICATE_API_KEY:', replicateKey ? `✅ Present` : '❌ Missing');
   
-  // FIRST: Try Pollinations (free, fast, no API key needed)
-  console.log('🎬 Using Pollinations for video (free & fast)...');
+  // FIRST: Try DeepAI (free video generation)
+  console.log('🎬 Attempting DeepAI (free video)...');
   try {
-    const pollResult = await generateVideoPollinations(prompt);
-    console.log('✅ Pollinations video generated successfully');
-    
-    // Try DeepAI as second free option
-    if (deepaiKey || true) { // Try even with demo key
-      try {
-        console.log('🎬 Attempting DeepAI (free tier)...');
-        const deepResult = await generateVideoDeepAI(prompt);
-        console.log('✅ DeepAI success');
-        return deepResult;
-      } catch (deepError) {
-        console.log('❌ DeepAI failed:', deepError.message);
-      }
-    }
-    
-    // If paid APIs available, try them for real video but return Pollinations if they fail
-    if (runwayKey || replicateKey || lumaKey) {
-      console.log('💡 Paid APIs available, attempting for real video...');
-      const errors = [];
-      
-      // Try Runway
-      if (runwayKey) {
-        try {
-          console.log('🎬 Attempting Runway...');
-          const result = await generateVideoRunway(prompt, runwayKey);
-          console.log('✅ Runway success');
-          return result;
-        } catch (error) {
-          console.log('❌ Runway failed:', error.message);
-          errors.push(`Runway: ${error.message}`);
-        }
-      }
-      
-      // Try Replicate
-      if (replicateKey) {
-        try {
-          console.log('🎬 Attempting Replicate...');
-          const result = await generateVideoReplicate(prompt, replicateKey);
-          console.log('✅ Replicate success');
-          return result;
-        } catch (error) {
-          console.log('❌ Replicate failed:', error.message);
-          errors.push(`Replicate: ${error.message}`);
-        }
-      }
-      
-      // Try Luma
-      if (lumaKey) {
-        try {
-          console.log('🎬 Attempting Luma...');
-          const result = await generateVideoLuma(prompt, lumaKey);
-          console.log('✅ Luma success');
-          return result;
-        } catch (error) {
-          console.log('❌ Luma failed:', error.message);
-          errors.push(`Luma: ${error.message}`);
-        }
-      }
-      
-      // All paid APIs failed, return Pollinations with warning
-      if (errors.length > 0) {
-        pollResult.content += `\n\n⚠️ Проблемы с платными API: ${errors.join(', ')}\n💡 Использована бесплатная генерация.`;
-      }
-    }
-    
-    return pollResult;
-  } catch (pollError) {
-    console.error('❌ Pollinations failed:', pollError.message);
-    
-    // LAST RESORT: Try paid APIs if Pollinations fails
-    if (runwayKey || replicateKey || lumaKey) {
-      console.log('🎬 Pollinations failed, trying paid APIs as fallback...');
-      
-      if (runwayKey) {
-        try {
-          return await generateVideoRunway(prompt, runwayKey);
-        } catch (e) {
-          console.log('❌ Runway fallback failed:', e.message);
-        }
-      }
-      
-      if (replicateKey) {
-        try {
-          return await generateVideoReplicate(prompt, replicateKey);
-        } catch (e) {
-          console.log('❌ Replicate fallback failed:', e.message);
-        }
-      }
-      
-      if (lumaKey) {
-        try {
-          return await generateVideoLuma(prompt, lumaKey);
-        } catch (e) {
-          console.log('❌ Luma fallback failed:', e.message);
-        }
-      }
-    }
-    
-    return {
-      type: 'error',
-      content: `❌ Ошибка генерации видео: ${pollError.message}`
-    };
+    const deepResult = await generateVideoDeepAI(prompt);
+    console.log('✅ DeepAI video generated successfully');
+    return deepResult;
+  } catch (deepError) {
+    console.log('❌ DeepAI failed:', deepError.message);
   }
+  
+  // SECOND: Try paid APIs if keys available
+  if (runwayKey || replicateKey || lumaKey) {
+    const errors = [];
+    
+    if (runwayKey) {
+      try {
+        console.log('🎬 Attempting Runway...');
+        const result = await generateVideoRunway(prompt, runwayKey);
+        console.log('✅ Runway success');
+        return result;
+      } catch (error) {
+        console.log('❌ Runway failed:', error.message);
+        errors.push(`Runway: ${error.message}`);
+      }
+    }
+    
+    if (replicateKey) {
+      try {
+        console.log('🎬 Attempting Replicate...');
+        const result = await generateVideoReplicate(prompt, replicateKey);
+        console.log('✅ Replicate success');
+        return result;
+      } catch (error) {
+        console.log('❌ Replicate failed:', error.message);
+        errors.push(`Replicate: ${error.message}`);
+      }
+    }
+    
+    if (lumaKey) {
+      try {
+        console.log('🎬 Attempting Luma...');
+        const result = await generateVideoLuma(prompt, lumaKey);
+        console.log('✅ Luma success');
+        return result;
+      } catch (error) {
+        console.log('❌ Luma failed:', error.message);
+        errors.push(`Luma: ${error.message}`);
+      }
+    }
+  }
+  
+  // FINAL FALLBACK: Pollinations image sequence (always works)
+  console.log('🎬 Using Pollinations fallback (image sequence)...');
+  const pollResult = await generateVideoPollinations(prompt);
+  pollResult.content += '\n\n💡 DeepAI видео недоступно. Использована анимация из кадров.';
+  return pollResult;
 }
 
 // Replicate Video Generation (free tier available)

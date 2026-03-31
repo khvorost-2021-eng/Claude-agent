@@ -403,18 +403,18 @@ class ClaudeDevAgent {
       progressCallback({ step: 'content', message: `📝 Генерирую контент для "${topic}"...`, progress: 15 });
     }
     
-    // STEP 1: Try Pollinations AI for content (with short timeout)
+    // STEP 1: Try Pollinations AI for content (with longer timeout)
     let aiContent = null;
     try {
       console.log('🤖 STEP 1: Getting AI content from Pollinations...');
       if (progressCallback) {
-        progressCallback({ step: 'content', message: '🤖 Запрашиваю AI контент... (5 сек)', progress: 20 });
+        progressCallback({ step: 'content', message: '🤖 Запрашиваю AI контент... (10 сек)', progress: 20 });
       }
       
-      // Race between AI and timeout
+      // Race between AI and timeout - 10 seconds for AI to respond
       aiContent = await Promise.race([
         this.generateSiteContentWithAI(topic, intent, progressCallback),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('AI Timeout')), 5000))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('AI Timeout')), 10000))
       ]);
       
       if (aiContent) {
