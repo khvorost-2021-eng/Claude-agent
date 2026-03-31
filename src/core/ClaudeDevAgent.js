@@ -459,8 +459,8 @@ Output ONLY valid JSON, no markdown, no comments.`;
     return null;
   }
 
-  // Generate AI-powered full HTML page
-  async generateAIPage(pageName, content, topic, intent, heroImage) {
+  // Generate AI-powered full HTML page with retry logic
+  async generateAIPage(pageName, content, topic, intent, heroImage, maxRetries = 3) {
     const pagePrompt = `Create a complete, valid HTML page for "${topic}" - ${pageName} page.
 
 PAGE DETAILS:
@@ -479,41 +479,80 @@ REQUIREMENTS:
 
 Start with <!DOCTYPE html> and end with </html>.`;
 
-    try {
-      console.log(`🤖 AI generating ${pageName} page for ${topic}...`);
-      const encoded = encodeURIComponent(pagePrompt);
-      const url = `https://text.pollinations.ai/${encoded}?seed=${Date.now() % 4294967295}`;
-      
-      console.log(`🌐 Fetching from: ${url.substring(0, 100)}...`);
-      
-      const response = await fetch(url, { 
-        headers: { 'Accept': 'text/plain' }
-      });
-      
-      if (!response.ok) {
-        console.error(`❌ HTTP error: ${response.status}`);
-        return null;
+    let lastError = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🤖 AI generating ${pageName} page for ${topic} (attempt ${attempt}/${maxRetries})...`);
+        const encoded = encodeURIComponent(pagePrompt);
+        const url = `https://text.pollinations.ai/${encoded}?seed=${Date.now() % 4294967295}`;
+        
+        console.log(`🌐 Fetching from: ${url.substring(0, 100)}...`);
+        
+        const response = await fetch(url, { 
+          headers: { 'Accept': 'text/plain' },
+          timeout: 15000 // 15 second timeout
+        });
+        
+        // Handle rate limit (429) - wait and retry
+        if (response.status === 429) {
+          const delay = attempt * 2000; // 2s, 4s, 6s
+          console.log(`⏳ Rate limit (429) on attempt ${attempt}, waiting ${delay}ms...`);
+          await new Promise(r => setTimeout(r, delay));
+          continue; // Try again
+        }
+        
+        // Handle bad gateway (502) - wait and retry
+        if (response.status === 502) {
+          const delay = attempt * 1500; // 1.5s, 3s, 4.5s
+          console.log(`⏳ Bad gateway (502) on attempt ${attempt}, waiting ${delay}ms...`);
+          await new Promise(r => setTimeout(r, delay));
+          continue; // Try again
+        }
+        
+        if (!response.ok) {
+          console.error(`❌ HTTP error: ${response.status}`);
+          lastError = new Error(`HTTP ${response.status}`);
+          // For other errors, wait a bit then continue
+          if (attempt < maxRetries) {
+            await new Promise(r => setTimeout(r, 1000));
+            continue;
+          }
+          return null;
+        }
+        
+        let html = await response.text();
+        console.log(`📥 Received ${html.length} characters`);
+        
+        // Clean up the response
+        html = html.replace(/```html\n?/gi, '').replace(/```\n?/g, '').trim();
+        
+        // Validate HTML - lowered to 500 chars
+        if (!html.includes('<!DOCTYPE') || !html.includes('<html') || html.length < 500) {
+          console.log(`⚠️ AI returned invalid/short HTML for ${pageName}, length: ${html.length}`);
+          console.log(`📝 Preview: ${html.substring(0, 200)}`);
+          if (attempt < maxRetries) {
+            await new Promise(r => setTimeout(r, 1000));
+            continue;
+          }
+          return null;
+        }
+        
+        console.log(`✅ AI generated ${pageName} page successfully (${html.length} chars)`);
+        return html;
+      } catch (e) {
+        console.error(`❌ AI page generation error for ${pageName} (attempt ${attempt}):`, e.message);
+        lastError = e;
+        if (attempt < maxRetries) {
+          const delay = attempt * 1000;
+          console.log(`⏳ Waiting ${delay}ms before retry...`);
+          await new Promise(r => setTimeout(r, delay));
+        }
       }
-      
-      let html = await response.text();
-      console.log(`📥 Received ${html.length} characters`);
-      
-      // Clean up the response
-      html = html.replace(/```html\n?/gi, '').replace(/```\n?/g, '').trim();
-      
-      // Validate HTML - lowered to 500 chars
-      if (!html.includes('<!DOCTYPE') || !html.includes('<html') || html.length < 500) {
-        console.log(`⚠️ AI returned invalid/short HTML for ${pageName}, length: ${html.length}`);
-        console.log(`📝 Preview: ${html.substring(0, 200)}`);
-        return null;
-      }
-      
-      console.log(`✅ AI generated ${pageName} page successfully (${html.length} chars)`);
-      return html;
-    } catch (e) {
-      console.error(`❌ AI page generation error for ${pageName}:`, e.message);
-      return null;
     }
+    
+    console.error(`❌ All ${maxRetries} attempts failed for ${pageName}:`, lastError?.message);
+    return null;
   }
 
   // Generate hybrid site: AI-powered full HTML generation
