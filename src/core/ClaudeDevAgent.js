@@ -693,16 +693,16 @@ Start with <!DOCTYPE html> and end with </html>.`;
     // Default content if AI fails
     const content = aiContent || {
       title: topic,
-      headline: `Откройте мир ${topic}`,
-      subtitle: 'Узнайте всё, что нужно знать, в одном месте',
-      description: `${topic} — это увлекательная тема, которая открывает множество возможностей для изучения и развития.`,
+      headline: 'Discover ' + topic,
+      subtitle: 'Learn everything you need to know in one place',
+      description: topic + ' is a fascinating topic that opens many opportunities for learning and growth.',
       features: [
         { title: 'Экспертные знания', description: 'Погрузитесь в тему с профессиональным контентом' },
         { title: 'Практические советы', description: 'Применяйте знания на практике каждый день' },
         { title: 'Современный подход', description: 'Актуальная информация и последние тренды' }
       ],
-      aboutTitle: `О ${topic}`,
-      aboutText: `${topic} занимает важное место в современном мире. Эта тема охватывает множество аспектов и предлагает глубокое понимание предмета. Изучение ${topic} открывает новые возможности и перспективы.`,
+      aboutTitle: 'About ' + topic,
+      aboutText: topic + ' is an important topic in the modern world. It covers many aspects and provides deep understanding of the subject. Learning ' + topic + ' opens new opportunities and perspectives.',
       services: [
         { name: 'Консультация', description: 'Профессиональная консультация по теме' },
         { name: 'Обучение', description: 'Полный курс обучения' },
