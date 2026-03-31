@@ -355,7 +355,17 @@ class ClaudeDevAgent {
     console.log('=== AI SITE GENERATION START ===');
     console.log('Description:', description);
     
-    // Send initial progress
+    // Check if user wants fast mode (template only, no AI)
+    const isFastMode = description.toLowerCase().includes('быстро') || 
+                       description.toLowerCase().includes('fast') ||
+                       description.toLowerCase().includes('шаблон') ||
+                       description.toLowerCase().includes('template');
+    
+    if (isFastMode && progressCallback) {
+      progressCallback({ step: 'analyzing', message: '⚡ Быстрый режим - использую шаблоны...', progress: 5 });
+    }
+    
+    // Send initial progress immediately
     if (progressCallback) {
       progressCallback({ step: 'analyzing', message: '🔍 Анализирую запрос...', progress: 5 });
     }
@@ -369,34 +379,63 @@ class ClaudeDevAgent {
     console.log(`🎯 Topic extracted: "${topic}"`);
     console.log(`📂 Category: ${intent.category}, Site Type: ${intent.siteType}`);
     
+    // FAST MODE: Skip AI, use templates only
+    if (isFastMode) {
+      console.log('⚡ FAST MODE: Using templates only (no AI)');
+      if (progressCallback) {
+        progressCallback({ step: 'content', message: `⚡ Генерация шаблонов для "${topic}"...`, progress: 15 });
+      }
+      
+      // Generate quickly with templates
+      await this.generateFastSite(project, description, topic, intent, progressCallback);
+      
+      console.log(`✅ Fast site generation complete for "${topic}"`);
+      console.log('=== AI SITE GENERATION END ===');
+      
+      if (progressCallback) {
+        progressCallback({ step: 'complete', message: '✅ Сайт готов! (быстрый режим)', progress: 100 });
+      }
+      return;
+    }
+    
+    // NORMAL MODE: Try AI with timeout
     if (progressCallback) {
       progressCallback({ step: 'content', message: `📝 Генерирую контент для "${topic}"...`, progress: 15 });
     }
     
-    // STEP 1: Try Pollinations AI for content
+    // STEP 1: Try Pollinations AI for content (with short timeout)
     let aiContent = null;
     try {
       console.log('🤖 STEP 1: Getting AI content from Pollinations...');
-      aiContent = await this.generateSiteContentWithAI(topic, intent, progressCallback);
+      if (progressCallback) {
+        progressCallback({ step: 'content', message: '🤖 Запрашиваю AI контент... (5 сек)', progress: 20 });
+      }
+      
+      // Race between AI and timeout
+      aiContent = await Promise.race([
+        this.generateSiteContentWithAI(topic, intent, progressCallback),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('AI Timeout')), 5000))
+      ]);
+      
       if (aiContent) {
-        console.log('✅ AI content received:', JSON.stringify(aiContent, null, 2));
+        console.log('✅ AI content received');
         if (progressCallback) {
-          progressCallback({ step: 'content', message: `✅ Контент сгенерирован: "${aiContent.title}"`, progress: 25 });
+          progressCallback({ step: 'content', message: `✅ Контент: "${aiContent.title}"`, progress: 25 });
         }
-      } else {
-        console.log('⚠️ AI content is null, using defaults');
       }
     } catch (e) {
-      console.log('❌ AI content failed:', e.message);
-      console.error(e);
+      console.log('⚠️ AI content timeout/failed:', e.message);
+      if (progressCallback) {
+        progressCallback({ step: 'content', message: '⚡ Использую шаблонный контент...', progress: 25 });
+      }
     }
     
     if (progressCallback) {
-      progressCallback({ step: 'generating', message: '🏗️ Начинаю создание страниц...', progress: 30 });
+      progressCallback({ step: 'generating', message: '🏗️ Создаю страницы...', progress: 30 });
     }
     
-    // STEP 2: Generate site with AI HTML generation
-    console.log('📄 STEP 2: Generating site with AI HTML...');
+    // STEP 2: Generate site (hybrid: AI for index, templates for rest)
+    console.log('📄 STEP 2: Generating pages...');
     await this.generateHybridSite(project, description, topic, intent, aiContent, progressCallback);
     
     console.log(`✅ Site generation complete for "${topic}"`);
@@ -556,6 +595,71 @@ Start with <!DOCTYPE html> and end with </html>.`;
   }
 
   // Generate hybrid site: AI-powered full HTML generation
+  // Generate site quickly using templates only (no AI)
+  async generateFastSite(project, description, topic, intent, progressCallback = null) {
+    if (progressCallback) {
+      progressCallback({ step: 'content', message: `⚡ Создаю страницы для "${topic}"...`, progress: 20 });
+    }
+    
+    const pages = ['index', 'about', 'services', 'contact'];
+    const totalPages = pages.length;
+    
+    for (let i = 0; i < pages.length; i++) {
+      const pageName = pages[i];
+      const progress = 20 + Math.round(((i + 1) / totalPages) * 60);
+      
+      if (progressCallback) {
+        progressCallback({ 
+          step: 'page', 
+          message: `📄 Создаю страницу "${pageName}"...`, 
+          progress: progress,
+          currentPage: pageName,
+          totalPages: totalPages,
+          completedPages: i
+        });
+      }
+      
+      // Generate page with template
+      const content = this.getDefaultContent(topic);
+      const heroImage = `https://image.pollinations.ai/prompt/${encodeURIComponent(`modern ${topic} website hero`)}?width=1200&height=600&nologo=true`;
+      const html = this.generatePageWithContent(pageName, content, topic, intent, heroImage);
+      
+      const filename = pageName === 'index' ? 'index.html' : `${pageName}.html`;
+      fs.writeFileSync(path.join(project.path, filename), html);
+      project.files.push(filename);
+      
+      if (progressCallback) {
+        progressCallback({ 
+          step: 'file_created', 
+          message: `✅ Страница "${pageName}" готова`, 
+          progress: progress,
+          file: filename,
+          previewUrl: `/preview/${project.id}/${filename}`
+        });
+      }
+    }
+    
+    // Generate CSS
+    if (progressCallback) {
+      progressCallback({ step: 'styling', message: '🎨 Создаю стили...', progress: 85 });
+    }
+    const css = this.generateSmartCSS({ colors: this.generateColorsForTopic(topic) });
+    fs.writeFileSync(path.join(project.path, 'styles.css'), css);
+    project.files.push('styles.css');
+    
+    // Generate JS
+    if (progressCallback) {
+      progressCallback({ step: 'js', message: '⚡ Добавляю интерактивность...', progress: 90 });
+    }
+    const js = this.generateJavaScript();
+    fs.writeFileSync(path.join(project.path, 'script.js'), js);
+    project.files.push('script.js');
+    
+    if (progressCallback) {
+      progressCallback({ step: 'complete', message: '✅ Сайт готов!', progress: 100 });
+    }
+  }
+
   // Generate hybrid site: AI-powered full HTML generation with parallel requests
   async generateHybridSite(project, description, topic, intent, aiContent, progressCallback = null) {
     // Dynamic import for ES modules compatibility

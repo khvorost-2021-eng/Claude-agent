@@ -394,81 +394,128 @@ function parseIntent(message) {
   return { type: 'unknown' };
 }
 
-// Video generation using AI APIs (Runway, Replicate, Luma, Pollinations)
+// Video generation using AI APIs (Pollinations first, then DeepAI, Runway, Replicate, Luma)
 async function generateVideo(prompt) {
   console.log('🎬 Generating video for:', prompt);
   
   const runwayKey = process.env.RUNWAY_API_KEY;
   const replicateKey = process.env.REPLICATE_API_KEY;
   const lumaKey = process.env.LUMA_API_KEY;
+  const deepaiKey = process.env.DEEPAI_API_KEY;
   
   // Log API key status (without exposing keys)
   console.log('🔑 API Keys status:');
   console.log('  RUNWAY_API_KEY:', runwayKey ? `✅ Present (${runwayKey.substring(0, 10)}...)` : '❌ Missing');
   console.log('  REPLICATE_API_KEY:', replicateKey ? `✅ Present (${replicateKey.substring(0, 10)}...)` : '❌ Missing');
   console.log('  LUMA_API_KEY:', lumaKey ? `✅ Present (${lumaKey.substring(0, 10)}...)` : '❌ Missing');
+  console.log('  DEEPAI_API_KEY:', deepaiKey ? `✅ Present (${deepaiKey.substring(0, 10)}...)` : '❌ Using demo key');
   
-  const errors = [];
-  
-  // Try Runway first (best quality, has free trial)
-  if (runwayKey) {
-    try {
-      console.log('🎬 Attempting Runway with key format:', runwayKey.startsWith('Bearer') ? 'Bearer + token' : 'Raw token');
-      const result = await generateVideoRunway(prompt, runwayKey);
-      console.log('✅ Runway success');
-      return result;
-    } catch (error) {
-      console.log('❌ Runway failed:', error.message);
-      errors.push(`Runway: ${error.message}`);
-    }
-  } else {
-    console.log('⚠️ Skipping Runway - no API key');
-  }
-  
-  // Try Replicate (has free tier)
-  if (replicateKey) {
-    try {
-      console.log('🎬 Attempting Replicate...');
-      const result = await generateVideoReplicate(prompt, replicateKey);
-      console.log('✅ Replicate success');
-      return result;
-    } catch (error) {
-      console.log('❌ Replicate failed:', error.message);
-      errors.push(`Replicate: ${error.message}`);
-      // If 401, warn about invalid key
-      if (error.message.includes('401')) {
-        console.log('⚠️ REPLICATE_API_KEY is invalid or expired. Get a new key at https://replicate.com/account/api-tokens');
+  // FIRST: Try Pollinations (free, fast, no API key needed)
+  console.log('🎬 Using Pollinations for video (free & fast)...');
+  try {
+    const pollResult = await generateVideoPollinations(prompt);
+    console.log('✅ Pollinations video generated successfully');
+    
+    // Try DeepAI as second free option
+    if (deepaiKey || true) { // Try even with demo key
+      try {
+        console.log('🎬 Attempting DeepAI (free tier)...');
+        const deepResult = await generateVideoDeepAI(prompt);
+        console.log('✅ DeepAI success');
+        return deepResult;
+      } catch (deepError) {
+        console.log('❌ DeepAI failed:', deepError.message);
       }
     }
-  } else {
-    console.log('⚠️ Skipping Replicate - no API key');
-  }
-  
-  // Try Luma AI
-  if (lumaKey) {
-    try {
-      console.log('🎬 Attempting Luma AI...');
-      const result = await generateVideoLuma(prompt, lumaKey);
-      console.log('✅ Luma AI success');
-      return result;
-    } catch (error) {
-      console.log('❌ Luma AI failed:', error.message);
-      errors.push(`Luma: ${error.message}`);
+    
+    // If paid APIs available, try them for real video but return Pollinations if they fail
+    if (runwayKey || replicateKey || lumaKey) {
+      console.log('💡 Paid APIs available, attempting for real video...');
+      const errors = [];
+      
+      // Try Runway
+      if (runwayKey) {
+        try {
+          console.log('🎬 Attempting Runway...');
+          const result = await generateVideoRunway(prompt, runwayKey);
+          console.log('✅ Runway success');
+          return result;
+        } catch (error) {
+          console.log('❌ Runway failed:', error.message);
+          errors.push(`Runway: ${error.message}`);
+        }
+      }
+      
+      // Try Replicate
+      if (replicateKey) {
+        try {
+          console.log('🎬 Attempting Replicate...');
+          const result = await generateVideoReplicate(prompt, replicateKey);
+          console.log('✅ Replicate success');
+          return result;
+        } catch (error) {
+          console.log('❌ Replicate failed:', error.message);
+          errors.push(`Replicate: ${error.message}`);
+        }
+      }
+      
+      // Try Luma
+      if (lumaKey) {
+        try {
+          console.log('🎬 Attempting Luma...');
+          const result = await generateVideoLuma(prompt, lumaKey);
+          console.log('✅ Luma success');
+          return result;
+        } catch (error) {
+          console.log('❌ Luma failed:', error.message);
+          errors.push(`Luma: ${error.message}`);
+        }
+      }
+      
+      // All paid APIs failed, return Pollinations with warning
+      if (errors.length > 0) {
+        pollResult.content += `\n\n⚠️ Проблемы с платными API: ${errors.join(', ')}\n💡 Использована бесплатная генерация.`;
+      }
     }
-  } else {
-    console.log('⚠️ Skipping Luma - no API key');
+    
+    return pollResult;
+  } catch (pollError) {
+    console.error('❌ Pollinations failed:', pollError.message);
+    
+    // LAST RESORT: Try paid APIs if Pollinations fails
+    if (runwayKey || replicateKey || lumaKey) {
+      console.log('🎬 Pollinations failed, trying paid APIs as fallback...');
+      
+      if (runwayKey) {
+        try {
+          return await generateVideoRunway(prompt, runwayKey);
+        } catch (e) {
+          console.log('❌ Runway fallback failed:', e.message);
+        }
+      }
+      
+      if (replicateKey) {
+        try {
+          return await generateVideoReplicate(prompt, replicateKey);
+        } catch (e) {
+          console.log('❌ Replicate fallback failed:', e.message);
+        }
+      }
+      
+      if (lumaKey) {
+        try {
+          return await generateVideoLuma(prompt, lumaKey);
+        } catch (e) {
+          console.log('❌ Luma fallback failed:', e.message);
+        }
+      }
+    }
+    
+    return {
+      type: 'error',
+      content: `❌ Ошибка генерации видео: ${pollError.message}`
+    };
   }
-  
-  // Final fallback: Pollinations image (free, no API key needed)
-  console.log('🎬 All paid APIs failed or not configured, using Pollinations fallback');
-  const pollResult = await generateVideoPollinations(prompt);
-  
-  // Add warning about API failures to the response
-  if (errors.length > 0) {
-    pollResult.content += `\n\n⚠️ Проблемы с API: ${errors.join(', ')}\n💡 Проверьте ваши API ключи в настройках.`;
-  }
-  
-  return pollResult;
 }
 
 // Replicate Video Generation (free tier available)
@@ -678,6 +725,44 @@ async function generateVideoRunway(prompt, apiKey) {
     };
   } catch (error) {
     throw new Error(`Runway failed: ${error.message}`);
+  }
+}
+
+// DeepAI Video Generation (free tier with watermark)
+async function generateVideoDeepAI(prompt) {
+  console.log('🎬 Using DeepAI for video:', prompt);
+  
+  try {
+    // DeepAI text2video API
+    const response = await fetch('https://api.deepai.org/api/text2video', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': process.env.DEEPAI_API_KEY || 'quickstart-KEY' // Use env key or demo key
+      },
+      body: JSON.stringify({
+        text: prompt
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`DeepAI API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.output_url) {
+      return {
+        type: 'video_generated',
+        content: `🎬 Видео от DeepAI: "${prompt}"`,
+        videoUrl: data.output_url,
+        prompt: prompt
+      };
+    }
+    
+    throw new Error('No video URL in response');
+  } catch (error) {
+    throw new Error(`DeepAI failed: ${error.message}`);
   }
 }
 
