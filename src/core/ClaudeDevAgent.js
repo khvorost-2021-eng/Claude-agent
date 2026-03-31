@@ -517,6 +517,7 @@ Start with <!DOCTYPE html> and end with </html>.`;
   }
 
   // Generate hybrid site: AI-powered full HTML generation
+  // Generate hybrid site: AI-powered full HTML generation with parallel requests
   async generateHybridSite(project, description, topic, intent, aiContent, progressCallback = null) {
     // Dynamic import for ES modules compatibility
     const websiteTemplates = await import('./websiteTemplates.js');
@@ -551,69 +552,108 @@ Start with <!DOCTYPE html> and end with </html>.`;
     // Generate hero image via Pollinations
     const heroImage = `https://image.pollinations.ai/prompt/${encodeURIComponent(`modern ${topic} website hero, professional, clean design`)}?width=1200&height=600&nologo=true&seed=${Date.now() % 4294967295}`;
     
-    // Generate pages with FULL AI HTML generation
+    // Generate only index page with AI (faster), rest with template
     const pages = ['index', 'about', 'services', 'contact'];
     let aiSuccessCount = 0;
     let templateFallbackCount = 0;
     
-    for (let i = 0; i < pages.length; i++) {
-      const pageName = pages[i];
-      const pageProgress = 40 + Math.round(((i) / pages.length) * 40);
-      
-      if (progressCallback) {
-        progressCallback({ 
-          step: 'page', 
-          message: `📄 Создаю страницу "${pageName}" (${i + 1}/${pages.length})...`, 
-          progress: pageProgress,
-          currentPage: pageName,
-          totalPages: pages.length,
-          completedPages: i
-        });
+    // Generate index page first with AI (most important)
+    if (progressCallback) {
+      progressCallback({ 
+        step: 'page', 
+        message: `📄 Создаю главную страницу с AI...`, 
+        progress: 40,
+        currentPage: 'index',
+        totalPages: pages.length,
+        completedPages: 0
+      });
+    }
+    
+    console.log(`🤖 Generating index page with AI (primary)...`);
+    let indexHtml = null;
+    let attempts = 0;
+    const maxAttempts = 2;
+    
+    while (!indexHtml && attempts < maxAttempts) {
+      attempts++;
+      try {
+        indexHtml = await this.generateAIPage('index', content, topic, intent, heroImage);
+      } catch (e) {
+        console.log(`⚠️ Index page attempt ${attempts} failed:`, e.message);
       }
-      
-      console.log(`🤖 Generating ${pageName} page with AI...`);
-      
-      // Try AI generation first with retry
+      if (!indexHtml && attempts < maxAttempts) {
+        await new Promise(r => setTimeout(r, 500)); // Short wait before retry
+      }
+    }
+    
+    if (!indexHtml || indexHtml.length < 500) {
+      console.log(`⚠️ AI failed for index, using template`);
+      indexHtml = this.generatePageWithContent('index', content, topic, intent, heroImage);
+      templateFallbackCount++;
+    } else {
+      aiSuccessCount++;
+      console.log(`✅ AI generated index page successfully (${indexHtml.length} chars)`);
+    }
+    
+    fs.writeFileSync(path.join(project.path, 'index.html'), indexHtml);
+    project.files.push('index.html');
+    
+    if (progressCallback) {
+      progressCallback({ 
+        step: 'file_created', 
+        message: `✅ Главная страница готова`, 
+        progress: 50,
+        file: 'index.html',
+        previewUrl: `/preview/${project.id}/index.html`
+      });
+    }
+    
+    // Generate other pages in parallel with template (much faster)
+    const otherPages = ['about', 'services', 'contact'];
+    
+    if (progressCallback) {
+      progressCallback({ step: 'pages', message: '📄 Создаю остальные страницы...', progress: 55 });
+    }
+    
+    // Try AI for other pages in parallel with shorter timeout
+    const pagePromises = otherPages.map(async (pageName, idx) => {
       let html = null;
-      let attempts = 0;
-      const maxAttempts = 2;
-      
-      while (!html && attempts < maxAttempts) {
-        attempts++;
-        html = await this.generateAIPage(pageName, content, topic, intent, heroImage);
-        if (!html && attempts < maxAttempts) {
-          console.log(`🔄 Retrying ${pageName} page generation (attempt ${attempts + 1})...`);
-          await new Promise(r => setTimeout(r, 1000)); // Wait 1 second before retry
-        }
+      try {
+        // Quick AI attempt with shorter timeout
+        html = await Promise.race([
+          this.generateAIPage(pageName, content, topic, intent, heroImage),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000))
+        ]);
+      } catch (e) {
+        console.log(`⚠️ AI failed for ${pageName}: ${e.message}`);
       }
       
-      // Fallback to template only if AI completely failed
       if (!html || html.length < 500) {
-        console.log(`⚠️ AI failed for ${pageName} after ${attempts} attempts, using template fallback`);
         html = this.generatePageWithContent(pageName, content, topic, intent, heroImage);
         templateFallbackCount++;
       } else {
         aiSuccessCount++;
-        console.log(`✅ AI successfully generated ${pageName} page (${html.length} chars)`);
       }
       
       const filename = pageName === 'index' ? 'index.html' : `${pageName}.html`;
       fs.writeFileSync(path.join(project.path, filename), html);
       project.files.push(filename);
       
-      // Send file created update
       if (progressCallback) {
         progressCallback({ 
           step: 'file_created', 
           message: `✅ Страница "${pageName}" готова`, 
-          progress: pageProgress + 5,
-          file: filename,
-          previewUrl: `/preview/${project.id}/${filename}`
+          progress: 55 + Math.round(((idx + 1) / otherPages.length) * 20),
+          file: filename
         });
       }
-    }
+      
+      return { pageName, success: !!html };
+    });
     
-    console.log(`📊 AI generation: ${aiSuccessCount}/${pages.length} pages, Template fallback: ${templateFallbackCount} pages`);
+    await Promise.all(pagePromises);
+    
+    console.log(`📊 AI generation: ${aiSuccessCount}/${pages.length} pages, Template: ${templateFallbackCount} pages`);
     
     if (progressCallback) {
       progressCallback({ step: 'styling', message: '🎨 Создаю стили CSS...', progress: 85 });
@@ -3236,7 +3276,7 @@ content
       title: smartTitle,
       subtitle: this.generateSmartSubtitle(topic, baseTemplate.category),
       description: this.generateSmartDescription(topic, baseTemplate.category, intent),
-      emoji: baseTemplate.hero.emoji
+      emoji: baseTemplate.hero?.emoji || '🎯'
     };
     
     // Generate smart sections based on topic
@@ -3245,12 +3285,30 @@ content
     // Generate smart gallery with relevant images
     const smartGallery = this.generateSmartGallery(topic);
     
+    // Generate lessons for educational sites
+    const lessons = baseTemplate.category === 'education' || intent?.category === 'education' 
+      ? this.generateLessonsForTopic(topic, 6)
+      : (baseTemplate.lessons || []);
+    
+    // Preserve colors from base template or use defaults
+    const colors = baseTemplate.colors || {
+      primary: '#6366f1',
+      secondary: '#8b5cf6',
+      accent: '#ec4899',
+      bg: '#f8fafc',
+      text: '#1e293b'
+    };
+    
     return {
       ...baseTemplate,
       title: smartTitle,
       hero: smartHero,
       sections: smartSections,
-      gallery: smartGallery
+      gallery: smartGallery,
+      lessons: lessons,
+      colors: colors,
+      topic: topic,
+      isEducational: baseTemplate.category === 'education' || intent?.category === 'education'
     };
   }
   
@@ -3376,7 +3434,15 @@ content
   }
   
   generateSmartCSS(template) {
-    const { colors } = template;
+    // Safety check for colors
+    const colors = template?.colors || {
+      primary: '#6366f1',
+      secondary: '#8b5cf6',
+      accent: '#ec4899',
+      bg: '#f8fafc',
+      text: '#1e293b'
+    };
+    
     const primary = colors.primary;
     const secondary = colors.secondary;
     const accent = colors.accent;
@@ -8713,7 +8779,20 @@ Format each file with path and content. Use markdown code blocks with file paths
   }
   
   generateHomePage(template, intent) {
-    const { hero, sections } = template;
+    const { hero, sections = [] } = template;
+    
+    // Safety check for sections
+    const safeSections = sections.length >= 2 ? sections : [
+      { title: 'Возможности', items: [
+        { title: 'Качество', desc: 'Премиум уровень', icon: 'star' },
+        { title: 'Скорость', desc: 'Быстрое выполнение', icon: 'bolt' },
+        { title: 'Поддержка', desc: '24/7 помощь', icon: 'headset' }
+      ]},
+      { title: 'Преимущества', items: [
+        { title: 'Опыт', desc: 'Профессионалы', icon: 'award' },
+        { title: 'Надёжность', desc: 'Гарантия результата', icon: 'shield-alt' }
+      ]}
+    ];
     
     // Check if this is an educational template with lessons
     const hasLessons = template.lessons && template.lessons.length > 0;
@@ -8767,7 +8846,7 @@ Format each file with path and content. Use markdown code blocks with file paths
           <p class="section-subtitle">${hasLessons ? 'Структурированная программа обучения' : 'Профессиональный подход и качественные решения'}</p>
         </div>
         <div class="features-grid">
-          ${sections[0].items.map(item => `
+          ${safeSections[0].items.map(item => `
           <div class="feature-card animate-on-scroll">
             <div class="feature-icon"><i class="fas fa-${item.icon}"></i></div>
             <h3>${item.title}</h3>
@@ -8784,7 +8863,7 @@ Format each file with path and content. Use markdown code blocks with file paths
           <h2 class="section-title">${hasLessons ? 'Почему выбирают <span>нас</span>' : 'Почему выбирают <span>нас</span>'}</h2>
         </div>
         <div class="features-grid">
-          ${(sections[1]?.items || sections[0].items).map(item => `
+          ${(safeSections[1]?.items || safeSections[0].items).map(item => `
           <div class="feature-card animate-on-scroll">
             <div class="feature-icon"><i class="fas fa-${item.icon}"></i></div>
             <h3>${item.title}</h3>
@@ -8874,8 +8953,31 @@ Format each file with path and content. Use markdown code blocks with file paths
   
   // Generate lessons page with video links and full theory
   generateLessonsPage(template, intent) {
-    const { hero, lessons } = template;
+    const { hero } = template;
+    const lessons = template.lessons || [];
     const topic = template.topic || hero.title;
+    
+    // Safety check - if no lessons, show placeholder
+    if (lessons.length === 0) {
+      return `
+      <section class="page-hero lessons-hero">
+        <div class="container">
+          <h1>📚 Уроки курса</h1>
+          <p>Курс по ${topic} в разработке</p>
+        </div>
+      </section>
+      <section class="lessons-container">
+        <div class="container">
+          <div class="lesson-card">
+            <div class="lesson-content" style="text-align: center; padding: 3rem;">
+              <i class="fas fa-book-open" style="font-size: 3rem; color: var(--primary); margin-bottom: 1rem;"></i>
+              <h2>Уроки скоро появятся</h2>
+              <p>Мы готовим качественные учебные материалы для вас.</p>
+            </div>
+          </div>
+        </div>
+      </section>`;
+    }
     
     const lessonsHTML = lessons.map((lesson, idx) => `
     <div class="lesson-card" id="${lesson.id}">

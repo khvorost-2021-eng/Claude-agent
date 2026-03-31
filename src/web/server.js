@@ -4,8 +4,12 @@ import http from 'http';
 import path from 'path';
 import fs from 'fs-extra';
 import multer from 'multer';
+import dotenv from 'dotenv';
 import ClaudeDevAgent from '../core/ClaudeDevAgent.js';
 import GooglePlayPublisher from '../publish/GooglePlayPublisher.js';
+
+// Load environment variables
+dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
@@ -557,26 +561,40 @@ async function pollLumaStatus(generationId, apiKey, maxAttempts = 30) {
 }
 
 // Pollinations Video API (free alternative - returns image sequence placeholder)
+// Pollinations Video Generation - uses animated GIF approach with multiple frames
 async function generateVideoPollinations(prompt) {
-  console.log('🎬 Using Pollinations for video frames:', prompt);
+  console.log('🎬 Using Pollinations for animated video:', prompt);
   
   try {
-    const encodedPrompt = encodeURIComponent(prompt);
+    const encodedPrompt = encodeURIComponent(prompt + ', smooth animation, motion, cinematic movement, 4k quality');
     
-    // Pollinations video endpoint - generates frames
-    const videoUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=576&nologo=true`;
+    // Generate multiple frames with different seeds to simulate video
+    const frames = [];
+    const numFrames = 8; // Generate 8 frames for smoother animation
+    const baseSeed = Date.now();
     
+    for (let i = 0; i < numFrames; i++) {
+      // Each frame gets a different seed for variation
+      const seed = baseSeed + i * 100;
+      frames.push(`https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=288&seed=${seed}&nologo=true&frame=${i}`);
+    }
+    
+    // Return first frame as preview with animation info
     return {
       type: 'video_generated',
-      content: `🎬 Видео сгенерировано: "${prompt}"`,
-      videoUrl: videoUrl,
+      content: `🎬 Анимация сгенерирована: "${prompt}"\n\n📹 Создано ${numFrames} кадров для плавной анимации.\n💡 Для настоящего видео добавьте API ключ в настройки (Runway, Replicate, или Luma).`,
+      videoUrl: frames[0],
+      frames: frames,
       prompt: prompt,
-      isImageSequence: true
+      isImageSequence: true,
+      isAnimated: true,
+      frameCount: numFrames
     };
   } catch (error) {
+    console.error('Pollinations video error:', error);
     return {
       type: 'error',
-      content: `❌ Ошибка генерации: ${error.message}`
+      content: `❌ Ошибка генерации анимации: ${error.message}`
     };
   }
 }
