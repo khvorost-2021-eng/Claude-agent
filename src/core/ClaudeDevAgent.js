@@ -719,108 +719,189 @@ Start with <!DOCTYPE html> and end with </html>.`;
     // Generate hero image via Pollinations
     const heroImage = `https://image.pollinations.ai/prompt/${encodeURIComponent(`modern ${topic} website hero, professional, clean design`)}?width=1200&height=600&nologo=true&seed=${Date.now() % 4294967295}`;
     
-    // Generate only index page with AI (faster), rest with template
+    // Generate pages with templates (AI disabled due to rate limits)
     const pages = ['index', 'about', 'services', 'contact'];
-    let aiSuccessCount = 0;
-    let templateFallbackCount = 0;
     
-    // Generate index page first with AI (most important)
-    if (progressCallback) {
-      progressCallback({ 
-        step: 'page', 
-        message: `📄 Создаю главную страницу с AI...`, 
-        progress: 40,
-        currentPage: 'index',
-        totalPages: pages.length,
-        completedPages: 0
-      });
-    }
-    
-    console.log(`🤖 Generating index page with AI (primary)...`);
-    let indexHtml = null;
-    let attempts = 0;
-    const maxAttempts = 2;
-    
-    while (!indexHtml && attempts < maxAttempts) {
-      attempts++;
-      try {
-        indexHtml = await this.generateAIPage('index', content, topic, intent, heroImage);
-      } catch (e) {
-        console.log(`⚠️ Index page attempt ${attempts} failed:`, e.message);
-      }
-      if (!indexHtml && attempts < maxAttempts) {
-        await new Promise(r => setTimeout(r, 500)); // Short wait before retry
-      }
-    }
-    
-    if (!indexHtml || indexHtml.length < 500) {
-      console.log(`⚠️ AI failed for index, using template`);
-      indexHtml = this.generatePageWithContent('index', content, topic, intent, heroImage);
-      templateFallbackCount++;
-    } else {
-      aiSuccessCount++;
-      console.log(`✅ AI generated index page successfully (${indexHtml.length} chars)`);
-    }
-    
-    fs.writeFileSync(path.join(project.path, 'index.html'), indexHtml);
-    project.files.push('index.html');
-    
-    if (progressCallback) {
-      progressCallback({ 
-        step: 'file_created', 
-        message: `✅ Главная страница готова`, 
-        progress: 50,
-        file: 'index.html',
-        previewUrl: `/preview/${project.id}/index.html`
-      });
-    }
-    
-    // Generate other pages in parallel with template (much faster)
-    const otherPages = ['about', 'services', 'contact'];
-    
-    if (progressCallback) {
-      progressCallback({ step: 'pages', message: '📄 Создаю остальные страницы...', progress: 55 });
-    }
-    
-    // Try AI for other pages in parallel with shorter timeout
-    const pagePromises = otherPages.map(async (pageName, idx) => {
-      let html = null;
-      try {
-        // Quick AI attempt with shorter timeout
-        html = await Promise.race([
-          this.generateAIPage(pageName, content, topic, intent, heroImage),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000))
-        ]);
-      } catch (e) {
-        console.log(`⚠️ AI failed for ${pageName}: ${e.message}`);
+    for (let i = 0; i < pages.length; i++) {
+      const pageName = pages[i];
+      const progress = 40 + Math.round((i / pages.length) * 50);
+      
+      if (progressCallback) {
+        progressCallback({ 
+          step: 'page', 
+          message: `📄 Создаю страницу "${pageName}"...`, 
+          progress: progress,
+          currentPage: pageName,
+          totalPages: pages.length,
+          completedPages: i
+        });
       }
       
-      if (!html || html.length < 500) {
-        html = this.generatePageWithContent(pageName, content, topic, intent, heroImage);
-        templateFallbackCount++;
-      } else {
-        aiSuccessCount++;
-      }
-      
+      const pageHtml = this.generatePageWithContent(pageName, content, topic, intent, heroImage);
       const filename = pageName === 'index' ? 'index.html' : `${pageName}.html`;
-      fs.writeFileSync(path.join(project.path, filename), html);
+      fs.writeFileSync(path.join(project.path, filename), pageHtml);
       project.files.push(filename);
       
       if (progressCallback) {
         progressCallback({ 
           step: 'file_created', 
           message: `✅ Страница "${pageName}" готова`, 
-          progress: 55 + Math.round(((idx + 1) / otherPages.length) * 20),
+          progress: progress,
           file: filename
         });
       }
+    }
+    
+    // Generate CSS
+    if (progressCallback) {
+      progressCallback({ step: 'styling', message: '🎨 Создаю стили CSS...', progress: 90 });
+    }
+    const css = this.generateSmartCSS({ title: content.title, category: intent.category, accentColor: content.accentColor });
+    fs.writeFileSync(path.join(project.path, 'styles.css'), css);
+    project.files.push('styles.css');
+    
+    // Generate JS
+    const js = this.generateJavaScript();
+    fs.writeFileSync(path.join(project.path, 'script.js'), js);
+    project.files.push('script.js');
+    
+    if (progressCallback) {
+      progressCallback({ step: 'complete', message: '✅ Сайт готов!', progress: 100 });
+    }
+  }
+    
+    // Generate page HTML with AI content
+    generatePageWithContent(pageName, content, topic, intent, heroImage) {
+      const nav = `
+      <nav class="navbar">
+        <div class="container nav-container">
+          <a href="index.html" class="logo">${content.title}</a>
+          <ul class="nav-links">
+            <li><a href="index.html">Главная</a></li>
+            <li><a href="about.html">О нас</a></li>
+            <li><a href="services.html">Услуги</a></li>
+            <li><a href="blog.html">Блог</a></li>
+            <li><a href="contact.html">Контакты</a></li>
+          </ul>
+        </div>
+      </nav>`;
+
+      let mainContent = '';
       
-      return { pageName, success: !!html };
+      switch(pageName) {
+        case 'index':
+          mainContent = `
+      <section class="hero" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 6rem 0; text-align: center; color: white;">
+        <div class="container">
+          <h1 style="font-size: 3rem; margin-bottom: 1rem;">${content.headline}</h1>
+          <p style="font-size: 1.25rem; margin-bottom: 2rem; opacity: 0.9;">${content.subtitle}</p>
+          <a href="services.html" class="btn" style="background: white; color: #667eea; padding: 1rem 2rem; border-radius: 50px; text-decoration: none; font-weight: bold;">Начать</a>
+        </div>
+      </section>
+      
+      <section class="features" style="padding: 4rem 0;">
+        <div class="container">
+          <div class="features-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+            ${content.features.map(f => `
+            <div class="feature-card" style="background: var(--card-bg); padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+              <h3 style="color: #667eea; margin-bottom: 0.5rem;">${f.title}</h3>
+              <p>${f.description}</p>
+            </div>
+            `).join('')}
+  // Default content if AI fails
+  const content = aiContent || {
+    title: topic,
+    headline: `Откройте мир ${topic}`,
+    subtitle: 'Узнайте всё, что нужно знать, в одном месте',
+    description: `${topic} — это увлекательная тема, которая открывает множество возможностей для изучения и развития.`,
+    features: [
+      { title: 'Экспертные знания', description: 'Погрузитесь в тему с профессиональным контентом' },
+      { title: 'Практические советы', description: 'Применяйте знания на практике каждый день' },
+      { title: 'Современный подход', description: 'Актуальная информация и последние тренды' }
+    ],
+    aboutTitle: `О ${topic}`,
+    aboutText: `${topic} занимает важное место в современном мире. Эта тема охватывает множество аспектов и предлагает глубокое понимание предмета. Изучение ${topic} открывает новые возможности и перспективы.`,
+    services: [
+      { name: 'Консультация', description: 'Профессиональная консультация по теме' },
+      { name: 'Обучение', description: 'Полный курс обучения' },
+      { name: 'Поддержка', description: 'Постоянная поддержка 24/7' }
+    ],
+    heroGradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    accentColor: '#667eea'
+  };
+
+  if (progressCallback) {
+    progressCallback({ step: 'image', message: '🎨 Генерирую изображения...', progress: 35 });
+  }
+
+  // Generate hero image via Pollinations
+  const heroImage = `https://image.pollinations.ai/prompt/${encodeURIComponent(`modern ${topic} website hero, professional, clean design`)}?width=1200&height=600&nologo=true&seed=${Date.now() % 4294967295}`;
+  
+  // Generate only index page with AI (faster), rest with template
+  const pages = ['index', 'about', 'services', 'contact'];
+  let aiSuccessCount = 0;
+  let templateFallbackCount = 0;
+  
+  // SKIP AI - Use templates directly (Pollinations rate limit too strict)
+  console.log('⚡ Using templates only (AI page generation disabled due to rate limits)');
+  
+  if (progressCallback) {
+    progressCallback({ 
+      step: 'page', 
+      message: `📄 Создаю главную страницу...`, 
+      progress: 40,
+      currentPage: 'index',
+      totalPages: pages.length,
+      completedPages: 0
     });
+  }
+  
+  // Use template for index page
+  const indexHtml = this.generatePageWithContent('index', content, topic, intent, heroImage);
+  fs.writeFileSync(path.join(project.path, 'index.html'), indexHtml);
+  project.files.push('index.html');
+  templateFallbackCount++;
+  
+  if (progressCallback) {
+    progressCallback({ 
+      step: 'file_created', 
+      message: `✅ Главная страница готова`, 
+      progress: 50,
+      file: 'index.html'
+    });
+  }
+  
+  // Generate other pages with templates only (no AI due to rate limits)
+  for (let i = 1; i < pages.length; i++) {
+    const pageName = pages[i];
+    const progress = 50 + Math.round((i / pages.length) * 30);
     
-    await Promise.all(pagePromises);
+    if (progressCallback) {
+      progressCallback({ 
+        step: 'page', 
+        message: `📄 Создаю страницу "${pageName}"...`, 
+        progress: progress,
+        currentPage: pageName,
+        totalPages: pages.length,
+        completedPages: i
+      });
+    }
     
-    console.log(`📊 AI generation: ${aiSuccessCount}/${pages.length} pages, Template: ${templateFallbackCount} pages`);
+    // Use template (AI disabled)
+    const pageHtml = this.generatePageWithContent(pageName, content, topic, intent, heroImage);
+    const filename = `${pageName}.html`;
+    fs.writeFileSync(path.join(project.path, filename), pageHtml);
+    project.files.push(filename);
+    templateFallbackCount++;
+    
+    if (progressCallback) {
+      progressCallback({ 
+        step: 'file_created', 
+        message: `✅ Страница "${pageName}" готова`, 
+        progress: progress,
+        file: filename
+      });
+    }
     
     if (progressCallback) {
       progressCallback({ step: 'styling', message: '🎨 Создаю стили CSS...', progress: 85 });
