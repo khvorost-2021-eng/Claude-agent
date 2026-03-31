@@ -595,6 +595,30 @@ Start with <!DOCTYPE html> and end with </html>.`;
   }
 
   // Generate hybrid site: AI-powered full HTML generation
+  // Get default content for a topic
+  getDefaultContent(topic) {
+    return {
+      title: topic,
+      headline: `Изучите ${topic}`,
+      subtitle: 'Полное руководство с примерами и практикой',
+      description: `${topic} — это увлекательная тема, которая открывает множество возможностей для изучения и развития.`,
+      features: [
+        { title: 'Экспертные знания', description: 'Погрузитесь в тему с профессиональным контентом' },
+        { title: 'Практические советы', description: 'Применяйте знания на практике каждый день' },
+        { title: 'Современный подход', description: 'Актуальная информация и последние тренды' }
+      ],
+      aboutTitle: `О ${topic}`,
+      aboutText: `${topic} занимает важное место в современном мире. Эта тема охватывает множество аспектов и предлагает глубокое понимание предмета.`,
+      services: [
+        { name: 'Консультация', description: 'Профессиональная консультация по теме' },
+        { name: 'Обучение', description: 'Полный курс обучения' },
+        { name: 'Поддержка', description: 'Постоянная поддержка 24/7' }
+      ],
+      heroGradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      accentColor: '#667eea'
+    };
+  }
+
   // Generate site quickly using templates only (no AI)
   async generateFastSite(project, description, topic, intent, progressCallback = null) {
     if (progressCallback) {

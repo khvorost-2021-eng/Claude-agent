@@ -394,7 +394,7 @@ function parseIntent(message) {
   return { type: 'unknown' };
 }
 
-// Video generation using AI APIs (DeepAI first for real video, then Pollinations fallback)
+// Video generation using AI APIs (Pollinations primary, paid APIs optional)
 async function generateVideo(prompt) {
   console.log('🎬 Generating video for:', prompt);
   
@@ -405,66 +405,52 @@ async function generateVideo(prompt) {
   
   // Log API key status
   console.log('🔑 API Keys status:');
-  console.log('  DEEPAI_API_KEY:', deepaiKey ? `✅ Present` : '⚠️ Using demo');
+  console.log('  DEEPAI_API_KEY:', deepaiKey ? `✅ Present` : '❌ Missing');
   console.log('  RUNWAY_API_KEY:', runwayKey ? `✅ Present` : '❌ Missing');
   console.log('  REPLICATE_API_KEY:', replicateKey ? `✅ Present` : '❌ Missing');
   
-  // FIRST: Try DeepAI (free video generation)
-  console.log('🎬 Attempting DeepAI (free video)...');
+  // PRIMARY: Pollinations (free, fast, reliable)
+  console.log('🎬 Using Pollinations for video (free & fast)...');
   try {
-    const deepResult = await generateVideoDeepAI(prompt);
-    console.log('✅ DeepAI video generated successfully');
-    return deepResult;
-  } catch (deepError) {
-    console.log('❌ DeepAI failed:', deepError.message);
+    const pollResult = await generateVideoPollinations(prompt);
+    console.log('✅ Pollinations video generated successfully');
+    
+    // Optional: Try paid APIs for "real" video (don't fail if they don't work)
+    if (runwayKey || replicateKey || deepaiKey) {
+      console.log('💡 Attempting paid APIs for HD video (optional)...');
+      
+      // Try in background, don't block response
+      setTimeout(async () => {
+        if (deepaiKey) {
+          try {
+            const deepResult = await generateVideoDeepAI(prompt);
+            console.log('✅ DeepAI HD video available:', deepResult.videoUrl);
+            // Could send update to client here
+          } catch (e) {
+            console.log('❌ DeepAI HD failed:', e.message);
+          }
+        }
+      }, 100);
+    }
+    
+    return pollResult;
+  } catch (pollError) {
+    console.error('❌ Pollinations failed:', pollError.message);
+    
+    // FALLBACK: Try paid APIs
+    if (deepaiKey) {
+      try {
+        return await generateVideoDeepAI(prompt);
+      } catch (e) {
+        console.log('❌ DeepAI fallback failed:', e.message);
+      }
+    }
+    
+    return {
+      type: 'error',
+      content: `❌ Ошибка генерации видео: ${pollError.message}`
+    };
   }
-  
-  // SECOND: Try paid APIs if keys available
-  if (runwayKey || replicateKey || lumaKey) {
-    const errors = [];
-    
-    if (runwayKey) {
-      try {
-        console.log('🎬 Attempting Runway...');
-        const result = await generateVideoRunway(prompt, runwayKey);
-        console.log('✅ Runway success');
-        return result;
-      } catch (error) {
-        console.log('❌ Runway failed:', error.message);
-        errors.push(`Runway: ${error.message}`);
-      }
-    }
-    
-    if (replicateKey) {
-      try {
-        console.log('🎬 Attempting Replicate...');
-        const result = await generateVideoReplicate(prompt, replicateKey);
-        console.log('✅ Replicate success');
-        return result;
-      } catch (error) {
-        console.log('❌ Replicate failed:', error.message);
-        errors.push(`Replicate: ${error.message}`);
-      }
-    }
-    
-    if (lumaKey) {
-      try {
-        console.log('🎬 Attempting Luma...');
-        const result = await generateVideoLuma(prompt, lumaKey);
-        console.log('✅ Luma success');
-        return result;
-      } catch (error) {
-        console.log('❌ Luma failed:', error.message);
-        errors.push(`Luma: ${error.message}`);
-      }
-    }
-  }
-  
-  // FINAL FALLBACK: Pollinations image sequence (always works)
-  console.log('🎬 Using Pollinations fallback (image sequence)...');
-  const pollResult = await generateVideoPollinations(prompt);
-  pollResult.content += '\n\n💡 DeepAI видео недоступно. Использована анимация из кадров.';
-  return pollResult;
 }
 
 // Replicate Video Generation (free tier available)
