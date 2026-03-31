@@ -1208,8 +1208,23 @@ wss.on('connection', (ws) => {
           case 'create_website':
             ws.send(JSON.stringify({ type: 'progress', step: 'generating', content: 'Генерирую веб-сайт...' }));
             try {
+              // Define progress callback to send real-time updates
+              const progressCallback = (update) => {
+                ws.send(JSON.stringify({
+                  type: 'progress',
+                  step: update.step,
+                  content: update.message,
+                  progress: update.progress,
+                  currentPage: update.currentPage,
+                  totalPages: update.totalPages,
+                  completedPages: update.completedPages,
+                  file: update.file,
+                  previewUrl: update.previewUrl
+                }));
+              };
+              
               // Add 5 minute timeout for project creation (AI generation can be slow)
-              const createPromise = agent.createProject('Website', msg.content, 'web');
+              const createPromise = agent.createProject('Website', msg.content, 'web', progressCallback);
               const timeoutPromise = new Promise((_, reject) => 
                 setTimeout(() => reject(new Error('Создание сайта заняло слишком много времени')), 300000)
               );

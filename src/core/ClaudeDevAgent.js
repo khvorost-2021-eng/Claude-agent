@@ -351,9 +351,14 @@ class ClaudeDevAgent {
     }
   }
   
-  async generateSiteWithAI(project, description) {
+  async generateSiteWithAI(project, description, progressCallback = null) {
     console.log('=== AI SITE GENERATION START ===');
     console.log('Description:', description);
+    
+    // Send initial progress
+    if (progressCallback) {
+      progressCallback({ step: 'analyzing', message: '🔍 Анализирую запрос...', progress: 5 });
+    }
     
     // Dynamic import for ES modules compatibility
     const websiteTemplates = await import('./websiteTemplates.js');
@@ -364,13 +369,20 @@ class ClaudeDevAgent {
     console.log(`🎯 Topic extracted: "${topic}"`);
     console.log(`📂 Category: ${intent.category}, Site Type: ${intent.siteType}`);
     
+    if (progressCallback) {
+      progressCallback({ step: 'content', message: `📝 Генерирую контент для "${topic}"...`, progress: 15 });
+    }
+    
     // STEP 1: Try Pollinations AI for content
     let aiContent = null;
     try {
       console.log('🤖 STEP 1: Getting AI content from Pollinations...');
-      aiContent = await this.generateSiteContentWithAI(topic, intent);
+      aiContent = await this.generateSiteContentWithAI(topic, intent, progressCallback);
       if (aiContent) {
         console.log('✅ AI content received:', JSON.stringify(aiContent, null, 2));
+        if (progressCallback) {
+          progressCallback({ step: 'content', message: `✅ Контент сгенерирован: "${aiContent.title}"`, progress: 25 });
+        }
       } else {
         console.log('⚠️ AI content is null, using defaults');
       }
@@ -379,12 +391,20 @@ class ClaudeDevAgent {
       console.error(e);
     }
     
+    if (progressCallback) {
+      progressCallback({ step: 'generating', message: '🏗️ Начинаю создание страниц...', progress: 30 });
+    }
+    
     // STEP 2: Generate site with AI HTML generation
     console.log('📄 STEP 2: Generating site with AI HTML...');
-    await this.generateHybridSite(project, description, topic, intent, aiContent);
+    await this.generateHybridSite(project, description, topic, intent, aiContent, progressCallback);
     
     console.log(`✅ Site generation complete for "${topic}"`);
     console.log('=== AI SITE GENERATION END ===');
+    
+    if (progressCallback) {
+      progressCallback({ step: 'complete', message: '✅ Сайт готов!', progress: 100 });
+    }
   }
 
   // Generate content via Pollinations AI - FULL HTML
@@ -497,7 +517,7 @@ Start with <!DOCTYPE html> and end with </html>.`;
   }
 
   // Generate hybrid site: AI-powered full HTML generation
-  async generateHybridSite(project, description, topic, intent, aiContent) {
+  async generateHybridSite(project, description, topic, intent, aiContent, progressCallback = null) {
     // Dynamic import for ES modules compatibility
     const websiteTemplates = await import('./websiteTemplates.js');
     const { generateSmartSite, analyzeIntent, getTitleForTopic } = websiteTemplates;
@@ -524,6 +544,10 @@ Start with <!DOCTYPE html> and end with </html>.`;
       accentColor: '#667eea'
     };
 
+    if (progressCallback) {
+      progressCallback({ step: 'image', message: '🎨 Генерирую изображения...', progress: 35 });
+    }
+
     // Generate hero image via Pollinations
     const heroImage = `https://image.pollinations.ai/prompt/${encodeURIComponent(`modern ${topic} website hero, professional, clean design`)}?width=1200&height=600&nologo=true&seed=${Date.now() % 4294967295}`;
     
@@ -532,7 +556,21 @@ Start with <!DOCTYPE html> and end with </html>.`;
     let aiSuccessCount = 0;
     let templateFallbackCount = 0;
     
-    for (const pageName of pages) {
+    for (let i = 0; i < pages.length; i++) {
+      const pageName = pages[i];
+      const pageProgress = 40 + Math.round(((i) / pages.length) * 40);
+      
+      if (progressCallback) {
+        progressCallback({ 
+          step: 'page', 
+          message: `📄 Создаю страницу "${pageName}" (${i + 1}/${pages.length})...`, 
+          progress: pageProgress,
+          currentPage: pageName,
+          totalPages: pages.length,
+          completedPages: i
+        });
+      }
+      
       console.log(`🤖 Generating ${pageName} page with AI...`);
       
       // Try AI generation first with retry
@@ -562,9 +600,24 @@ Start with <!DOCTYPE html> and end with </html>.`;
       const filename = pageName === 'index' ? 'index.html' : `${pageName}.html`;
       fs.writeFileSync(path.join(project.path, filename), html);
       project.files.push(filename);
+      
+      // Send file created update
+      if (progressCallback) {
+        progressCallback({ 
+          step: 'file_created', 
+          message: `✅ Страница "${pageName}" готова`, 
+          progress: pageProgress + 5,
+          file: filename,
+          previewUrl: `/preview/${project.id}/${filename}`
+        });
+      }
     }
     
     console.log(`📊 AI generation: ${aiSuccessCount}/${pages.length} pages, Template fallback: ${templateFallbackCount} pages`);
+    
+    if (progressCallback) {
+      progressCallback({ step: 'styling', message: '🎨 Создаю стили CSS...', progress: 85 });
+    }
     
     // Generate CSS with AI styling
     const css = this.generateSmartCSS({ 
@@ -576,19 +629,34 @@ Start with <!DOCTYPE html> and end with </html>.`;
     fs.writeFileSync(path.join(project.path, 'styles.css'), css);
     project.files.push('styles.css');
     
+    if (progressCallback) {
+      progressCallback({ step: 'js', message: '⚡ Добавляю JavaScript...', progress: 90 });
+    }
+    
     // Generate JS
-    const js = this.generateSmartJS({ title: content.title });
+    const js = this.generateSmartJS({ title: content.title, category: intent.category });
     fs.writeFileSync(path.join(project.path, 'main.js'), js);
     project.files.push('main.js');
     
-    // Metadata
+    if (progressCallback) {
+      progressCallback({ step: 'metadata', message: '📝 Финализирую проект...', progress: 95 });
+    }
+    
+    // Save metadata
+    const metadata = {
+      template: 'ai-hybrid',
+      title: content.title,
+      aiSuccessCount,
+      templateFallbackCount,
+      generatedAt: new Date().toISOString()
+    };
     fs.writeFileSync(
       path.join(project.path, '.project-metadata.json'),
-      JSON.stringify({ method: 'FULL_AI', topic, intent, aiContent: !!aiContent, createdAt: new Date().toISOString() }, null, 2)
+      JSON.stringify(metadata, null, 2)
     );
     project.files.push('.project-metadata.json');
     
-    console.log(`✅ AI-powered site generated for "${topic}"`);
+    console.log(`✅ Hybrid site generated: ${project.files.length} files`);
   }
 
   // Generate page HTML with AI content
@@ -1139,7 +1207,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ===== PROJECT CREATION =====
 
-  async createProject(name, description, type = 'web') {
+  async createProject(name, description, type = 'web', progressCallback = null) {
     console.log(`=== Creating project: ${name} (${type}) ===`);
     
     const projectId = 'proj_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -1162,9 +1230,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     try {
       if (type === 'web') {
-        await this.generateSiteWithAI(project, description);
+        await this.generateSiteWithAI(project, description, progressCallback);
       } else if (type === 'android') {
-        await this.generateAndroidApp(project, description);
+        await this.generateAndroidApp(project, description, progressCallback);
       }
       
       project.status = 'ready';
@@ -2405,6 +2473,54 @@ content
   async modifyFlutterProject(project, description) {
     console.log('Flutter project modification - regenerating...');
     await this.generateFlutterProject(project, description);
+  }
+
+  async generateAndroidApp(project, description, progressCallback = null) {
+    if (progressCallback) {
+      progressCallback({ step: 'analyzing', message: '🔍 Анализирую требования приложения...', progress: 10 });
+    }
+    
+    // Parse requirements from description
+    const requirements = this.parseAppRequirements(description);
+    
+    if (progressCallback) {
+      progressCallback({ step: 'structure', message: '🏗️ Создаю структуру проекта...', progress: 25 });
+    }
+    
+    // Create project structure
+    await this.createAndroidProjectStructure(project);
+    
+    if (progressCallback) {
+      progressCallback({ step: 'ui', message: '🎨 Дизайнирую интерфейс...', progress: 40 });
+    }
+    
+    // Generate layouts
+    await this.generateAndroidLayouts(project, requirements);
+    
+    if (progressCallback) {
+      progressCallback({ step: 'code', message: '💻 Пишу код приложения...', progress: 60 });
+    }
+    
+    // Generate activities and logic
+    await this.generateAndroidCode(project, requirements);
+    
+    if (progressCallback) {
+      progressCallback({ step: 'resources', message: '📁 Добавляю ресурсы...', progress: 80 });
+    }
+    
+    // Add resources
+    await this.addAndroidResources(project, requirements);
+    
+    if (progressCallback) {
+      progressCallback({ step: 'build', message: '⚙️ Настраиваю сборку...', progress: 90 });
+    }
+    
+    // Generate build files
+    await this.generateBuildFiles(project, requirements);
+    
+    if (progressCallback) {
+      progressCallback({ step: 'complete', message: '✅ Приложение готово!', progress: 100 });
+    }
   }
 
   // ===== INTERNET SEARCH SERVICE =====
