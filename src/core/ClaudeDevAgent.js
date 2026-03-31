@@ -2805,35 +2805,253 @@ content
   }
   
   generateLessonsForTopic(topic, count = 6) {
-    // Dynamic lesson generation based on topic keywords
+    // Dynamic lesson generation with rich educational content
     const topicLower = topic.toLowerCase();
     
-    // Topic-specific lesson templates
+    // Topic-specific lesson templates with detailed theory
     const lessonTemplates = {
       'default': [
-        { id: 'lesson-1', title: `Введение в ${topic}`, content: `Добро пожаловать в мир ${topic.toLowerCase()}! В этом уроке мы разберём основные понятия и подготовимся к изучению.`, examples: ['Пример базового понятия', 'Разбор простой задачи'], practice: ['Найдите пример из жизни', 'Опишите своими словами'] },
-        { id: 'lesson-2', title: `Основы ${topic}`, content: `Фундаментальные принципы ${topic.toLowerCase()}. Эти знания станут базой для всего курса.`, examples: ['Конкретный пример применения', 'Разбор типичной ситуации'], practice: ['Решите базовую задачу', 'Приведите свой пример'] },
-        { id: 'lesson-3', title: `Практическое применение`, content: `Как использовать знания о ${topic.toLowerCase()} в реальной жизни. Практические кейсы и примеры.`, examples: ['Реальный пример из практики', 'Case study'], practice: ['Примените на практике', 'Составьте план действий'] },
-        { id: 'lesson-4', title: `Продвинутые техники`, content: `Углублённое изучение ${topic.toLowerCase()}. Тонкости и нюансы, которые отличают профессионала.`, examples: ['Сложный пример', 'Оптимизационная задача'], practice: ['Решите продвинутую задачу', 'Найдите ошибку в примере'] },
-        { id: 'lesson-5', title: `Частые ошибки`, content: `Чего избегать при работе с ${topic.toLowerCase()}. Советы экспертов и best practices.`, examples: ['Пример неправильного подхода', 'Как исправить ошибку'], practice: ['Найдите ошибку', 'Исправьте пример'] },
-        { id: 'lesson-6', title: `Итоговый проект`, content: `Закрепите знания по ${topic.toLowerCase()} на практике. Финальный проект и план дальнейшего развития.`, examples: ['Пример готового проекта', 'Шаблон для работы'], practice: ['Выполните проект', 'Представьте результаты'] }
+        { 
+          id: 'lesson-1', 
+          title: `${topic}: Введение`, 
+          content: `<h3>Что такое ${topic}?</h3>
+<p>${topic} — это область знаний, которая изучает фундаментальные принципы и практическое применение. В современном мире понимание этой темы становится всё более важным для профессионального развития.</p>
+
+<h3>Зачем изучать ${topic}?</h3>
+<ul>
+<li>Получение востребованных навыков на рынке труда</li>
+<li>Решение реальных задач и проблем</li>
+<li>Расширение кругозора и профессиональных возможностей</li>
+</ul>
+
+<h3>Что вы изучите в этом курсе</h3>
+<p>Курс охватывает все основные аспекты ${topic.toLowerCase()} — от базовых понятий до продвинутых техник. Каждый урок содержит теорию, практические примеры и задания для закрепления материала.</p>`,
+          theory: `Введение в ${topic}: основные концепции, история развития, современное применение.`,
+          examples: ['Пример базового понятия в действии', 'Разбор простой задачи с объяснением', 'Иллюстрация ключевого принципа'],
+          practice: ['Найдите пример из жизни, связанный с темой', 'Опишите своими словами, что вы поняли', 'Составьте список вопросов для изучения'],
+          videoQuery: `${topic} introduction basics tutorial`,
+          duration: '25 мин'
+        },
+        { 
+          id: 'lesson-2', 
+          title: `${topic}: Основы`, 
+          content: `<h3>Фундаментальные принципы ${topic}</h3>
+<p>В этом уроке мы разберём базовые концепции, которые лежат в основе ${topic.toLowerCase()}. Понимание этих принципов критически важно для дальнейшего изучения.</p>
+
+<h3>Ключевые концепции</h3>
+<ul>
+<li><strong>Основа 1:</strong> первый фундаментальный принцип с подробным объяснением</li>
+<li><strong>Основа 2:</strong> второй важный аспект с практическими примерами</li>
+<li><strong>Основа 3:</strong> связь между различными элементами темы</li>
+</ul>
+
+<h3>Как это работает на практике</h3>
+<p>Каждая теоретическая концепция имеет практическое применение. Рассмотрим реальные сценарии использования этих знаний.</p>`,
+          theory: `Основы ${topic}: фундаментальные законы, базовые принципы, ключевые термины и определения.`,
+          examples: ['Конкретный пример применения в реальной жизни', 'Пошаговый разбор типичной ситуации', 'Сравнение разных подходов'],
+          practice: ['Решите базовую задачу по теме', 'Приведите свой пример применения', 'Объясните концепцию своими словами'],
+          videoQuery: `${topic} fundamentals basics explained`,
+          duration: '35 мин'
+        },
+        { 
+          id: 'lesson-3', 
+          title: `${topic}: Практика`, 
+          content: `<h3>Практическое применение ${topic}</h3>
+<p>Теория без практики бесполезна. В этом уроке мы научимся применять знания о ${topic.toLowerCase()} в реальных ситуациях.</p>
+
+<h3>Case Study: Реальный пример</h3>
+<p>Рассмотрим конкретный case study, где знания ${topic.toLowerCase()} помогли решить важную задачу. Разберём по шагам:</p>
+<ul>
+<li>Постановка проблемы и анализ ситуации</li>
+<li>Выбор подхода и инструментов</li>
+<li>Реализация решения</li>
+<li>Оценка результатов</li>
+</ul>
+
+<h3>Практические техники</h3>
+<p>Узнаём проверенные методики и подходы, которые используют профессионалы в этой области.</p>`,
+          theory: `Методология применения ${topic}: практические подходы, инструменты, best practices.`,
+          examples: ['Разбор реального case study', 'Пример из профессиональной практики', 'Пошаговая инструкция'],
+          practice: ['Примените технику на практическом примере', 'Составьте план действий для реальной задачи', 'Проанализируйте case study и найдите решение'],
+          videoQuery: `${topic} practical application tutorial`,
+          duration: '40 мин'
+        },
+        { 
+          id: 'lesson-4', 
+          title: `${topic}: Продвинутый уровень`, 
+          content: `<h3>Углублённое изучение ${topic}</h3>
+<p>Тонкости и нюансы, которые отличают эксперта от новичка. Эти знания помогут вам решать сложные задачи и выделяться среди других специалистов.</p>
+
+<h3>Продвинутые концепции</h3>
+<ul>
+<li><strong>Оптимизация:</strong> как добиться лучших результатов</li>
+<li><strong>Масштабирование:</strong> работа с большими объёмами</li>
+<li><strong>Интеграция:</strong> связь с другими областями</li>
+</ul>
+
+<h3>Сложные сценарии</h3>
+<p>Разбираем нестандартные ситуации и edge cases, с которыми можно столкнуться в работе.</p>
+
+<h3>Инструменты эксперта</h3>
+<p>Профессиональные инструменты и подходы для работы на высоком уровне.</p>`,
+          theory: `Продвинутые техники ${topic}: оптимизация, сложные сценарии, интеграция с другими системами.`,
+          examples: ['Сложный пример с пошаговым разбором', 'Оптимизационная задача с решением', 'Нестандартный сценарий и подход'],
+          practice: ['Решите продвинутую задачу', 'Найдите ошибку в сложном примере', 'Оптимизируйте предложенное решение'],
+          videoQuery: `${topic} advanced techniques tutorial`,
+          duration: '50 мин'
+        },
+        { 
+          id: 'lesson-5', 
+          title: `${topic}: Типичные ошибки`, 
+          content: `<h3>Чего избегать при работе с ${topic}</h3>
+<p>Опытные профессионалы знают не только что делать, но и чего избегать. В этом уроке разберём частые ошибки и антипаттерны.</p>
+
+<h3>Частые ошибки новичков</h3>
+<ul>
+<li><strong>Ошибка 1:</strong> неправильное понимание базового принципа и как это исправить</li>
+<li><strong>Ошибка 2:</strong> типичный антипаттерн и лучшая практика взамен</li>
+<li><strong>Ошибка 3:</strong> распространённое заблуждение</li>
+</ul>
+
+<h3>Best Practices</h3>
+<p>Советы экспертов и проверенные подходы из индустрии:</p>
+<ul>
+<li>Принципы чистого и эффективного подхода</li>
+<li>Методологии профессионалов</li>
+<li>Стандарты и рекомендации</li>
+</ul>
+
+<h3>Отладка и решение проблем</h3>
+<p>Как диагностировать и исправлять типичные проблемы.</p>`,
+          theory: `Best practices ${topic}: типичные ошибки, антипаттерны, методологии отладки и профессиональные стандарты.`,
+          examples: ['Пример неправильного подхода с объяснением', 'Как исправить типичную ошибку', 'Best practice в действии'],
+          practice: ['Найдите ошибку в предложенном коде/примере', 'Исправьте неправильное решение', 'Оптимизируйте неэффективный подход'],
+          videoQuery: `${topic} common mistakes best practices`,
+          duration: '30 мин'
+        },
+        { 
+          id: 'lesson-6', 
+          title: `${topic}: Итоговый проект`, 
+          content: `<h3>Закрепление знаний ${topic} на практике</h3>
+<p>Финальный проект — это возможность применить все полученные знания в комплексной задаче. Работайте над проектом самостоятельно или в команде.</p>
+
+<h3>Структура итогового проекта</h3>
+<ul>
+<li><strong>Часть 1:</strong> анализ требований и планирование</li>
+<li><strong>Часть 2:</strong> реализация базовой функциональности</li>
+<li><strong>Часть 3:</strong> добавление продвинутых возможностей</li>
+<li><strong>Часть 4:</strong> тестирование и оптимизация</li>
+</ul>
+
+<h3>Пример готового проекта</h3>
+<p>Разбираём пример успешного проекта, выполненного в рамках этого курса. Что сделано хорошо и почему.</p>
+
+<h3>Дальнейшее развитие</h3>
+<p>Рекомендации по продолжению изучения ${topic.toLowerCase()}:</p>
+<ul>
+<li>Книги и ресурсы для углублённого изучения</li>
+<li>Сообщества и форумы</li>
+<li>Следующие шаги в профессиональном развитии</li>
+</ul>`,
+          theory: `Финальный проект ${topic}: комплексное применение знаний, рекомендации по дальнейшему развитию, ресурсы.`,
+          examples: ['Пример готового проекта с разбором', 'Шаблон для вашей работы', 'Чек-лист для самопроверки'],
+          practice: ['Выполните полноценный проект по теме', 'Представьте результаты и получите обратную связь', 'Опубликуйте проект в портфолио'],
+          videoQuery: `${topic} project walkthrough tutorial`,
+          duration: '60 мин'
+        }
       ]
     };
     
-    // Get lessons (default template works for any topic)
+    // Get lessons with rich content
     const lessons = lessonTemplates['default'];
     
-    // Customize titles with topic
-    return lessons.map((lesson, idx) => ({
-      ...lesson,
-      id: `${this.slugify(topic)}-${idx + 1}`,
-      title: idx === 0 ? `${topic}: Введение` : 
-             idx === 1 ? `${topic}: Основы` :
-             idx === 2 ? `${topic}: Практика` :
-             idx === 3 ? `${topic}: Продвинутый уровень` :
-             idx === 4 ? `${topic}: Типичные ошибки` :
-             `${topic}: Итоговый проект`
-    }));
+    // Generate video URLs for each lesson as external links
+    return lessons.map((lesson, idx) => {
+      const video = this.getVideoIdForLesson(topic, idx);
+      return {
+        ...lesson,
+        id: `${this.slugify(topic)}-${idx + 1}`,
+        videoUrl: video.url,
+        videoTitle: video.title,
+        hasVideo: true
+      };
+    });
+  }
+  
+  // Helper method to generate consistent video IDs for lessons
+  getVideoIdForLesson(topic, lessonIndex) {
+    // Returns educational video references as links, not embedded content
+    // Users can click to watch on YouTube directly
+    const videoMap = {
+      'javascript': [
+        { title: 'JavaScript Programming - Full Course', url: 'https://www.youtube.com/watch?v=PkZNo7MFNFg' },
+        { title: 'Learn JavaScript in 1 Hour', url: 'https://www.youtube.com/watch?v=W6NZfCO5SIk' },
+        { title: 'JavaScript Tutorial for Beginners', url: 'https://www.youtube.com/watch?v=hdI2bqOjy3c' },
+        { title: 'Advanced JavaScript Concepts', url: 'https://www.youtube.com/watch?v=W6NZfCO5SIk' },
+        { title: 'JavaScript Best Practices', url: 'https://www.youtube.com/watch?v=Mus_vwhT4zQ' },
+        { title: 'JavaScript Project Tutorial', url: 'https://www.youtube.com/watch?v=3PHXvlpOkf4' }
+      ],
+      'python': [
+        { title: 'Python Full Course', url: 'https://www.youtube.com/watch?v=rfscVS0vtbw' },
+        { title: 'Python Tutorial for Beginners', url: 'https://www.youtube.com/watch?v=t8pPdKYpowI' },
+        { title: 'Learn Python Programming', url: 'https://www.youtube.com/watch?v=k9TUPpGqYTo' },
+        { title: 'Python Advanced Concepts', url: 'https://www.youtube.com/watch?v=HGOBQPFzWKo' },
+        { title: 'Python Best Practices', url: 'https://www.youtube.com/watch?v=Z1Yd7upQsXY' },
+        { title: 'Python Project Walkthrough', url: 'https://www.youtube.com/watch?v=3ub2hL1l3R0' }
+      ],
+      'html': [
+        { title: 'HTML Full Course', url: 'https://www.youtube.com/watch?v=UB1O30fR-EE' },
+        { title: 'HTML Tutorial', url: 'https://www.youtube.com/watch?v=mU6anGqMa0k' },
+        { title: 'HTML Crash Course', url: 'https://www.youtube.com/watch?v=ieTHC78giT8' },
+        { title: 'Advanced HTML', url: 'https://www.youtube.com/watch?v=pQN-pnXPaVg' },
+        { title: 'HTML Best Practices', url: 'https://www.youtube.com/watch?v=OXGznpkLGEg' },
+        { title: 'HTML Project Tutorial', url: 'https://www.youtube.com/watch?v=FhvhkTHq8hQ' }
+      ],
+      'css': [
+        { title: 'CSS Full Course', url: 'https://www.youtube.com/watch?v=1Rs2ND1ryYc' },
+        { title: 'CSS Tutorial', url: 'https://www.youtube.com/watch?v=yfoY53QX61s' },
+        { title: 'CSS Flexbox Guide', url: 'https://www.youtube.com/watch?v=JJSoEo8JSnc' },
+        { title: 'CSS Grid Tutorial', url: 'https://www.youtube.com/watch?v=9zBsdzdS4yk' },
+        { title: 'CSS Animations', url: 'https://www.youtube.com/watch?v=HZHHBwA5C2w' },
+        { title: 'Responsive CSS', url: 'https://www.youtube.com/watch?v=K24lUqcT0Ms' }
+      ],
+      'react': [
+        { title: 'React Full Course', url: 'https://www.youtube.com/watch?v=bMknfKXIFA8' },
+        { title: 'React Tutorial', url: 'https://www.youtube.com/watch?v=Tn6-PIqc4UM' },
+        { title: 'Learn React', url: 'https://www.youtube.com/watch?v=w7ejDZ8SWv8' },
+        { title: 'React Hooks', url: 'https://www.youtube.com/watch?v=TNhaISOUy6Q' },
+        { title: 'React Best Practices', url: 'https://www.youtube.com/watch?v=Q3HU2vE1K6o' },
+        { title: 'React Project', url: 'https://www.youtube.com/watch?v=4UZrsTqkcW4' }
+      ],
+      'math': [
+        { title: 'Algebra Basics', url: 'https://www.youtube.com/watch?v=NybHck7C1jY' },
+        { title: 'Calculus Introduction', url: 'https://www.youtube.com/watch?v=5yooh5W8M8c' },
+        { title: 'Geometry Fundamentals', url: 'https://www.youtube.com/watch?v=3025fE1gKiw' },
+        { title: 'Trigonometry', url: 'https://www.youtube.com/watch?v=ovLbCqo7UQU' },
+        { title: 'Statistics Basics', url: 'https://www.youtube.com/watch?v=MXaJ7sa7q-8' },
+        { title: 'Linear Algebra', url: 'https://www.youtube.com/watch?v=0NdnzxLAf5w' }
+      ],
+      'english': [
+        { title: 'English Grammar', url: 'https://www.youtube.com/watch?v=J5A5o9r6-7g' },
+        { title: 'English Conversation', url: 'https://www.youtube.com/watch?v=juKd26qkNAw' },
+        { title: 'English Vocabulary', url: 'https://www.youtube.com/watch?v=wp43Odtpqzg' },
+        { title: 'English Pronunciation', url: 'https://www.youtube.com/watch?v=gW7mU7Kjb7M' },
+        { title: 'Business English', url: 'https://www.youtube.com/watch?v=nBO34N-dLlE' },
+        { title: 'English Writing', url: 'https://www.youtube.com/watch?v=GgkRoYPLhts' }
+      ],
+      'default': [
+        { title: 'Educational Video 1', url: 'https://www.youtube.com/results?search_query=' + encodeURIComponent(topic) },
+        { title: 'Educational Video 2', url: 'https://www.youtube.com/results?search_query=' + encodeURIComponent(topic + ' tutorial') },
+        { title: 'Educational Video 3', url: 'https://www.youtube.com/results?search_query=' + encodeURIComponent(topic + ' basics') },
+        { title: 'Educational Video 4', url: 'https://www.youtube.com/results?search_query=' + encodeURIComponent(topic + ' advanced') },
+        { title: 'Educational Video 5', url: 'https://www.youtube.com/results?search_query=' + encodeURIComponent(topic + ' best practices') },
+        { title: 'Educational Video 6', url: 'https://www.youtube.com/results?search_query=' + encodeURIComponent(topic + ' project') }
+      ]
+    };
+    
+    const topicKey = Object.keys(videoMap).find(k => topic.toLowerCase().includes(k)) || 'default';
+    const videos = videoMap[topicKey];
+    return videos[lessonIndex % videos.length];
   }
   
   // AI-powered lesson generation for truly unique content
@@ -4383,32 +4601,54 @@ window.addEventListener('scroll', () => {
   async aiModifyWebsite(projectPath, request, metadata) {
     console.log('Using AI to modify website...');
     
-    if (!this.apiKey) {
-      console.log('No API key available for AI modification');
-      return;
-    }
+    // Read all current HTML files, not just index
+    const existingFiles = {};
+    const filesToRead = ['index.html', 'about.html', 'services.html', 'blog.html', 'contact.html', 'lessons.html', 'styles.css', 'main.js'];
     
-    // Read current index.html
-    const indexPath = path.join(projectPath, 'index.html');
-    const currentHTML = fs.existsSync(indexPath) ? fs.readFileSync(indexPath, 'utf8') : '';
+    for (const filename of filesToRead) {
+      const filepath = path.join(projectPath, filename);
+      if (fs.existsSync(filepath)) {
+        existingFiles[filename] = fs.readFileSync(filepath, 'utf8');
+      }
+    }
     
     const prompt = `You are modifying an existing website based on this request: "${request}"
 
-Current HTML structure:
-${currentHTML.substring(0, 3000)}
+Current files structure:
+${Object.entries(existingFiles).map(([name, content]) => `
+=== ${name} ===
+${content.substring(0, 1500)}...
+`).join('\n')}
 
 Apply the requested changes while maintaining the existing structure and styles.
-Return ONLY the complete modified HTML code for index.html.
-Do not change the CSS link or basic structure unless specifically requested.`;
+Return ALL modified files in this format:
+filename.ext
+\`\`\`language
+content
+\`\`\`
+
+IMPORTANT: 
+1. Return complete files with all changes applied
+2. Maintain existing CSS variables and styling
+3. Keep navigation structure consistent across all pages
+4. Do not add explanations, only file content`;
 
     try {
       const response = await this.generateCode(prompt, { type: 'web' });
-      const newHTML = this.extractCodeBlock(response) || response;
       
-      fs.writeFileSync(indexPath, newHTML);
-      console.log('AI modification applied to index.html');
+      // Parse and save all modified files
+      const files = this.parseFilesFromResponse(response);
+      
+      for (const [filename, content] of Object.entries(files)) {
+        const filepath = path.join(projectPath, filename);
+        fs.writeFileSync(filepath, content);
+        console.log(`✅ Modified: ${filename}`);
+      }
+      
+      console.log(`AI modification applied to ${Object.keys(files).length} files`);
     } catch (error) {
       console.error('AI modification failed:', error.message);
+      throw error;
     }
   }
 
@@ -8490,6 +8730,11 @@ Format each file with path and content. Use markdown code blocks with file paths
   }
   
   generateServicesPage(template, intent) {
+    // For educational sites, generate lessons page with video support
+    if (template.isEducational && template.lessons && template.lessons.length > 0) {
+      return this.generateLessonsPage(template, intent);
+    }
+    
     const { hero } = template;
     return `
     <section class="page-hero">
@@ -8509,6 +8754,286 @@ Format each file with path and content. Use markdown code blocks with file paths
         </div>
       </div>
     </section>`;
+  }
+  
+  // Generate lessons page with video links and full theory
+  generateLessonsPage(template, intent) {
+    const { hero, lessons } = template;
+    const topic = template.topic || hero.title;
+    
+    const lessonsHTML = lessons.map((lesson, idx) => `
+    <div class="lesson-card" id="${lesson.id}">
+      <div class="lesson-header">
+        <div class="lesson-number">Урок ${idx + 1}</div>
+        <h2>${lesson.title}</h2>
+        ${lesson.duration ? `<span class="lesson-duration"><i class="fas fa-clock"></i> ${lesson.duration}</span>` : ''}
+      </div>
+      <div class="lesson-content">
+        ${lesson.videoUrl ? `
+        <div class="lesson-video">
+          <a href="${lesson.videoUrl}" target="_blank" rel="noopener noreferrer" class="video-link">
+            <div class="video-thumbnail">
+              <i class="fas fa-play-circle"></i>
+              <span>Смотреть видео-урок</span>
+            </div>
+            <p class="video-title"><i class="fas fa-external-link-alt"></i> ${lesson.videoTitle || 'Видео-урок'}</p>
+          </a>
+        </div>
+        ` : ''}
+        
+        <div class="lesson-text">
+          ${lesson.content || lesson.theory || ''}
+        </div>
+        
+        ${lesson.examples && lesson.examples.length > 0 ? `
+        <div class="lesson-examples">
+          <h3><i class="fas fa-lightbulb"></i> Примеры</h3>
+          <ul>
+            ${lesson.examples.map(ex => `<li>${ex}</li>`).join('')}
+          </ul>
+        </div>
+        ` : ''}
+        
+        ${lesson.practice && lesson.practice.length > 0 ? `
+        <div class="lesson-practice">
+          <h3><i class="fas fa-tasks"></i> Практические задания</h3>
+          <ul>
+            ${lesson.practice.map(p => `<li>${p}</li>`).join('')}
+          </ul>
+          <button class="btn btn-primary" onclick="alert('Практическое задание выполнено! Продолжайте обучение.')">
+            <i class="fas fa-check"></i> Отметить выполненным
+          </button>
+        </div>
+        ` : ''}
+      </div>
+    </div>
+    `).join('');
+    
+    return `
+    <section class="page-hero lessons-hero">
+      <div class="container">
+        <h1>📚 Уроки курса</h1>
+        <p>Полный курс по ${topic} с видео-уроками и практическими заданиями</p>
+        <div class="course-stats">
+          <div class="stat"><i class="fas fa-book-open"></i> ${lessons.length} уроков</div>
+          <div class="stat"><i class="fas fa-video"></i> Видео материалы</div>
+          <div class="stat"><i class="fas fa-tasks"></i> Практические задания</div>
+        </div>
+      </div>
+    </section>
+    
+    <section class="lessons-container">
+      <div class="container">
+        <div class="lessons-nav">
+          <h3>📖 Содержание курса</h3>
+          <ul>
+            ${lessons.map((lesson, idx) => `
+            <li><a href="#${lesson.id}" class="lesson-link"><span class="lesson-num">${idx + 1}</span> ${lesson.title}</a></li>
+            `).join('')}
+          </ul>
+        </div>
+        <div class="lessons-content">
+          ${lessonsHTML}
+        </div>
+      </div>
+    </section>
+    
+    <style>
+    .lessons-hero {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+      padding: 8rem 2rem 4rem;
+      text-align: center;
+    }
+    .lessons-hero h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+    .lessons-hero p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+      margin-bottom: 2rem;
+    }
+    .course-stats {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+    .course-stats .stat {
+      background: rgba(255,255,255,0.2);
+      padding: 0.75rem 1.5rem;
+      border-radius: 50px;
+      font-size: 0.9rem;
+    }
+    .lessons-container {
+      padding: 4rem 2rem;
+      background: var(--bg-alt);
+    }
+    .lessons-container .container {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 2rem;
+      max-width: 1200px;
+    }
+    .lessons-nav {
+      background: white;
+      padding: 1.5rem;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      height: fit-content;
+      position: sticky;
+      top: 100px;
+    }
+    .lessons-nav h3 {
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid var(--bg-alt);
+    }
+    .lessons-nav ul {
+      list-style: none;
+    }
+    .lessons-nav li {
+      margin-bottom: 0.5rem;
+    }
+    .lesson-link {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem;
+      border-radius: var(--radius);
+      text-decoration: none;
+      color: var(--text);
+      transition: all 0.2s;
+    }
+    .lesson-link:hover {
+      background: var(--bg-alt);
+    }
+    .lesson-num {
+      width: 28px;
+      height: 28px;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .lesson-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+    .lesson-header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: white;
+      padding: 1.5rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .lesson-number {
+      background: rgba(255,255,255,0.2);
+      padding: 0.5rem 1rem;
+      border-radius: 50px;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+    .lesson-header h2 {
+      flex: 1;
+      font-size: 1.5rem;
+      margin: 0;
+    }
+    .lesson-duration {
+      font-size: 0.875rem;
+      opacity: 0.9;
+    }
+    .lesson-content {
+      padding: 2rem;
+    }
+    .lesson-video {
+      margin-bottom: 2rem;
+    }
+    .video-link {
+      display: block;
+      text-decoration: none;
+      color: var(--text);
+    }
+    .video-thumbnail {
+      background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+      border-radius: var(--radius);
+      padding: 2rem;
+      text-align: center;
+      color: white;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .video-thumbnail:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 30px rgba(255,0,0,0.3);
+    }
+    .video-thumbnail i {
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+    .video-thumbnail span {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    .video-title {
+      margin-top: 0.75rem;
+      font-weight: 500;
+      color: var(--primary);
+    }
+    .lesson-text {
+      font-size: 1.1rem;
+      line-height: 1.8;
+      margin-bottom: 2rem;
+    }
+    .lesson-text h3 {
+      color: var(--primary);
+      margin: 1.5rem 0 1rem;
+      font-size: 1.3rem;
+    }
+    .lesson-text ul {
+      margin: 1rem 0;
+      padding-left: 1.5rem;
+    }
+    .lesson-text li {
+      margin-bottom: 0.5rem;
+    }
+    .lesson-examples, .lesson-practice {
+      background: var(--bg-alt);
+      padding: 1.5rem;
+      border-radius: var(--radius);
+      margin-bottom: 1.5rem;
+    }
+    .lesson-examples h3, .lesson-practice h3 {
+      color: var(--primary);
+      margin-bottom: 1rem;
+      font-size: 1.1rem;
+    }
+    .lesson-examples ul, .lesson-practice ul {
+      padding-left: 1.5rem;
+    }
+    .lesson-examples li, .lesson-practice li {
+      margin-bottom: 0.5rem;
+    }
+    @media (max-width: 768px) {
+      .lessons-container .container {
+        grid-template-columns: 1fr;
+      }
+      .lessons-nav {
+        position: static;
+        order: -1;
+      }
+    }
+    </style>`;
   }
   
   generateBlogPage(template, intent) {
