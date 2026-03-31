@@ -402,40 +402,61 @@ async function generateVideo(prompt) {
   const replicateKey = process.env.REPLICATE_API_KEY;
   const lumaKey = process.env.LUMA_API_KEY;
   
+  // Log API key status (without exposing keys)
+  console.log('🔑 API Keys status:');
+  console.log('  RUNWAY_API_KEY:', runwayKey ? `✅ Present (${runwayKey.substring(0, 10)}...)` : '❌ Missing');
+  console.log('  REPLICATE_API_KEY:', replicateKey ? `✅ Present (${replicateKey.substring(0, 10)}...)` : '❌ Missing');
+  console.log('  LUMA_API_KEY:', lumaKey ? `✅ Present (${lumaKey.substring(0, 10)}...)` : '❌ Missing');
+  
   const errors = [];
   
   // Try Runway first (best quality, has free trial)
   if (runwayKey) {
     try {
-      return await generateVideoRunway(prompt, runwayKey);
+      console.log('🎬 Attempting Runway with key format:', runwayKey.startsWith('Bearer') ? 'Bearer + token' : 'Raw token');
+      const result = await generateVideoRunway(prompt, runwayKey);
+      console.log('✅ Runway success');
+      return result;
     } catch (error) {
-      console.log('Runway failed:', error.message);
+      console.log('❌ Runway failed:', error.message);
       errors.push(`Runway: ${error.message}`);
     }
+  } else {
+    console.log('⚠️ Skipping Runway - no API key');
   }
   
   // Try Replicate (has free tier)
   if (replicateKey) {
     try {
-      return await generateVideoReplicate(prompt, replicateKey);
+      console.log('🎬 Attempting Replicate...');
+      const result = await generateVideoReplicate(prompt, replicateKey);
+      console.log('✅ Replicate success');
+      return result;
     } catch (error) {
-      console.log('Replicate failed:', error.message);
+      console.log('❌ Replicate failed:', error.message);
       errors.push(`Replicate: ${error.message}`);
       // If 401, warn about invalid key
       if (error.message.includes('401')) {
         console.log('⚠️ REPLICATE_API_KEY is invalid or expired. Get a new key at https://replicate.com/account/api-tokens');
       }
     }
+  } else {
+    console.log('⚠️ Skipping Replicate - no API key');
   }
   
   // Try Luma AI
   if (lumaKey) {
     try {
-      return await generateVideoLuma(prompt, lumaKey);
+      console.log('🎬 Attempting Luma AI...');
+      const result = await generateVideoLuma(prompt, lumaKey);
+      console.log('✅ Luma AI success');
+      return result;
     } catch (error) {
-      console.log('Luma AI failed:', error.message);
+      console.log('❌ Luma AI failed:', error.message);
       errors.push(`Luma: ${error.message}`);
     }
+  } else {
+    console.log('⚠️ Skipping Luma - no API key');
   }
   
   // Final fallback: Pollinations image (free, no API key needed)

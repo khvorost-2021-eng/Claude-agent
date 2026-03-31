@@ -665,8 +665,55 @@ class AgentClient {
   }
 
   updateProgress(data) {
-    if (data.step === 'generating') {
-      this.addMessage(`⏳ ${data.content}`, 'bot', true);
+    // Create or update progress message
+    let progressDiv = document.getElementById('active-progress');
+    
+    if (!progressDiv) {
+      progressDiv = document.createElement('div');
+      progressDiv.id = 'active-progress';
+      progressDiv.className = 'message bot progress-message';
+      this.chatMessages.appendChild(progressDiv);
+    }
+    
+    const progressPercent = data.progress || 0;
+    const progressBar = progressPercent > 0 
+      ? `<div style="background: var(--bg3); border-radius: 4px; height: 6px; margin: 8px 0; overflow: hidden;"><div style="background: linear-gradient(90deg, var(--accent), var(--accent2)); height: 100%; width: ${progressPercent}%; transition: width 0.3s;"></div></div>` 
+      : '';
+    
+    const stepIcon = {
+      'analyzing': '🔍',
+      'content': '📝',
+      'generating': '🏗️',
+      'page': '📄',
+      'file_created': '✅',
+      'pages': '📑',
+      'image': '🎨',
+      'styling': '🎨',
+      'js': '⚡',
+      'metadata': '📝',
+      'complete': '🎉'
+    }[data.step] || '⏳';
+    
+    progressDiv.innerHTML = `
+      <div class="message-content">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span>${stepIcon}</span>
+          <span>${data.content || data.message || 'Обработка...'}</span>
+          ${progressPercent > 0 ? `<span style="margin-left: auto; font-size: 0.85rem; color: var(--accent);">${progressPercent}%</span>` : ''}
+        </div>
+        ${progressBar}
+      </div>
+    `;
+    
+    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    
+    // Remove progress message when complete
+    if (data.step === 'complete' || data.progress === 100) {
+      setTimeout(() => {
+        if (progressDiv && progressDiv.parentNode) {
+          progressDiv.remove();
+        }
+      }, 3000);
     }
   }
 
