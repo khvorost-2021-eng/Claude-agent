@@ -402,12 +402,15 @@ async function generateVideo(prompt) {
   const replicateKey = process.env.REPLICATE_API_KEY;
   const lumaKey = process.env.LUMA_API_KEY;
   
+  const errors = [];
+  
   // Try Runway first (best quality, has free trial)
   if (runwayKey) {
     try {
       return await generateVideoRunway(prompt, runwayKey);
     } catch (error) {
       console.log('Runway failed:', error.message);
+      errors.push(`Runway: ${error.message}`);
     }
   }
   
@@ -417,6 +420,11 @@ async function generateVideo(prompt) {
       return await generateVideoReplicate(prompt, replicateKey);
     } catch (error) {
       console.log('Replicate failed:', error.message);
+      errors.push(`Replicate: ${error.message}`);
+      // If 401, warn about invalid key
+      if (error.message.includes('401')) {
+        console.log('⚠️ REPLICATE_API_KEY is invalid or expired. Get a new key at https://replicate.com/account/api-tokens');
+      }
     }
   }
   
@@ -426,11 +434,20 @@ async function generateVideo(prompt) {
       return await generateVideoLuma(prompt, lumaKey);
     } catch (error) {
       console.log('Luma AI failed:', error.message);
+      errors.push(`Luma: ${error.message}`);
     }
   }
   
   // Final fallback: Pollinations image (free, no API key needed)
-  return await generateVideoPollinations(prompt);
+  console.log('🎬 All paid APIs failed or not configured, using Pollinations fallback');
+  const pollResult = await generateVideoPollinations(prompt);
+  
+  // Add warning about API failures to the response
+  if (errors.length > 0) {
+    pollResult.content += `\n\n⚠️ Проблемы с API: ${errors.join(', ')}\n💡 Проверьте ваши API ключи в настройках.`;
+  }
+  
+  return pollResult;
 }
 
 // Replicate Video Generation (free tier available)
